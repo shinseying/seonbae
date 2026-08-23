@@ -26,7 +26,7 @@ export default async function AdminBookingsPage() {
   const [{ data: rows }, { data: tutors }] = await Promise.all([
     admin
       .from("booking_requests")
-      .select("id,tutor_registry_id,name,email,phone,preferred_day,preferred_time,note,status,seen_by_admin,created_at")
+      .select("id,tutor_registry_id,name,email,phone,subject,preferred_day,preferred_time,note,status,seen_by_admin,created_at")
       .order("created_at", { ascending: false })
       .limit(100),
     admin.from("tutors").select("registry_id,name"),
@@ -41,6 +41,7 @@ export default async function AdminBookingsPage() {
     phone: row.phone,
     preferredDay: row.preferred_day,
     preferredTime: row.preferred_time,
+    subject: row.subject,
     note: row.note,
     status: row.status,
     unread: !row.seen_by_admin,
@@ -57,9 +58,9 @@ export default async function AdminBookingsPage() {
       <section className={styles.main}>
         <header className={styles.heading}>
           <div>
-            <p>INTRO CALLS</p>
-            <h1>상담 예약</h1>
-            <span>튜터 카드에서 접수된 상담 예약 요청입니다. 튜터에게도 메일이 발송됩니다.</span>
+            <p>LESSON BOOKINGS</p>
+            <h1>수업 예약</h1>
+            <span>튜터 카드에서 접수된 수업 예약 요청입니다. 튜터에게도 메일이 발송됩니다.</span>
           </div>
           <b>{bookings.filter((booking) => booking.unread).length}건 신규</b>
         </header>

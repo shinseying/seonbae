@@ -12,6 +12,7 @@ export type PortalBooking = {
   phone: string | null;
   preferredDay: string | null;
   preferredTime: string | null;
+  subject: string | null;
   note: string | null;
   status: string;
   unread: boolean;
@@ -57,7 +58,7 @@ export default function BookingsPanel({
       <header className={styles.head}>
         <div>
           <p>BOOKINGS</p>
-          <h2>{l("상담 예약 요청", "Intro call requests")}</h2>
+          <h2>{l("수업 예약 요청", "Lesson requests")}</h2>
         </div>
         {unread > 0 && <span className={styles.badge}>{l(`새 요청 ${unread}건`, `${unread} new`)}</span>}
       </header>
@@ -76,6 +77,7 @@ export default function BookingsPanel({
                   {item.email}
                   {item.phone ? ` · ${item.phone}` : ""}
                 </span>
+                {item.subject && <span className={styles.subject}>{item.subject}</span>}
                 {showTutor && <span className={styles.tutor}>{item.tutorName}</span>}
               </div>
               <div className={styles.when}>

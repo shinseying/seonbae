@@ -96,7 +96,7 @@ const roster = true;
                   </ul>
                   <div class="tcardx__foot">
                     <button type="button" class="tcardx__book" disabled>
-                      <T en="Book Intro Call" ko="상담 예약하기" />
+                      <T en="Book lessons" ko="수업 예약하기" />
                     </button>
                   </div>
                 </article>
@@ -130,31 +130,49 @@ const roster = true;
     </div>
   </section>
 
+  <dialog class="pf" id="profile-dialog" aria-labelledby="profile-heading">
+    <div class="book__panel">
+      <button type="button" class="book__close" data-close-profile aria-label="Close">×</button>
+      <p class="book__eyebrow" id="profile-heading"><T en="Tutor profile" ko="튜터 프로필" /></p>
+      <div data-profile-body></div>
+    </div>
+  </dialog>
+
   <dialog class="book" id="book-dialog" aria-labelledby="book-heading">
     <div class="book__panel">
       <button type="button" class="book__close" data-close-book aria-label="Close">×</button>
-      <p class="book__eyebrow"><T en="Intro call" ko="상담 예약" /></p>
+      <p class="book__eyebrow"><T en="Book lessons" ko="수업 예약" /></p>
       <h2 class="h3" id="book-heading"><span data-book-title></span></h2>
 
-      <h3 class="book__sub"><T en="Available hours" ko="가능 시간" /></h3>
+      <p class="book__gate" data-book-gate hidden></p>
+
+      <h3 class="book__sub"><T en="Published hours" ko="등록된 가능 시간" /></h3>
       <div class="book__calendar" data-book-calendar></div>
 
       <form class="book__form" novalidate>
         <input type="text" name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
-        <input type="hidden" name="preferredSlot" />
+        <div class="form-field">
+          <label for="bk-subject"><T en="Subject" ko="과목" /></label>
+          <input id="bk-subject" name="subject" class="form-control" type="text" required maxlength="100" data-placeholder-en="IB Economics HL" data-placeholder-ko="IB 경제 HL" />
+        </div>
         <div class="form-grid">
           <div class="form-field">
-            <label for="bk-name"><T en="Your name" ko="이름" /></label>
-            <input id="bk-name" name="name" class="form-control" type="text" required maxlength="80" autocomplete="name" />
+            <label for="bk-day"><T en="Preferred day" ko="희망 요일" /></label>
+            <select id="bk-day" name="preferredDay" class="form-control" required>
+              <option value="" disabled selected data-label-en="Choose a day" data-label-ko="요일 선택">요일 선택</option>
+              <option value="mon" data-label-en="Monday" data-label-ko="월요일">월요일</option>
+              <option value="tue" data-label-en="Tuesday" data-label-ko="화요일">화요일</option>
+              <option value="wed" data-label-en="Wednesday" data-label-ko="수요일">수요일</option>
+              <option value="thu" data-label-en="Thursday" data-label-ko="목요일">목요일</option>
+              <option value="fri" data-label-en="Friday" data-label-ko="금요일">금요일</option>
+              <option value="sat" data-label-en="Saturday" data-label-ko="토요일">토요일</option>
+              <option value="sun" data-label-en="Sunday" data-label-ko="일요일">일요일</option>
+            </select>
           </div>
           <div class="form-field">
-            <label for="bk-phone"><T en="Mobile number" ko="휴대전화번호" /></label>
-            <input id="bk-phone" name="phone" class="form-control" type="tel" maxlength="24" autocomplete="tel" placeholder="01012345678" />
+            <label for="bk-time"><T en="Preferred time" ko="희망 시각" /></label>
+            <input id="bk-time" name="preferredTime" class="form-control" type="time" required step="900" />
           </div>
-        </div>
-        <div class="form-field">
-          <label for="bk-email"><T en="Email" ko="이메일" /></label>
-          <input id="bk-email" name="email" class="form-control" type="email" required maxlength="254" autocomplete="email" placeholder="you@email.com" />
         </div>
         <div class="form-field">
           <label for="bk-note"><T en="Anything we should know" ko="전하고 싶은 내용" /> <span class="book__opt"><T en="optional" ko="선택" /></span></label>
@@ -444,6 +462,33 @@ const roster = true;
   .book__status[data-tone='ok'] { background: var(--sage); color: var(--sage-ink); }
   .book__status[data-tone='error'] { background: #fbeeea; color: #8f302b; }
 
+  .tcardx { cursor: pointer; }
+  .tcardx:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; }
+  .tcardx__bio.is-empty, .tcardx__video.is-empty { color: var(--muted-soft); }
+  .tcardx__video.is-empty { cursor: default; border-style: dashed; }
+  .tcardx__video.is-empty .tcardx__play { background: var(--line); color: var(--muted-soft); }
+  .tcardx__book { cursor: pointer; }
+
+  .book__gate { margin-top: 14px; padding: 13px 16px; border-radius: var(--r-sm); background: var(--yellow-soft); color: var(--ink); font-size: .92rem; line-height: 1.55; }
+  .book__gate a { font-weight: 700; color: var(--violet); }
+  .book__calendar .book__slot { margin: 0; }
+  .book__fixed { padding: 6px 12px; border-radius: var(--r-pill); background: var(--violet-soft); color: var(--violet); font-size: .8rem; font-weight: 600; }
+  .book__form[hidden] { display: none; }
+
+  /* Profile dialog */
+  .pf { position: fixed; inset: 0; width: min(calc(100vw - 32px), 720px); max-width: none; max-height: min(calc(100dvh - 32px), 880px); margin: auto; padding: 0; border: 0; border-radius: var(--r-xl); background: transparent; color: var(--ink); box-shadow: var(--shadow-lift); }
+  .pf::backdrop { background: rgba(19, 24, 27, .56); backdrop-filter: blur(4px); }
+  .pf__head { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 20px; align-items: center; margin-top: 10px; }
+  .pf__head img { width: 96px; height: 96px; border-radius: 50%; object-fit: contain; background: var(--violet-soft); }
+  .pf__head p { margin-top: 4px; color: var(--muted); }
+  .pf__head .tcardx__scores { justify-content: flex-start; margin-top: 12px; }
+  .pf__sub { margin-top: 26px; font-family: var(--display); font-size: 1rem; font-weight: 750; }
+  .pf__video { margin-top: 12px; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #0d1418; }
+  .pf__video :global(video), .pf__video :global(iframe) { width: 100%; height: 100%; border: 0; display: block; }
+  .pf__bio { margin-top: 10px; color: var(--muted); line-height: 1.65; white-space: pre-wrap; }
+  .pf__empty { margin-top: 10px; padding: 14px 16px; border: 1px dashed var(--line); border-radius: var(--r-sm); color: var(--muted-soft); font-size: .92rem; }
+  .pf__foot { margin-top: 28px; }
+
   .vid__title { font-size: 1.2rem; padding-right: 48px; }
   .vid__frame { margin-top: 16px; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #0d1418; }
   .vid__frame :global(video), .vid__frame :global(iframe) { width: 100%; height: 100%; border: 0; display: block; }
@@ -551,6 +596,7 @@ const roster = true;
   const scoresOf = (tutor: Tutor) => Array.isArray(tutor.subject_scores) ? tutor.subject_scores : [];
   const slotsOf = (tutor: Tutor) => (tutor.availability && typeof tutor.availability === 'object') ? tutor.availability : {};
   const hasSlots = (tutor: Tutor) => DAYS.some((day) => (slotsOf(tutor)[day.key] || []).length > 0);
+  const bioOf = (tutor: Tutor) => tr(tutor.bio_en || tutor.bio || '', tutor.bio || tutor.bio_en || '');
 
   // Weekdays and weekends read better than a seven-day list on the card face.
   const availabilitySummary = (tutor: Tutor) => {
@@ -572,18 +618,24 @@ const roster = true;
       const displayName = tr(tutor.name_en || tutor.name, tutor.name);
       const altName = tr(tutor.name, tutor.name_en || tutor.name);
       const uni = escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''));
-      const bio = tr(tutor.bio_en || tutor.bio || '', tutor.bio || tutor.bio_en || '');
+      const bio = bioOf(tutor);
 
       const scores = scoresOf(tutor);
       const scoreList = scores.length
         ? scores.map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')
         : `<li><b>${escapeHtml(tutor.score)}</b><span>${escapeHtml(tutor.exam)}</span></li>`;
 
-      const video = safeAsset(tutor.video_url)
+      // Placeholders keep every card the same shape, so a card without a
+      // description or a video does not look like a rendering fault.
+      const bioBlock = bio
+        ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>`
+        : `<p class="tcardx__bio is-empty">${tr('Introduction coming soon.', '소개글 준비 중입니다.')}</p>`;
+
+      const videoBlock = safeAsset(tutor.video_url)
         ? `<button type="button" class="tcardx__video" data-video="${safeAsset(tutor.video_url)}" data-name="${escapeHtml(displayName)}">
              <span class="tcardx__play" aria-hidden="true">&#9658;</span>${tr('Watch sample lesson', '샘플 수업 보기')}
            </button>`
-        : '';
+        : `<span class="tcardx__video is-empty"><span class="tcardx__play" aria-hidden="true">&#9658;</span>${tr('Sample lesson coming soon', '샘플 수업 준비 중')}</span>`;
 
       const meta = `
         <dl class="tcardx__meta">
@@ -593,18 +645,18 @@ const roster = true;
         </dl>`;
 
       return `<div class="tutor-cell" data-cats="${categoryFor(tutor)}" data-registry-id="${escapeHtml(tutor.registry_id)}">
-        <article class="tcardx card">
+        <article class="tcardx card" data-profile="${escapeHtml(tutor.registry_id)}" tabindex="0" role="button" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')}">
           <span class="tcardx__verified">${verifyIcon}${tr('Verified Tutor', '검증 완료')}</span>
           <img class="tcardx__avatar" src="${cardPhoto}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="320" height="320" loading="lazy" decoding="async" />
           <h3 class="tcardx__name">${escapeHtml(displayName)}<small>${escapeHtml(altName)}</small></h3>
           <p class="tcardx__uni">${uni}</p>
           <ul class="tcardx__scores">${scoreList}</ul>
-          ${bio ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>` : ''}
-          ${video}
+          ${bioBlock}
+          ${videoBlock}
           ${meta}
           <div class="tcardx__foot">
             <button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}" data-tutor-name="${escapeHtml(displayName)}">
-              ${calendarIcon}${tr('Book Intro Call', '상담 예약하기')}
+              ${calendarIcon}${tr('Book lessons', '수업 예약하기')}
             </button>
           </div>
         </article>
@@ -613,6 +665,7 @@ const roster = true;
 
     applyScope(grid);
     cells = [...grid.querySelectorAll('.tutor-cell')] as HTMLElement[];
+    roster = tutors;
     roster = tutors;
     Object.keys(staticFilterCounts).forEach((key) => { staticFilterCounts[key] = 0; });
     staticFilterCounts.all = tutors.length;
@@ -652,14 +705,83 @@ const roster = true;
       grid?.classList.remove('is-loading');
       grid?.removeAttribute('aria-busy');
     });
+  // ----- Viewer session ----------------------------------------------------
+  // Booking needs a signed-in student or parent, so the button explains itself
+  // rather than failing after the form is filled in.
+  let viewer: { authenticated: boolean; role?: string } = { authenticated: false };
+  fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
+    .then((response) => response.ok ? response.json() : { authenticated: false })
+    .then((data) => { viewer = data || { authenticated: false }; })
+    .catch(() => {});
+  const canBook = () => viewer.authenticated && (viewer.role === 'student' || viewer.role === 'parent');
+
+  // ----- Profile dialog ----------------------------------------------------
+  const profileDialog = document.querySelector('#profile-dialog') as HTMLDialogElement | null;
+  const profileBody = profileDialog?.querySelector('[data-profile-body]') as HTMLElement | null;
+
+  const openProfile = (registryId: string) => {
+    const tutor = roster.find((row) => row.registry_id === registryId);
+    if (!tutor || !profileDialog || !profileBody) return;
+
+    const name = tr(tutor.name_en || tutor.name, tutor.name);
+    const uni = escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''));
+    const bio = bioOf(tutor);
+    const scores = scoresOf(tutor);
+    const slots = slotsOf(tutor);
+    const video = safeAsset(tutor.video_url);
+
+    profileBody.innerHTML = `
+      <header class="pf__head">
+        <img src="${cardPhoto}" alt="" width="320" height="320" />
+        <div>
+          <h2 class="h3">${escapeHtml(name)}</h2>
+          <p>${uni}</p>
+          <ul class="tcardx__scores">${
+            scores.length
+              ? scores.map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')
+              : `<li><b>${escapeHtml(tutor.score)}</b><span>${escapeHtml(tutor.exam)}</span></li>`
+          }</ul>
+        </div>
+      </header>
+
+      <h3 class="pf__sub">${tr('Sample lesson', '샘플 수업')}</h3>
+      ${video
+        ? (/\.(mp4|webm|ogg)$/i.test(video)
+            ? `<div class="pf__video"><video src="${video}" controls playsinline preload="metadata"></video></div>`
+            : `<div class="pf__video"><iframe src="${video}" title="${escapeHtml(name)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`)
+        : `<p class="pf__empty">${tr('This tutor has not uploaded a sample lesson yet.', '아직 등록된 샘플 수업이 없습니다.')}</p>`}
+
+      <h3 class="pf__sub">${tr('Introduction', '소개')}</h3>
+      ${bio ? `<p class="pf__bio">${escapeHtml(bio)}</p>` : `<p class="pf__empty">${tr('Introduction coming soon.', '소개글 준비 중입니다.')}</p>`}
+
+      <h3 class="pf__sub">${tr('Available hours', '가능 시간')}</h3>
+      ${hasSlots(tutor)
+        ? `<div class="book__calendar">${DAYS.map((day) => {
+            const ranges = slots[day.key] || [];
+            return `<div class="book__day"><span class="book__dow">${tr(day.en, day.ko)}</span><div class="book__ranges">${
+              ranges.length ? ranges.map((range) => `<span class="book__fixed">${escapeHtml(range)}</span>`).join('') : `<span class="book__none">&mdash;</span>`
+            }</div></div>`;
+          }).join('')}</div>`
+        : `<p class="pf__empty">${tr('Hours are arranged on request.', '가능 시간은 협의 후 정합니다.')}</p>`}
+
+      <div class="pf__foot">
+        <button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}">
+          ${calendarIcon}${tr('Book lessons', '수업 예약하기')}
+        </button>
+      </div>`;
+
+    if (typeof profileDialog.showModal === 'function') profileDialog.showModal();
+    else profileDialog.setAttribute('open', '');
+  };
+
   // ----- Booking dialog ----------------------------------------------------
-  // One dialog serves every card: the calendar and the form are rebuilt from
-  // whichever tutor was clicked.
   const dialog = document.querySelector('#book-dialog') as HTMLDialogElement | null;
   const bookForm = dialog?.querySelector('form.book__form') as HTMLFormElement | null;
   const bookTitle = dialog?.querySelector('[data-book-title]') as HTMLElement | null;
   const bookCal = dialog?.querySelector('[data-book-calendar]') as HTMLElement | null;
-  const bookSlot = dialog?.querySelector('input[name="preferredSlot"]') as HTMLInputElement | null;
+  const bookDay = dialog?.querySelector('select[name="preferredDay"]') as HTMLSelectElement | null;
+  const bookTime = dialog?.querySelector('input[name="preferredTime"]') as HTMLInputElement | null;
+  const bookGate = dialog?.querySelector('[data-book-gate]') as HTMLElement | null;
   const bookStatus = dialog?.querySelector('[data-book-status]') as HTMLElement | null;
   const bookSubmit = dialog?.querySelector('.book__submit') as HTMLButtonElement | null;
   let bookingTutor: Tutor | null = null;
@@ -667,24 +789,39 @@ const roster = true;
   const openBooking = (registryId: string) => {
     bookingTutor = roster.find((tutor) => tutor.registry_id === registryId) ?? null;
     if (!bookingTutor || !dialog) return;
+    profileDialog?.close();
 
-    const name = tr(bookingTutor.name_en || bookingTutor.name, bookingTutor.name);
-    if (bookTitle) bookTitle.textContent = name;
+    if (bookTitle) bookTitle.textContent = tr(bookingTutor.name_en || bookingTutor.name, bookingTutor.name);
     if (bookStatus) { bookStatus.hidden = true; bookStatus.textContent = ''; }
-    if (bookSlot) bookSlot.value = '';
     bookForm?.reset();
 
+    // Signed-out visitors, and tutors or admins, see the reason instead of a
+    // form they cannot submit.
+    const allowed = canBook();
+    if (bookGate) {
+      bookGate.hidden = allowed;
+      bookGate.innerHTML = allowed
+        ? ''
+        : viewer.authenticated
+          ? tr('Only student and parent accounts can book lessons.', '학생 또는 보호자 계정만 수업을 예약할 수 있습니다.')
+          : `${tr('Sign in to book lessons.', '수업을 예약하려면 로그인해 주세요.')} <a href="/login">${tr('Log in', '로그인')}</a>`;
+    }
+    if (bookForm) bookForm.hidden = !allowed;
+
+    // Published hours become one-tap presets; the day and time controls stay
+    // editable so a visitor can always propose their own slot.
     const slots = slotsOf(bookingTutor);
     if (bookCal) {
       bookCal.innerHTML = hasSlots(bookingTutor)
         ? DAYS.map((day) => {
             const ranges = slots[day.key] || [];
-            const cells = ranges.length
-              ? ranges.map((range) => `<button type="button" class="book__slot" data-slot="${escapeHtml(day.key)}|${escapeHtml(range)}">${escapeHtml(range)}</button>`).join('')
-              : `<span class="book__none">&mdash;</span>`;
-            return `<div class="book__day"><span class="book__dow">${tr(day.en, day.ko)}</span><div class="book__ranges">${cells}</div></div>`;
+            if (!ranges.length) return '';
+            return ranges.map((range) => {
+              const start = range.split('-')[0];
+              return `<button type="button" class="book__slot" data-day="${day.key}" data-time="${escapeHtml(start)}">${tr(day.en, day.ko)} ${escapeHtml(range)}</button>`;
+            }).join('');
           }).join('')
-        : `<p class="book__empty">${tr('This tutor has not published their hours yet. Send a request and we will arrange a time.', '아직 가능 시간이 등록되지 않았습니다. 요청을 보내주시면 시간을 조율해 드립니다.')}</p>`;
+        : `<p class="book__empty">${tr('This tutor has not published hours. Choose any time below and we will arrange it.', '등록된 가능 시간이 없습니다. 아래에서 원하는 시간을 선택해 주시면 조율해 드립니다.')}</p>`;
     }
 
     if (typeof dialog.showModal === 'function') dialog.showModal();
@@ -692,21 +829,38 @@ const roster = true;
   };
 
   document.addEventListener('click', (event) => {
-    const trigger = (event.target as HTMLElement).closest('[data-book]') as HTMLElement | null;
-    if (trigger) { openBooking(trigger.dataset.book || ''); return; }
+    const target = event.target as HTMLElement;
 
-    const slot = (event.target as HTMLElement).closest('.book__slot') as HTMLElement | null;
-    if (slot && bookSlot) {
+    const bookTrigger = target.closest('[data-book]') as HTMLElement | null;
+    if (bookTrigger) { event.stopPropagation(); openBooking(bookTrigger.dataset.book || ''); return; }
+
+    const play = target.closest('[data-video]') as HTMLElement | null;
+    if (play) { event.stopPropagation(); openVideo(play.dataset.video || '', play.dataset.name || ''); return; }
+
+    const slot = target.closest('.book__slot') as HTMLElement | null;
+    if (slot) {
       dialog?.querySelectorAll('.book__slot').forEach((node) => node.classList.remove('is-on'));
       slot.classList.add('is-on');
-      bookSlot.value = slot.dataset.slot || '';
+      if (bookDay) bookDay.value = slot.dataset.day || '';
+      if (bookTime) bookTime.value = slot.dataset.time || '';
+      return;
     }
 
-    const play = (event.target as HTMLElement).closest('[data-video]') as HTMLElement | null;
-    if (play) openVideo(play.dataset.video || '', play.dataset.name || '');
+    const card = target.closest('[data-profile]') as HTMLElement | null;
+    if (card) openProfile(card.dataset.profile || '');
+  });
+
+  // Keyboard parity for the card, which is a button in all but element name.
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const card = (event.target as HTMLElement).closest('[data-profile]') as HTMLElement | null;
+    if (!card || card !== document.activeElement) return;
+    event.preventDefault();
+    openProfile(card.dataset.profile || '');
   });
 
   dialog?.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+  profileDialog?.addEventListener('click', (event) => { if (event.target === profileDialog) profileDialog.close(); });
 
   bookForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -714,7 +868,6 @@ const roster = true;
 
     const data = new FormData(bookForm);
     if (String(data.get('company') || '')) return;
-    const [day = '', time = ''] = String(data.get('preferredSlot') || '').split('|');
 
     if (bookSubmit) bookSubmit.disabled = true;
     if (bookStatus) { bookStatus.hidden = true; bookStatus.removeAttribute('data-tone'); }
@@ -722,14 +875,13 @@ const roster = true;
     try {
       const response = await fetch('/api/bookings', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tutorRegistryId: bookingTutor.registry_id,
-          name: data.get('name'),
-          email: data.get('email'),
-          phone: data.get('phone'),
-          preferredDay: day,
-          preferredTime: time,
+          subject: data.get('subject'),
+          preferredDay: data.get('preferredDay'),
+          preferredTime: data.get('preferredTime'),
           note: data.get('note'),
         }),
       });
@@ -737,7 +889,6 @@ const roster = true;
       if (!response.ok) throw new Error(result?.error || tr('That did not send.', '요청을 보내지 못했습니다.'));
 
       bookForm.reset();
-      if (bookSlot) bookSlot.value = '';
       dialog?.querySelectorAll('.book__slot').forEach((node) => node.classList.remove('is-on'));
       if (bookStatus) {
         bookStatus.textContent = tr('Booked. The tutor and our team have been notified.', '예약 요청이 접수되었습니다. 튜터와 담당자에게 전달했습니다.');
@@ -763,7 +914,6 @@ const roster = true;
   function openVideo(url: string, name: string) {
     if (!videoDialog || !videoFrame || !url) return;
     if (videoTitle) videoTitle.textContent = name;
-    // A file plays inline; anything else (YouTube, Vimeo) is framed.
     videoFrame.innerHTML = /\.(mp4|webm|ogg)$/i.test(url)
       ? `<video src="${url}" controls playsinline preload="metadata"></video>`
       : `<iframe src="${url}" title="${escapeHtml(name)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
@@ -776,6 +926,7 @@ const roster = true;
   videoDialog?.addEventListener('click', (event) => { if (event.target === videoDialog) videoDialog.close(); });
 
   document.querySelector('[data-close-book]')?.addEventListener('click', () => dialog?.close());
+  document.querySelector('[data-close-profile]')?.addEventListener('click', () => profileDialog?.close());
   document.querySelector('[data-close-video]')?.addEventListener('click', () => videoDialog?.close());
   document.querySelectorAll('[data-set-lang]').forEach((button) => button.addEventListener('click', () => location.reload()));
 </script>

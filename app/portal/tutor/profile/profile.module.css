@@ -31,6 +31,16 @@
 .message{margin:0;font-size:.9rem}
 .message[data-tone="ok"]{color:#276344}
 .message[data-tone="error"]{color:#a9342d}
+.ghost{background:none;border:1px solid rgba(16,42,89,.2);color:#163a51}
+.pending{margin:0;padding:12px 15px;border-radius:11px;background:#fbf0dc;color:#7a5a17;font-size:.88rem;font-weight:600}
+.readHead{margin:0;font-size:1rem;font-weight:800}
+.readList{display:grid;gap:12px;margin:6px 0 0}
+.readList div{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;padding-bottom:12px;border-bottom:1px solid rgba(16,42,89,.1)}
+.readList div:last-child{border-bottom:0;padding-bottom:0}
+.readList dt{font-size:.78rem;font-weight:800;color:#818896}
+.readList dd{margin:0;font-size:.9rem;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap}
+@media(max-width:600px){.readList div{grid-template-columns:1fr;gap:4px}}
+:global(html[data-theme="dark"]) .pending{background:#3a3320;color:#e6cf94}
 
 @media(max-width:600px){.pair{grid-template-columns:1fr}.dayRow{grid-template-columns:1fr}}
 :global(html[data-theme="dark"]) .block{background:#162133;border-color:rgba(235,241,249,.18)}

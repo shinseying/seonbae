@@ -11,6 +11,7 @@
 .who b{font-size:.96rem}
 .who span{color:#6b7180;font-size:.82rem;overflow-wrap:anywhere}
 .tutor{font-weight:700;color:#163a51}
+.subject{font-weight:700;color:#c1663a}
 .when{display:grid;gap:3px;justify-items:end;text-align:right}
 .when b{font-size:.9rem}
 .when span{color:#6b7180;font-size:.78rem}

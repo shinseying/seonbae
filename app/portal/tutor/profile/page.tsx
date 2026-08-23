@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "../../../../utils/supabase/server";
 import { PortalText } from "../../PortalLocale";
-import TutorProfileForm, { type TutorProfile } from "./TutorProfileForm";
+import TutorProfileForm, { type PendingRequest, type TutorProfile } from "./TutorProfileForm";
 import styles from "./profile.module.css";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +38,17 @@ export default async function TutorProfilePage() {
     lessonFormat: row?.lesson_format ?? "",
   };
 
+  const { data: openRequest } = await supabase
+    .from("tutor_profile_requests")
+    .select("created_at,note")
+    .eq("tutor_registry_id", profile.tutor_registry_id)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  const pending: PendingRequest = openRequest
+    ? { createdAt: openRequest.created_at, note: openRequest.note }
+    : null;
+
   return (
     <main className={styles.page}>
       <section className={styles.shell}>
@@ -46,12 +57,12 @@ export default async function TutorProfilePage() {
           <h1><PortalText ko="내 카드 관리" en="My tutor card" /></h1>
           <span>
             <PortalText
-              ko="여기서 저장한 내용이 선배 찾기 페이지의 카드에 그대로 표시됩니다."
-              en="What you save here is what visitors see on your card in the tutor directory."
+              ko="공개 카드에 표시되는 내용입니다. 수정은 관리자 검토를 거쳐 반영됩니다."
+              en="This is what visitors see. Changes are applied by an admin after review."
             />
           </span>
         </header>
-        <TutorProfileForm profile={current} />
+        <TutorProfileForm profile={current} pending={pending} />
       </section>
     </main>
   );

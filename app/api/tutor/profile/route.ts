@@ -5,9 +5,9 @@ import { parseProfile } from "../../../../utils/tutors/profile-patch";
 
 export const dynamic = "force-dynamic";
 
-// A tutor edits their own card: availability, per-subject scores, bio, video.
-// Admins edit the same fields through /api/admin/tutors.
-export async function PATCH(request: NextRequest) {
+// Tutors no longer edit their card directly. They submit the change they want
+// and an admin applies it, so the public card and the registry never diverge.
+export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,23 +31,43 @@ export async function PATCH(request: NextRequest) {
     return error("요청 형식이 올바르지 않습니다.", 400);
   }
 
-  const patch = parseProfile(body);
-  if (typeof patch === "string") return error(patch, 400);
+  const payload = parseProfile(body);
+  if (typeof payload === "string") return error(payload, 400);
+
+  const note = typeof body.note === "string" ? body.note.trim().slice(0, 1000) : "";
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
   } catch {
-    return error("프로필 시스템이 아직 설정되지 않았습니다.", 503);
+    return error("변경 요청 시스템이 아직 설정되지 않았습니다.", 503);
   }
 
-  const { error: updateError } = await admin
-    .from("tutors")
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("registry_id", profile.tutor_registry_id);
+  // One open request at a time. A second submission replaces the first rather
+  // than queueing two versions of the same card for the admin to reconcile.
+  const { data: open } = await admin
+    .from("tutor_profile_requests")
+    .select("id")
+    .eq("tutor_registry_id", profile.tutor_registry_id)
+    .eq("status", "pending")
+    .maybeSingle();
 
-  if (updateError) return error("프로필을 저장하지 못했습니다.", 500);
-  return NextResponse.json({ ok: true });
+  const row = {
+    tutor_registry_id: profile.tutor_registry_id,
+    requested_by: user.id,
+    payload,
+    note: note || null,
+    status: "pending",
+    seen_by_admin: false,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: writeError } = open
+    ? await admin.from("tutor_profile_requests").update(row).eq("id", open.id)
+    : await admin.from("tutor_profile_requests").insert(row);
+
+  if (writeError) return error("변경 요청을 저장하지 못했습니다.", 500);
+  return NextResponse.json({ ok: true, replaced: Boolean(open) });
 }
 
 function error(message: string, status: number) {

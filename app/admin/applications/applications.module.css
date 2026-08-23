@@ -21,3 +21,12 @@
 :global(html[data-theme="dark"]) .createForm input{background:#111b2b;border-color:rgba(219,228,241,.2);color:#f7f9fc}
 .provisionLink{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border:1px solid rgba(10,32,70,.2);border-radius:999px;font-size:.78rem;font-weight:700;color:#163a51}
 .provisionLink:hover{background:rgba(22,58,81,.06)}
+
+/* Tutor card change requests. */
+.diff{display:grid;gap:8px;margin:0 0 4px}
+.diff div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px}
+.diff dt{font-size:.76rem;font-weight:800;color:#818896}
+.diff dd{margin:0;font-size:.88rem;line-height:1.5;overflow-wrap:anywhere}
+.requestNote{margin:0;padding:12px 14px;border-radius:10px;background:#f4efe5;color:#53636c;font-size:.86rem;line-height:1.5;white-space:pre-wrap}
+@media(max-width:600px){.diff div{grid-template-columns:1fr}}
+:global(html[data-theme="dark"]) .requestNote{background:#1d2634;color:#c2cbd8}

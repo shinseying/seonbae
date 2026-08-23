@@ -8,6 +8,7 @@ export type AdminSection =
   | "tutors"
   | "tutor-accounts"
   | "bookings"
+  | "card-requests"
   | "sessions"
   | "consultation-sessions"
   | "consultations"
@@ -36,7 +37,8 @@ export default function AdminSidebar({
   const links: Array<{ key: AdminSection; href: string; label: string }> = [
     { key: "tutors", href: "/admin", label: "튜터 명부" },
     { key: "tutor-accounts", href: "/admin/tutor-accounts", label: "튜터 계정 생성" },
-    { key: "bookings", href: "/admin/bookings", label: "상담 예약" },
+    { key: "bookings", href: "/admin/bookings", label: "수업 예약" },
+    { key: "card-requests", href: "/admin/card-requests", label: "카드 변경 요청" },
     { key: "sessions", href: "/admin/sessions", label: "Zoom 수업" },
     { key: "consultation-sessions", href: "/admin/consultation-sessions", label: "보호자 상담 일정" },
     { key: "consultations", href: "/admin/consultations", label: "상담 신청" },

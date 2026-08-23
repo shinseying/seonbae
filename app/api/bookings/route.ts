@@ -2,19 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../utils/supabase/admin";
 import { createClient } from "../../../utils/supabase/server";
 import { sendBookingEmail } from "../../../utils/email/booking";
-import { isEmailAddress } from "../../../utils/auth/school-email";
-import { normalizePhone } from "../../../utils/auth/phone";
-import { authRateLimitResponse, consumeAuthRateLimit } from "../../../utils/auth/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 const DAYS = new Set(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
 
-// A visitor books an intro call from a tutor card. No account is required, so
-// this writes with the service-role client after validating the payload.
+// A signed-in student or parent books lessons with a tutor. Intro calls are
+// withdrawn, so there is no anonymous path into this route.
 export async function POST(request: NextRequest) {
-  const rateLimit = await consumeAuthRateLimit(request, "consultation");
-  if (!rateLimit.allowed) return authRateLimitResponse(rateLimit.retryAfterSeconds);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return error("로그인 후 예약할 수 있습니다.", 401);
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name,email,phone,role,account_status")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || (profile.role !== "student" && profile.role !== "parent")) {
+    return error("학생 또는 보호자 계정만 예약할 수 있습니다.", 403);
+  }
+  if (profile.account_status !== "approved") {
+    return error("계정 승인 후 예약할 수 있습니다.", 403);
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -24,17 +37,17 @@ export async function POST(request: NextRequest) {
   }
 
   const tutorRegistryId = text(body.tutorRegistryId, 24);
-  const name = text(body.name, 80);
-  const email = text(body.email, 254).toLowerCase();
-  const phone = normalizePhone(text(body.phone, 24)) || null;
+  const subject = text(body.subject, 100);
   const preferredDay = text(body.preferredDay, 3).toLowerCase();
   const preferredTime = text(body.preferredTime, 20);
   const note = text(body.note, 1000) || null;
 
   if (!tutorRegistryId) return error("튜터를 확인하지 못했습니다.", 400);
-  if (name.length < 2) return error("이름을 입력해 주세요.", 400);
-  if (!isEmailAddress(email)) return error("올바른 이메일 주소를 입력해 주세요.", 400);
-  if (preferredDay && !DAYS.has(preferredDay)) return error("희망 요일을 다시 선택해 주세요.", 400);
+  if (!subject) return error("과목을 입력해 주세요.", 400);
+  if (!preferredDay || !DAYS.has(preferredDay)) return error("희망 요일을 선택해 주세요.", 400);
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(preferredTime)) {
+    return error("희망 시각을 24시간 형식으로 선택해 주세요.", 400);
+  }
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
@@ -50,15 +63,20 @@ export async function POST(request: NextRequest) {
     .single();
   if (!tutor || !tutor.active) return error("해당 튜터는 예약을 받을 수 없습니다.", 404);
 
+  const requesterName = profile.full_name || profile.email || "회원";
+  const requesterEmail = profile.email || user.email || "";
+
   const { data: booking, error: insertError } = await admin
     .from("booking_requests")
     .insert({
       tutor_registry_id: tutorRegistryId,
-      name,
-      email,
-      phone,
-      preferred_day: preferredDay || null,
-      preferred_time: preferredTime || null,
+      requester_id: user.id,
+      name: requesterName,
+      email: requesterEmail,
+      phone: profile.phone ?? null,
+      subject,
+      preferred_day: preferredDay,
+      preferred_time: preferredTime,
       note,
     })
     .select("id")
@@ -66,8 +84,8 @@ export async function POST(request: NextRequest) {
 
   if (insertError || !booking) return error("예약을 저장하지 못했습니다.", 500);
 
-  // The admin and the tutor both see this in their portal. Email is the tutor's
-  // extra copy, and a failure to send never loses the booking.
+  // The tutor and the admin both see this in their portal. Email is the
+  // tutor's extra copy, and a failure to send never loses the booking.
   const { data: tutorProfile } = await admin
     .from("profiles")
     .select("email")
@@ -80,11 +98,12 @@ export async function POST(request: NextRequest) {
         bookingId: booking.id,
         tutorName: tutor.name,
         tutorEmail: tutorProfile.email,
-        name,
-        email,
-        phone,
-        preferredDay: preferredDay || null,
-        preferredTime: preferredTime || null,
+        name: requesterName,
+        email: requesterEmail,
+        phone: profile.phone ?? null,
+        subject,
+        preferredDay,
+        preferredTime,
         note,
         portalUrl: `${request.nextUrl.origin}/portal/tutor`,
       });

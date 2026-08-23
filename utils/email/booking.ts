@@ -7,6 +7,7 @@ type BookingEmail = {
   name: string;
   email: string;
   phone?: string | null;
+  subject?: string | null;
   preferredDay?: string | null;
   preferredTime?: string | null;
   note?: string | null;
@@ -40,10 +41,10 @@ export async function sendBookingEmail(input: BookingEmail) {
       from,
       to: [input.tutorEmail],
       reply_to: input.email,
-      subject: `[선배] 새 상담 예약 · ${input.name}`,
+      subject: `[선배] 새 수업 예약 · ${input.name}`,
       html: html(input, slot),
       text: plain(input, slot),
-      tags: [{ name: "workflow", value: "booking_request" }],
+      tags: [{ name: "workflow", value: "lesson_booking" }],
     }),
     cache: "no-store",
   });
@@ -61,11 +62,12 @@ function html(input: BookingEmail, slot: string) {
   return `
     <div style="font-family:Arial,sans-serif;color:#201e19;line-height:1.6;max-width:620px;background:#fbf7ef;padding:28px">
       <p style="font-size:12px;letter-spacing:.12em;color:#c1663a;font-weight:700">SEONBAE BOOKING</p>
-      <h1 style="font-size:23px;color:#163a51">${escapeHtml(input.tutorName)} 선배님, 상담 예약이 도착했습니다.</h1>
+      <h1 style="font-size:23px;color:#163a51">${escapeHtml(input.tutorName)} 선배님, 수업 예약이 도착했습니다.</h1>
       <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:9px;margin:18px 0">
         ${row("이름", input.name)}
         ${row("이메일", input.email)}
         ${input.phone ? row("연락처", input.phone) : ""}
+        ${input.subject ? row("과목", input.subject) : ""}
         ${row("희망 시간", slot)}
       </table>
       ${input.note ? `<p style="padding:14px 16px;background:#f4efe5;border-radius:8px;white-space:pre-wrap">${escapeHtml(input.note)}</p>` : ""}
@@ -76,10 +78,11 @@ function html(input: BookingEmail, slot: string) {
 
 function plain(input: BookingEmail, slot: string) {
   return [
-    `${input.tutorName} 선배님, 새 상담 예약이 도착했습니다.`,
+    `${input.tutorName} 선배님, 새 수업 예약이 도착했습니다.`,
     `이름: ${input.name}`,
     `이메일: ${input.email}`,
     input.phone ? `연락처: ${input.phone}` : "",
+    input.subject ? `과목: ${input.subject}` : "",
     `희망 시간: ${slot}`,
     input.note ? `메모: ${input.note}` : "",
     `튜터 포털: ${input.portalUrl}`,

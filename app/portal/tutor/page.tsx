@@ -43,7 +43,7 @@ export default async function TutorPortalPage() {
       .order("updated_at", { ascending: false }),
     supabase
       .from("booking_requests")
-      .select("id,name,email,phone,preferred_day,preferred_time,note,status,seen_by_tutor,created_at")
+      .select("id,name,email,phone,subject,preferred_day,preferred_time,note,status,seen_by_tutor,created_at")
       .eq("tutor_registry_id", profile.tutor_registry_id)
       .order("created_at", { ascending: false })
       .limit(30),
@@ -57,6 +57,7 @@ export default async function TutorPortalPage() {
     phone: row.phone,
     preferredDay: row.preferred_day,
     preferredTime: row.preferred_time,
+    subject: row.subject,
     note: row.note,
     status: row.status,
     unread: !row.seen_by_tutor,
