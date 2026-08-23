@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "../../../utils/supabase/server";
 import type { PortalChatThread } from "../ChatPanel";
+import type { PortalBooking } from "../BookingsPanel";
 import TutorPortalDashboard, {
   type TutorPortalSession,
 } from "./TutorPortalDashboard";
@@ -26,7 +27,7 @@ export default async function TutorPortalPage() {
     redirect("/portal");
   }
 
-  const [{ data: sessionRows }, { data: threadRows }] = await Promise.all([
+  const [{ data: sessionRows }, { data: threadRows }, { data: bookingRows }] = await Promise.all([
     supabase
       .from("portal_sessions")
       .select(
@@ -40,7 +41,27 @@ export default async function TutorPortalPage() {
       .select("id,student_id")
       .eq("tutor_registry_id", profile.tutor_registry_id)
       .order("updated_at", { ascending: false }),
+    supabase
+      .from("booking_requests")
+      .select("id,name,email,phone,preferred_day,preferred_time,note,status,seen_by_tutor,created_at")
+      .eq("tutor_registry_id", profile.tutor_registry_id)
+      .order("created_at", { ascending: false })
+      .limit(30),
   ]);
+
+  const bookings: PortalBooking[] = (bookingRows ?? []).map((row) => ({
+    id: row.id,
+    tutorName: "",
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    preferredDay: row.preferred_day,
+    preferredTime: row.preferred_time,
+    note: row.note,
+    status: row.status,
+    unread: !row.seen_by_tutor,
+    createdAt: row.created_at,
+  }));
 
   const studentIds = Array.from(
     new Set([
@@ -102,6 +123,7 @@ export default async function TutorPortalPage() {
       }}
       sessions={sessions}
       chatThreads={chatThreads}
+      bookings={bookings}
     />
   );
 }

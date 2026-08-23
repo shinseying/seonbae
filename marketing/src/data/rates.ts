@@ -21,6 +21,8 @@ export interface Rate {
   curriculum: CurriculumSlug;
   group: string;
   name: string;
+  /** Korean label. Set only where the English name would not do on the KO site. */
+  nameKo?: string;
   price: number; // KRW per hour
 }
 
@@ -178,9 +180,9 @@ export const rates: Rate[] = [
   { curriculum: 'standardized-tests', group: 'English proficiency', name: 'TOEFL', price: 70000 },
 
   // ----- English -----------------------------------------------------------
-  { curriculum: 'english-writing', group: 'English', name: 'Beginner’s English, ESL', price: 60000 },
-  { curriculum: 'english-writing', group: 'English', name: 'Academic English', price: 70000 },
-  { curriculum: 'english-writing', group: 'English', name: 'Business English', price: 80000 },
+  { curriculum: 'english-writing', group: 'English', name: 'Beginner’s English, ESL', nameKo: '초급 영어', price: 60000 },
+  { curriculum: 'english-writing', group: 'English', name: 'Academic English', nameKo: '학교 영어', price: 70000 },
+  { curriculum: 'english-writing', group: 'English', name: 'Business English', nameKo: '직장 영어', price: 80000 },
 ];
 
 /** Every rate for one curriculum, in the order written above. */

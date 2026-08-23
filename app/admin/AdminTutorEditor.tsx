@@ -18,6 +18,13 @@ export type AdminTutor = {
   zoom_host_email: string | null;
   display_order: number;
   active: boolean;
+  subject_scores?: Array<{ subject: string; score: string }> | null;
+  availability?: Record<string, string[]> | null;
+  bio?: string | null;
+  bio_en?: string | null;
+  video_url?: string | null;
+  languages?: string | null;
+  lesson_format?: string | null;
 };
 
 const bannerOptions = [

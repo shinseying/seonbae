@@ -31,7 +31,7 @@ export async function GET() {
   let { data, error } = await supabase
     .from("tutors")
     .select(
-      "registry_id,name,exam,score,category,tier,university,university_en,photo_url,banner_url,display_order",
+      "registry_id,name,exam,score,category,tier,university,university_en,photo_url,banner_url,display_order,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format",
     )
     .eq("active", true)
     .order("display_order", { ascending: true })

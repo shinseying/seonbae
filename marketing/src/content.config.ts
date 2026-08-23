@@ -21,24 +21,6 @@ const subjects = defineCollection({
   }),
 });
 
-// Verified tutors. Sample profiles the founders will replace with the live roster.
-const tutors = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/tutors' }),
-  schema: z.object({
-    name: z.string(),
-    hangul: z.string().optional(),
-    university: z.string(),
-    specialty: z.array(z.string()),
-    levels: z.array(z.string()),
-    languages: z.array(z.string()),
-    credentials: z.array(z.string()),
-    availability: z.string(),
-    teachingStyle: z.string(),
-    accent,
-    order: z.number(),
-    featured: z.boolean().default(false),
-  }),
-});
 
 // Editorial learning resources.
 const resources = defineCollection({
@@ -55,19 +37,6 @@ const resources = defineCollection({
   }),
 });
 
-const testimonials = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/testimonials' }),
-  schema: z.object({
-    name: z.string(),
-    context: z.string(),
-    quote: z.string(),
-    rating: z.number().min(1).max(5).default(5),
-    subject: z.string().optional(),
-    accent,
-    order: z.number(),
-    featured: z.boolean().default(false),
-  }),
-});
 
 // Two ways to work with Seonbae. Rates are per subject, per hour.
 const plans = defineCollection({
@@ -88,4 +57,4 @@ const plans = defineCollection({
   }),
 });
 
-export const collections = { subjects, tutors, resources, testimonials, plans };
+export const collections = { subjects, resources, plans };

@@ -67,6 +67,10 @@ const nextConfig = {
           destination: "/marketing/tutors/index.html",
         },
         {
+          source: "/404",
+          destination: "/marketing/404/index.html",
+        },
+        {
           source: "/verification",
           destination: "/marketing/verification/index.html",
         },

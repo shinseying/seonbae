@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { lessonAmountKrw } from "../../../utils/billing/rate-lookup";
 import { createClient } from "../../../utils/supabase/server";
 import {
   BILLING_ACCESS_COOKIE,
@@ -67,7 +68,7 @@ export default async function BillingPage() {
           studentName: studentNames.get(session.user_id) || "학생",
           tutorName: tutor?.name || "담당 튜터",
           minutes: session.actual_minutes ?? session.duration_minutes,
-          amountKrw: null,
+          amountKrw: lessonAmountKrw(session.subject, session.actual_minutes ?? session.duration_minutes),
           status: session.zoom_status === "ended" ? "confirmed" : "scheduled",
         };
       });

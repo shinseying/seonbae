@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import ChatPanel, { type PortalChatThread } from "../ChatPanel";
+import type { PortalChatThread } from "../ChatPanel";
+import BookingsPanel, { type PortalBooking } from "../BookingsPanel";
 import styles from "../portal.module.css";
 import { useSeonbaeLocale } from "../../../utils/i18n/client";
 
@@ -26,11 +27,13 @@ export default function TutorPortalDashboard({
   tutor,
   sessions,
   chatThreads,
+  bookings,
 }: {
   currentUserId: string;
   tutor: { name: string; email: string; registryId: string };
   sessions: TutorPortalSession[];
   chatThreads: PortalChatThread[];
+  bookings: PortalBooking[];
 }) {
   const locale = useSeonbaeLocale();
   const l = (ko: string, en: string) => locale === "ko" ? ko : en;
@@ -162,6 +165,8 @@ export default function TutorPortalDashboard({
             )}
           </div>
         </section>
+
+        <BookingsPanel bookings={bookings} />
       </section>
     </main>
   );

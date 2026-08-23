@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import PageHero from '../components/PageHero.astro';
 import T from '../components/T.astro';
+import Icon from '../components/Icon.astro';
 import { leadership, TUTOR_CARD_PHOTO } from '../data/people';
 
 const ianTutor = {
@@ -85,18 +86,18 @@ const roster = true;
           <div class="tutor-grid is-loading" id="tutor-grid" aria-busy="true">
             {withCats.map(({ registryId, entry: tutor, cats, score, exam }) => (
               <div class="tutor-cell reveal is-in" data-cats={cats.join(' ')} data-registry-id={registryId}>
-                <article class="live-tutor-card card">
-                  <div class="live-tutor-card__visual">
-                    <img class="live-tutor-card__photo" src={TUTOR_CARD_PHOTO} alt={tutor.name} width="800" height="800" loading="lazy" decoding="async" />
-                    <span class="live-tutor-card__verified"><T en="Verified" ko="검증 완료" /></span>
-                  </div>
-                  <div class="live-tutor-card__body">
-                    <div class="live-tutor-card__id"><h3><T en={tutor.name} ko={tutor.hangul} /></h3></div>
-                    <p class="live-tutor-card__uni"><T en={tutor.university} ko={tutor.universityKo} /></p>
-                    <p class="live-tutor-card__score"><strong>{score}</strong><span><T en={exam.en} ko={exam.ko} /></span></p>
-                    <a class="textlink live-tutor-card__action" href={`/get-matched?tutor=${encodeURIComponent(tutor.name)}`}><T en="Request this tutor" ko="이 튜터로 상담 신청" />
-                      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </a>
+                <article class="tcardx card">
+                  <span class="tcardx__verified"><Icon name="verify" size={15} /> <T en="Verified Tutor" ko="검증 완료" /></span>
+                  <img class="tcardx__avatar" src={TUTOR_CARD_PHOTO} alt={tutor.name} width="320" height="320" loading="lazy" decoding="async" />
+                  <h3 class="tcardx__name"><T en={tutor.name} ko={tutor.hangul} /><small><T en={tutor.hangul} ko={tutor.name} /></small></h3>
+                  <p class="tcardx__uni"><T en={tutor.university} ko={tutor.universityKo} /></p>
+                  <ul class="tcardx__scores">
+                    <li><b>{score}</b><span><T en={exam.en} ko={exam.ko} /></span></li>
+                  </ul>
+                  <div class="tcardx__foot">
+                    <button type="button" class="tcardx__book" disabled>
+                      <T en="Book Intro Call" ko="상담 예약하기" />
+                    </button>
                   </div>
                 </article>
               </div>
@@ -128,6 +129,54 @@ const roster = true;
       </div>
     </div>
   </section>
+
+  <dialog class="book" id="book-dialog" aria-labelledby="book-heading">
+    <div class="book__panel">
+      <button type="button" class="book__close" data-close-book aria-label="Close">×</button>
+      <p class="book__eyebrow"><T en="Intro call" ko="상담 예약" /></p>
+      <h2 class="h3" id="book-heading"><span data-book-title></span></h2>
+
+      <h3 class="book__sub"><T en="Available hours" ko="가능 시간" /></h3>
+      <div class="book__calendar" data-book-calendar></div>
+
+      <form class="book__form" novalidate>
+        <input type="text" name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <input type="hidden" name="preferredSlot" />
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="bk-name"><T en="Your name" ko="이름" /></label>
+            <input id="bk-name" name="name" class="form-control" type="text" required maxlength="80" autocomplete="name" />
+          </div>
+          <div class="form-field">
+            <label for="bk-phone"><T en="Mobile number" ko="휴대전화번호" /></label>
+            <input id="bk-phone" name="phone" class="form-control" type="tel" maxlength="24" autocomplete="tel" placeholder="01012345678" />
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="bk-email"><T en="Email" ko="이메일" /></label>
+          <input id="bk-email" name="email" class="form-control" type="email" required maxlength="254" autocomplete="email" placeholder="you@email.com" />
+        </div>
+        <div class="form-field">
+          <label for="bk-note"><T en="Anything we should know" ko="전하고 싶은 내용" /> <span class="book__opt"><T en="optional" ko="선택" /></span></label>
+          <textarea id="bk-note" name="note" class="form-control" rows="3" maxlength="1000"></textarea>
+        </div>
+        <button type="submit" class="btn btn--primary btn--lg book__submit">
+          <span><T en="Send booking request" ko="예약 요청 보내기" /></span>
+          <span class="btn__disc" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </button>
+        <p class="book__status" role="status" aria-live="polite" data-book-status hidden></p>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="vid" id="video-dialog" aria-labelledby="video-heading">
+    <div class="vid__panel">
+      <button type="button" class="book__close" data-close-video aria-label="Close">×</button>
+      <h2 class="h3 vid__title" id="video-heading"><span data-video-title></span></h2>
+      <div class="vid__frame" data-video-frame></div>
+    </div>
+  </dialog>
+
 </Base>
 
 <style>
@@ -265,6 +314,144 @@ const roster = true;
     .tutor-grid { grid-template-columns: 1fr; }
     .closing { grid-template-columns: 1fr; align-items: start; }
   }
+
+  /* ----- Tutor card ------------------------------------------------------- */
+  .tcardx {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    height: 100%;
+    padding: clamp(22px, 2.6vw, 30px) clamp(18px, 2.2vw, 26px) clamp(18px, 2.2vw, 24px);
+    border-radius: 22px;
+    border: 1px solid var(--line-soft);
+    background: var(--white);
+    box-shadow: 0 14px 36px rgba(22, 48, 69, .07);
+    text-align: center;
+    transition: transform .24s ease, box-shadow .24s ease;
+  }
+  .tcardx:hover { transform: translateY(-3px); box-shadow: 0 22px 48px rgba(22, 48, 69, .12); }
+
+  .tcardx__verified {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 15px; border-radius: var(--r-pill);
+    border: 1px solid var(--line); background: var(--white);
+    color: var(--violet); font-size: .78rem; font-weight: 700;
+    box-shadow: var(--shadow-sm);
+  }
+  .tcardx__avatar {
+    width: 118px; height: 118px; border-radius: 50%;
+    object-fit: contain; background: var(--violet-soft);
+    border: 5px solid var(--canvas);
+  }
+  .tcardx__name {
+    font-family: var(--display); font-weight: 800; font-size: 1.7rem;
+    letter-spacing: -.03em; line-height: 1.1; color: var(--violet);
+    display: flex; align-items: baseline; justify-content: center; gap: 9px; flex-wrap: wrap;
+  }
+  .tcardx__name small { font-size: .95rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+  .tcardx__uni { font-size: 1.02rem; font-weight: 600; color: var(--ink); margin-top: -6px; }
+
+  .tcardx__scores { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .tcardx__scores li {
+    display: inline-flex; align-items: baseline; gap: 7px;
+    padding: 7px 14px; border-radius: var(--r-pill);
+    background: var(--violet-soft);
+  }
+  .tcardx__scores b { font-family: var(--display); font-weight: 800; font-size: .98rem; color: var(--violet); }
+  .tcardx__scores span { font-size: .82rem; color: var(--muted); }
+
+  .tcardx__bio {
+    width: 100%; padding-top: 14px; border-top: 1px solid var(--line);
+    color: var(--muted); font-size: .94rem; line-height: 1.6; text-align: left;
+  }
+
+  .tcardx__video {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 9px 16px; border: 1px solid var(--line); border-radius: var(--r-pill);
+    background: var(--white); color: var(--ink);
+    font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer;
+    transition: border-color .16s ease, background .16s ease;
+  }
+  .tcardx__video:hover { border-color: var(--violet); background: var(--violet-soft); }
+  .tcardx__play {
+    display: grid; place-items: center; width: 22px; height: 22px; flex: none;
+    border-radius: 50%; background: var(--violet); color: #fff; font-size: .6rem; padding-left: 2px;
+  }
+
+  .tcardx__meta {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+    width: 100%; margin: 0; padding-top: 14px; border-top: 1px solid var(--line);
+  }
+  .tcardx__meta div { display: grid; gap: 3px; text-align: left; }
+  .tcardx__meta dt { font-size: .72rem; color: var(--muted-soft); }
+  .tcardx__meta dd { margin: 0; font-size: .84rem; font-weight: 600; color: var(--ink); line-height: 1.35; }
+
+  .tcardx__foot { width: 100%; margin-top: auto; padding-top: 16px; }
+  .tcardx__book {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; min-height: 54px; padding: 0 20px;
+    border: 0; border-radius: 14px;
+    background: var(--violet); color: #fff;
+    font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer;
+    transition: background .16s ease, transform .16s ease;
+  }
+  .tcardx__book:hover:not([disabled]) { background: var(--violet-deep); transform: translateY(-1px); }
+  .tcardx__book[disabled] { opacity: .5; cursor: default; }
+
+  /* ----- Booking dialog --------------------------------------------------- */
+  .book, .vid {
+    position: fixed; inset: 0; width: min(calc(100vw - 32px), 620px); max-width: none;
+    max-height: min(calc(100dvh - 32px), 860px); margin: auto; padding: 0;
+    border: 0; border-radius: var(--r-xl); background: transparent; color: var(--ink);
+    box-shadow: var(--shadow-lift); overflow: visible;
+  }
+  .vid { width: min(calc(100vw - 32px), 860px); }
+  .book::backdrop, .vid::backdrop { background: rgba(19, 24, 27, .56); backdrop-filter: blur(4px); }
+  .book__panel, .vid__panel {
+    position: relative; max-height: inherit; overflow: auto;
+    padding: clamp(24px, 4vw, 40px); background: var(--white);
+    border: 1px solid var(--line-soft); border-radius: inherit;
+  }
+  .book__close {
+    position: absolute; top: 14px; right: 14px; display: grid; place-items: center;
+    width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 50%;
+    background: var(--white); color: var(--ink); font-size: 1.5rem; line-height: 1; cursor: pointer;
+  }
+  .book__close:hover { background: var(--ink); color: var(--white); }
+  .book__eyebrow { font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--violet); font-weight: 700; }
+  .book__sub { margin-top: 24px; font-family: var(--display); font-size: 1rem; font-weight: 750; }
+
+  .book__calendar { display: grid; gap: 6px; margin-top: 12px; }
+  .book__day { display: grid; grid-template-columns: 46px minmax(0, 1fr); align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .book__dow { font-size: .82rem; font-weight: 700; color: var(--muted); }
+  .book__ranges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .book__slot {
+    padding: 7px 13px; border: 1px solid var(--line); border-radius: var(--r-pill);
+    background: var(--white); color: var(--ink); font: inherit; font-size: .82rem; font-weight: 600;
+    cursor: pointer; transition: border-color .14s ease, background .14s ease, color .14s ease;
+  }
+  .book__slot:hover { border-color: var(--violet); }
+  .book__slot.is-on { background: var(--violet); border-color: var(--violet); color: #fff; }
+  .book__none { color: var(--muted-soft); font-size: .82rem; }
+  .book__empty { color: var(--muted); font-size: .9rem; line-height: 1.55; }
+
+  .book__form { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
+  .book__opt { font-weight: 500; color: var(--muted-soft); }
+  .book__submit { width: 100%; justify-content: space-between; margin-top: 4px; }
+  .book__submit[disabled] { opacity: .65; cursor: progress; }
+  .book__status { margin: 0; padding: 12px 15px; border-radius: var(--r-sm); font-size: .92rem; line-height: 1.5; }
+  .book__status[data-tone='ok'] { background: var(--sage); color: var(--sage-ink); }
+  .book__status[data-tone='error'] { background: #fbeeea; color: #8f302b; }
+
+  .vid__title { font-size: 1.2rem; padding-right: 48px; }
+  .vid__frame { margin-top: 16px; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #0d1418; }
+  .vid__frame :global(video), .vid__frame :global(iframe) { width: 100%; height: 100%; border: 0; display: block; }
+
+  @media (max-width: 560px) {
+    .tcardx__meta { grid-template-columns: 1fr; }
+    .book, .vid { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
+  }
 </style>
 
 <script>
@@ -285,7 +472,15 @@ const roster = true;
     university?: string;
     university_en?: string;
     photo_url?: string | null;
+    subject_scores?: Array<{ subject: string; score: string }>;
+    availability?: Record<string, string[]>;
+    bio?: string | null;
+    bio_en?: string | null;
+    video_url?: string | null;
+    languages?: string | null;
+    lesson_format?: string | null;
   };
+  let roster: Tutor[] = [];
   let cells: HTMLElement[] = [...document.querySelectorAll('.tutor-cell')] as HTMLElement[];
 
   // Astro scopes this page's CSS with a data-astro-cid-* attribute. Cards built
@@ -312,6 +507,12 @@ const roster = true;
   const escapeHtml = (value: unknown) => String(value ?? '')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+  const safeAsset = (value: unknown) => {
+    const url = String(value || '');
+    return /^(\/|https:\/\/)/.test(url) ? escapeHtml(url) : '';
+  };
+  const verifyIcon = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3l7 3v5c0 4.2-2.9 7.4-7 8.5-4.1-1.1-7-4.3-7-8.5V6l7-3z M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const calendarIcon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7z M4 10h16 M8 3v4 M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const language = () => document.documentElement.dataset.lang === 'en' ? 'en' : 'ko';
   const tr = (en: string, ko: string) => language() === 'en' ? en : ko;
 
@@ -337,6 +538,31 @@ const roster = true;
   };
   buttons.forEach(filterRoster);
 
+  const DAYS: Array<{ key: string; en: string; ko: string }> = [
+    { key: 'mon', en: 'Mon', ko: '월' },
+    { key: 'tue', en: 'Tue', ko: '화' },
+    { key: 'wed', en: 'Wed', ko: '수' },
+    { key: 'thu', en: 'Thu', ko: '목' },
+    { key: 'fri', en: 'Fri', ko: '금' },
+    { key: 'sat', en: 'Sat', ko: '토' },
+    { key: 'sun', en: 'Sun', ko: '일' },
+  ];
+
+  const scoresOf = (tutor: Tutor) => Array.isArray(tutor.subject_scores) ? tutor.subject_scores : [];
+  const slotsOf = (tutor: Tutor) => (tutor.availability && typeof tutor.availability === 'object') ? tutor.availability : {};
+  const hasSlots = (tutor: Tutor) => DAYS.some((day) => (slotsOf(tutor)[day.key] || []).length > 0);
+
+  // Weekdays and weekends read better than a seven-day list on the card face.
+  const availabilitySummary = (tutor: Tutor) => {
+    const slots = slotsOf(tutor);
+    const week = ['mon', 'tue', 'wed', 'thu', 'fri'].some((d) => (slots[d] || []).length > 0);
+    const end = ['sat', 'sun'].some((d) => (slots[d] || []).length > 0);
+    if (week && end) return tr('Weekdays & Weekends', '평일·주말');
+    if (week) return tr('Weekdays', '평일');
+    if (end) return tr('Weekends', '주말');
+    return tr('On request', '문의');
+  };
+
   const renderTutors = (tutors: Tutor[]) => {
     const grid = document.getElementById('tutor-grid');
     if (!grid) return;
@@ -344,24 +570,50 @@ const roster = true;
     grid.removeAttribute('aria-busy');
     grid.innerHTML = tutors.map((tutor) => {
       const displayName = tr(tutor.name_en || tutor.name, tutor.name);
-      // Every card carries the same image, so the row's own photo_url is not read.
-      const avatar = `<img class="live-tutor-card__photo" src="${cardPhoto}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="800" height="800" loading="lazy" decoding="async" />`;
+      const altName = tr(tutor.name, tutor.name_en || tutor.name);
+      const uni = escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''));
+      const bio = tr(tutor.bio_en || tutor.bio || '', tutor.bio || tutor.bio_en || '');
+
+      const scores = scoresOf(tutor);
+      const scoreList = scores.length
+        ? scores.map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')
+        : `<li><b>${escapeHtml(tutor.score)}</b><span>${escapeHtml(tutor.exam)}</span></li>`;
+
+      const video = safeAsset(tutor.video_url)
+        ? `<button type="button" class="tcardx__video" data-video="${safeAsset(tutor.video_url)}" data-name="${escapeHtml(displayName)}">
+             <span class="tcardx__play" aria-hidden="true">&#9658;</span>${tr('Watch sample lesson', '샘플 수업 보기')}
+           </button>`
+        : '';
+
+      const meta = `
+        <dl class="tcardx__meta">
+          <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(tutor.languages || tr('Korean, English', '한국어, 영어'))}</dd></div>
+          <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(tutor.lesson_format || tr('Online 1:1', '온라인 1:1'))}</dd></div>
+          <div><dt>${tr('Availability', '가능 시간')}</dt><dd>${availabilitySummary(tutor)}</dd></div>
+        </dl>`;
+
       return `<div class="tutor-cell" data-cats="${categoryFor(tutor)}" data-registry-id="${escapeHtml(tutor.registry_id)}">
-        <article class="live-tutor-card card">
-          <div class="live-tutor-card__visual">${avatar}<span class="live-tutor-card__verified">${tr('Verified', '검증 완료')}</span></div>
-          <div class="live-tutor-card__body">
-            <div class="live-tutor-card__id"><h3>${escapeHtml(displayName)}</h3></div>
-            <p class="live-tutor-card__uni">${escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''))}</p>
-            <p class="live-tutor-card__score"><strong>${escapeHtml(tutor.score)}</strong><span>${escapeHtml(tutor.exam)}</span></p>
-            <a class="textlink live-tutor-card__action" href="/get-matched?tutor=${encodeURIComponent(tutor.name)}">${tr('Request this tutor', '이 튜터로 상담 신청')}
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </a>
+        <article class="tcardx card">
+          <span class="tcardx__verified">${verifyIcon}${tr('Verified Tutor', '검증 완료')}</span>
+          <img class="tcardx__avatar" src="${cardPhoto}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="320" height="320" loading="lazy" decoding="async" />
+          <h3 class="tcardx__name">${escapeHtml(displayName)}<small>${escapeHtml(altName)}</small></h3>
+          <p class="tcardx__uni">${uni}</p>
+          <ul class="tcardx__scores">${scoreList}</ul>
+          ${bio ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>` : ''}
+          ${video}
+          ${meta}
+          <div class="tcardx__foot">
+            <button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}" data-tutor-name="${escapeHtml(displayName)}">
+              ${calendarIcon}${tr('Book Intro Call', '상담 예약하기')}
+            </button>
           </div>
         </article>
       </div>`;
     }).join('');
+
     applyScope(grid);
     cells = [...grid.querySelectorAll('.tutor-cell')] as HTMLElement[];
+    roster = tutors;
     Object.keys(staticFilterCounts).forEach((key) => { staticFilterCounts[key] = 0; });
     staticFilterCounts.all = tutors.length;
     tutors.forEach((tutor) => { staticFilterCounts[categoryFor(tutor)] += 1; });
@@ -400,5 +652,130 @@ const roster = true;
       grid?.classList.remove('is-loading');
       grid?.removeAttribute('aria-busy');
     });
+  // ----- Booking dialog ----------------------------------------------------
+  // One dialog serves every card: the calendar and the form are rebuilt from
+  // whichever tutor was clicked.
+  const dialog = document.querySelector('#book-dialog') as HTMLDialogElement | null;
+  const bookForm = dialog?.querySelector('form.book__form') as HTMLFormElement | null;
+  const bookTitle = dialog?.querySelector('[data-book-title]') as HTMLElement | null;
+  const bookCal = dialog?.querySelector('[data-book-calendar]') as HTMLElement | null;
+  const bookSlot = dialog?.querySelector('input[name="preferredSlot"]') as HTMLInputElement | null;
+  const bookStatus = dialog?.querySelector('[data-book-status]') as HTMLElement | null;
+  const bookSubmit = dialog?.querySelector('.book__submit') as HTMLButtonElement | null;
+  let bookingTutor: Tutor | null = null;
+
+  const openBooking = (registryId: string) => {
+    bookingTutor = roster.find((tutor) => tutor.registry_id === registryId) ?? null;
+    if (!bookingTutor || !dialog) return;
+
+    const name = tr(bookingTutor.name_en || bookingTutor.name, bookingTutor.name);
+    if (bookTitle) bookTitle.textContent = name;
+    if (bookStatus) { bookStatus.hidden = true; bookStatus.textContent = ''; }
+    if (bookSlot) bookSlot.value = '';
+    bookForm?.reset();
+
+    const slots = slotsOf(bookingTutor);
+    if (bookCal) {
+      bookCal.innerHTML = hasSlots(bookingTutor)
+        ? DAYS.map((day) => {
+            const ranges = slots[day.key] || [];
+            const cells = ranges.length
+              ? ranges.map((range) => `<button type="button" class="book__slot" data-slot="${escapeHtml(day.key)}|${escapeHtml(range)}">${escapeHtml(range)}</button>`).join('')
+              : `<span class="book__none">&mdash;</span>`;
+            return `<div class="book__day"><span class="book__dow">${tr(day.en, day.ko)}</span><div class="book__ranges">${cells}</div></div>`;
+          }).join('')
+        : `<p class="book__empty">${tr('This tutor has not published their hours yet. Send a request and we will arrange a time.', '아직 가능 시간이 등록되지 않았습니다. 요청을 보내주시면 시간을 조율해 드립니다.')}</p>`;
+    }
+
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+  };
+
+  document.addEventListener('click', (event) => {
+    const trigger = (event.target as HTMLElement).closest('[data-book]') as HTMLElement | null;
+    if (trigger) { openBooking(trigger.dataset.book || ''); return; }
+
+    const slot = (event.target as HTMLElement).closest('.book__slot') as HTMLElement | null;
+    if (slot && bookSlot) {
+      dialog?.querySelectorAll('.book__slot').forEach((node) => node.classList.remove('is-on'));
+      slot.classList.add('is-on');
+      bookSlot.value = slot.dataset.slot || '';
+    }
+
+    const play = (event.target as HTMLElement).closest('[data-video]') as HTMLElement | null;
+    if (play) openVideo(play.dataset.video || '', play.dataset.name || '');
+  });
+
+  dialog?.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+
+  bookForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!bookForm.reportValidity() || !bookingTutor) return;
+
+    const data = new FormData(bookForm);
+    if (String(data.get('company') || '')) return;
+    const [day = '', time = ''] = String(data.get('preferredSlot') || '').split('|');
+
+    if (bookSubmit) bookSubmit.disabled = true;
+    if (bookStatus) { bookStatus.hidden = true; bookStatus.removeAttribute('data-tone'); }
+
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tutorRegistryId: bookingTutor.registry_id,
+          name: data.get('name'),
+          email: data.get('email'),
+          phone: data.get('phone'),
+          preferredDay: day,
+          preferredTime: time,
+          note: data.get('note'),
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || tr('That did not send.', '요청을 보내지 못했습니다.'));
+
+      bookForm.reset();
+      if (bookSlot) bookSlot.value = '';
+      dialog?.querySelectorAll('.book__slot').forEach((node) => node.classList.remove('is-on'));
+      if (bookStatus) {
+        bookStatus.textContent = tr('Booked. The tutor and our team have been notified.', '예약 요청이 접수되었습니다. 튜터와 담당자에게 전달했습니다.');
+        bookStatus.dataset.tone = 'ok';
+        bookStatus.hidden = false;
+      }
+    } catch (error) {
+      if (bookStatus) {
+        bookStatus.textContent = error instanceof Error ? error.message : tr('Please try again shortly.', '잠시 후 다시 시도해 주세요.');
+        bookStatus.dataset.tone = 'error';
+        bookStatus.hidden = false;
+      }
+    } finally {
+      if (bookSubmit) bookSubmit.disabled = false;
+    }
+  });
+
+  // ----- Sample video ------------------------------------------------------
+  const videoDialog = document.querySelector('#video-dialog') as HTMLDialogElement | null;
+  const videoFrame = videoDialog?.querySelector('[data-video-frame]') as HTMLElement | null;
+  const videoTitle = videoDialog?.querySelector('[data-video-title]') as HTMLElement | null;
+
+  function openVideo(url: string, name: string) {
+    if (!videoDialog || !videoFrame || !url) return;
+    if (videoTitle) videoTitle.textContent = name;
+    // A file plays inline; anything else (YouTube, Vimeo) is framed.
+    videoFrame.innerHTML = /\.(mp4|webm|ogg)$/i.test(url)
+      ? `<video src="${url}" controls playsinline preload="metadata"></video>`
+      : `<iframe src="${url}" title="${escapeHtml(name)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+    if (typeof videoDialog.showModal === 'function') videoDialog.showModal();
+    else videoDialog.setAttribute('open', '');
+  }
+
+  // Stop playback when the dialog closes, or audio keeps running behind it.
+  videoDialog?.addEventListener('close', () => { if (videoFrame) videoFrame.innerHTML = ''; });
+  videoDialog?.addEventListener('click', (event) => { if (event.target === videoDialog) videoDialog.close(); });
+
+  document.querySelector('[data-close-book]')?.addEventListener('click', () => dialog?.close());
+  document.querySelector('[data-close-video]')?.addEventListener('click', () => videoDialog?.close());
   document.querySelectorAll('[data-set-lang]').forEach((button) => button.addEventListener('click', () => location.reload()));
 </script>

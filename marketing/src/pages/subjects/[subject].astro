@@ -4,7 +4,6 @@ import Base from '../../layouts/Base.astro';
 import Eyebrow from '../../components/Eyebrow.astro';
 import Button from '../../components/Button.astro';
 import SubjectCard from '../../components/SubjectCard.astro';
-import TutorCard from '../../components/TutorCard.astro';
 import RateBrowser from '../../components/RateBrowser.astro';
 import { won } from '../../lib/format';
 import { ratesFor, priceRange, type CurriculumSlug } from '../../data/rates';
@@ -23,17 +22,6 @@ const { Content } = await render(entry);
 
 const all = (await getCollection('subjects')).sort((a, b) => a.data.order - b.data.order);
 const related = all.filter((x) => x.id !== entry.id).slice(0, 3);
-
-// Loose match of tutors to this curriculum.
-const token = s.title.split(' ')[0];
-const allTutors = (await getCollection('tutors')).sort((a, b) => a.data.order - b.data.order);
-let tutors = allTutors.filter(
-  (t) =>
-    t.data.levels.some((l) => s.levels.some((sl) => sl.includes(l) || l.includes(sl.split(' ')[0]))) ||
-    t.data.specialty.some((sp) => sp.toLowerCase().includes(token.toLowerCase()))
-);
-if (tutors.length === 0) tutors = allTutors.filter((t) => t.data.featured);
-tutors = tutors.slice(0, 3);
 
 // Prices are per subject, so this page publishes the whole sheet for this
 // curriculum rather than a single "from" figure.
@@ -139,22 +127,6 @@ const ko = subjectsKo[entry.id];
     </div>
   </section>
 
-  {tutors.length > 0 && (
-    <section class="section bg-white">
-      <div class="container">
-        <div class="sec-head reveal">
-          <div>
-            <Eyebrow label="Tutors" labelKo="선배" />
-            <h2 class="h2"><T en={`Tutors for ${s.title}.`} ko={`${ko?.title ?? s.title} 선배.`} /></h2>
-          </div>
-          <Button href="/tutors" label="All tutors" labelKo="전체 선배" variant="text" arrow="right" />
-        </div>
-        <div class="grid three-col">
-          {tutors.map((t) => <div class="reveal"><TutorCard entry={t} /></div>)}
-        </div>
-      </div>
-    </section>
-  )}
 
   <section class="section bg-cream">
     <div class="container">

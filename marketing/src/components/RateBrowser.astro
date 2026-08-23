@@ -57,8 +57,8 @@ const groupKo: Record<string, string> = {
             <h4 class="rb__group-h"><T en={g.group} ko={groupKo[g.group] ?? g.group} /></h4>
             <ul class="rb__rows">
               {g.items.map((r) => (
-                <li class="rb__row" data-name={r.name.toLowerCase()}>
-                  <span class="rb__name">{r.name}</span>
+                <li class="rb__row" data-name={`${r.name} ${r.nameKo ?? ''}`.toLowerCase()}>
+                  <span class="rb__name"><T en={r.name} ko={r.nameKo ?? r.name} /></span>
                   <span class="rb__dots" aria-hidden="true"></span>
                   <span class="rb__price" data-krw={r.price}>{won(r.price)}<span class="rb__unit"><T en="/ hr" ko="/ 시간" /></span></span>
                 </li>

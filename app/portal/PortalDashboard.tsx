@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import ChatPanel, { type PortalChatThread } from "./ChatPanel";
+import type { PortalChatThread } from "./ChatPanel";
 import type { PortalHeaderUser } from "./PortalHeader";
 import { useSeonbaeLocale } from "../../utils/i18n/client";
 import styles from "./portal.module.css";
@@ -368,17 +368,11 @@ export default function PortalDashboard({
           </aside>
         </div>
 
-        {user.role === "parent" ? (
+        {user.role === "parent" && (
           <ParentConsultations
             consultations={consultations}
             completedCount={completedConsultations}
             locale={locale}
-          />
-        ) : (
-          <ChatPanel
-            currentUserId={currentUserId}
-            threads={chatThreads}
-            heading={l("담당 튜터와 채팅", "Chat with your tutor")}
           />
         )}
       </section>

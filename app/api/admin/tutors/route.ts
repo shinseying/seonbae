@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../utils/supabase/server";
+import { parseProfile } from "../../../../utils/tutors/profile-patch";
 
 export const dynamic = "force-dynamic";
 
 const tutorFields =
-  "registry_id,name,exam,score,category,tier,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active";
+  "registry_id,name,exam,score,category,tier,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -95,7 +96,15 @@ export async function PATCH(request: NextRequest) {
   }
   const zoomHostEmail = zoomHostEmailInput || null;
 
+  // Same profile fields the tutor edits themselves, so an admin can correct a
+  // card without asking. Returns a message string when a value is malformed.
+  const profilePatch = parseProfile(body);
+  if (typeof profilePatch === "string") {
+    return NextResponse.json({ error: profilePatch }, { status: 400 });
+  }
+
   const updates = {
+    ...profilePatch,
     name: cleanText(body.name, 80),
     exam: cleanText(body.exam, 80),
     score: cleanText(body.score, 80),
