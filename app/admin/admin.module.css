@@ -18,3 +18,14 @@
 @media(prefers-reduced-motion:reduce){.sidebar nav a,.tutorList>button,.actions button{transition:none!important}}
 :global(html[data-theme="dark"]) .page{--paper:#111b22!important;--card:#17262e!important;--line:rgba(240,238,235,.16)!important;--blue:#d5e6ef!important;--sage:#24382e;--honey:#3b3423;background:var(--paper)!important;color:#f3f0ea!important}:global(html[data-theme="dark"]) .sidebar{background:var(--card)!important}:global(html[data-theme="dark"]) .brand b,:global(html[data-theme="dark"]) .heading h1,:global(html[data-theme="dark"]) .adminAccount b,:global(html[data-theme="dark"]) .sidebar>div b{color:#f3f0ea!important}:global(html[data-theme="dark"]) .sidebar nav a{color:#bdc5c4!important}:global(html[data-theme="dark"]) .sidebar nav .active{background:#d5e6ef!important;color:#14232b!important}:global(html[data-theme="dark"]) .tutorList>button:hover,:global(html[data-theme="dark"]) .tutorList .selectedTutor{background:var(--sage)!important}:global(html[data-theme="dark"]) .formGrid input,:global(html[data-theme="dark"]) .formGrid select{background:#111d24!important;color:#f3f0ea!important}
 @media(max-width:980px){.sidebar nav a{display:flex!important;min-height:44px!important}.sidebar nav a:not(.active){color:#777f7a!important}.sidebar nav a:not(.active) i{display:block!important}.sidebar nav a em{display:none}}@media(max-width:780px){.sidebar{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:12px!important}.sidebar nav{display:flex!important;min-width:0!important;margin:0!important;overflow-x:auto!important;scrollbar-width:none}.sidebar nav::-webkit-scrollbar{display:none}.sidebar nav a,.sidebar nav .active{display:flex!important;min-width:max-content!important;padding:0 11px!important}.sidebar nav a i{display:none!important}}
+
+/* Tutor profile fields in the registry editor. */
+.groupLabel{display:block;font-size:.72rem;font-weight:800;color:#505969;margin-bottom:4px}
+.groupHint{margin:0 0 10px;color:#818896;font-size:.72rem;line-height:1.5}
+.pairRow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) 40px;gap:8px;margin-bottom:8px}
+.pairRow button{border:1px solid rgba(10,32,70,.18);border-radius:9px;background:#fff;color:#8f302b;font-size:1.1rem;cursor:pointer}
+.addRow{min-height:38px;padding:0 15px;border:1px dashed rgba(10,32,70,.3);border-radius:999px;background:none;color:#163a51;font:inherit;font-weight:700;cursor:pointer}
+.dayRow{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;gap:10px;margin-bottom:8px}
+.dayRow>span{font-size:.76rem;font-weight:700;color:#4b5567}
+@media(max-width:640px){.pairRow{grid-template-columns:1fr}.dayRow{grid-template-columns:1fr}}
+:global(html[data-theme="dark"]) .pairRow button,:global(html[data-theme="dark"]) .addRow{background:#111b2b;color:#f0f4fa}

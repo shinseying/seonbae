@@ -101,6 +101,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "계정 정보를 저장하지 못했습니다." }, { status: 500 });
   }
 
+  // A tutor account is useless without a registry row: the directory reads
+  // public.tutors, and the tutor portal gates on profiles.tutor_registry_id.
+  // The row starts hidden so an empty card never appears on the live site.
+  const registryId = `T-${created.user.id.slice(0, 8).toUpperCase()}`;
+  const { error: registryError } = await admin.from("tutors").upsert(
+    {
+      registry_id: registryId,
+      name: application.full_name,
+      exam: "자격 검증 중",
+      score: "검토 중",
+      category: "english",
+      tier: "standard",
+      zoom_host_email: application.email,
+      active: false,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "registry_id" },
+  );
+
+  if (registryError) {
+    await admin.auth.admin.deleteUser(created.user.id);
+    return NextResponse.json({ error: "튜터 명부를 만들지 못했습니다." }, { status: 500 });
+  }
+
+  const { error: linkError } = await admin
+    .from("profiles")
+    .update({ tutor_registry_id: registryId, updated_at: new Date().toISOString() })
+    .eq("id", created.user.id);
+
+  if (linkError) {
+    await admin.auth.admin.deleteUser(created.user.id);
+    return NextResponse.json({ error: "튜터 명부를 계정에 연결하지 못했습니다." }, { status: 500 });
+  }
+
   if (application.id !== null) {
     await admin
       .from("account_creation_requests")
@@ -138,7 +172,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, registryId });
 }
 
 // Meets the sign-up policy (12+ chars, upper, lower, digit, symbol) and is

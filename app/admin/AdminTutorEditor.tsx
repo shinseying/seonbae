@@ -27,6 +27,16 @@ export type AdminTutor = {
   lesson_format?: string | null;
 };
 
+const DAY_FIELDS = [
+  { key: "mon", label: "월요일" },
+  { key: "tue", label: "화요일" },
+  { key: "wed", label: "수요일" },
+  { key: "thu", label: "목요일" },
+  { key: "fri", label: "금요일" },
+  { key: "sat", label: "토요일" },
+  { key: "sun", label: "일요일" },
+];
+
 const bannerOptions = [
   { value: "/university-korea-banner.png", label: "고려대학교 배너" },
   { value: "/university-snu-banner.png", label: "서울대학교 배너" },
@@ -45,6 +55,22 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
     setMessage("");
   }
 
+  function updateScore(index: number, key: "subject" | "score", value: string) {
+    const rows = [...(selected?.subject_scores ?? [])];
+    rows[index] = { ...rows[index], [key]: value };
+    updateSelected("subject_scores", rows);
+  }
+  function addScore() {
+    updateSelected("subject_scores", [...(selected?.subject_scores ?? []), { subject: "", score: "" }]);
+  }
+  function removeScore(index: number) {
+    updateSelected("subject_scores", (selected?.subject_scores ?? []).filter((_, i) => i !== index));
+  }
+  function updateDay(day: string, value: string) {
+    const ranges = value.split(",").map((range) => range.trim()).filter(Boolean);
+    updateSelected("availability", { ...(selected?.availability ?? {}), [day]: ranges });
+  }
+
   async function saveTutor() {
     if (!selected) return;
     setSaving(true);
@@ -52,7 +78,14 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
     const response = await fetch("/api/admin/tutors", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(selected),
+      body: JSON.stringify({
+        ...selected,
+        subjectScores: selected.subject_scores ?? [],
+        availability: selected.availability ?? {},
+        bioEn: selected.bio_en ?? "",
+        videoUrl: selected.video_url ?? "",
+        lessonFormat: selected.lesson_format ?? "",
+      }),
     });
     const result = await response.json();
     if (!response.ok) {
@@ -113,6 +146,49 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
                 <label><span>대학교 배너</span><select value={selected.banner_url || ""} onChange={(event) => updateSelected("banner_url", event.target.value || null)}><option value="">배너 없음</option>{bannerOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
                 <label><span>Zoom 호스트 이메일</span><input type="email" placeholder="tutor@seonbae.com" value={selected.zoom_host_email || ""} onChange={(event) => updateSelected("zoom_host_email", event.target.value || null)} /></label>
                 <label className={styles.full}><span>튜터 사진 URL</span><input type="url" placeholder="https://... 또는 /images/..." value={selected.photo_url || ""} onChange={(event) => updateSelected("photo_url", event.target.value || null)} /></label>
+
+                <div className={styles.full}>
+                  <span className={styles.groupLabel}>과목별 성적</span>
+                  <p className={styles.groupHint}>튜터 카드의 성적 배지로 표시됩니다. 비워 두면 위의 시험·검증 성적이 대신 표시됩니다.</p>
+                  {(selected.subject_scores ?? []).map((row, index) => (
+                    <div className={styles.pairRow} key={index}>
+                      <input
+                        value={row.subject}
+                        placeholder="예: IB Economics HL"
+                        onChange={(event) => updateScore(index, "subject", event.target.value)}
+                      />
+                      <input
+                        value={row.score}
+                        placeholder="예: 7"
+                        onChange={(event) => updateScore(index, "score", event.target.value)}
+                      />
+                      <button type="button" onClick={() => removeScore(index)} aria-label="과목 삭제">×</button>
+                    </div>
+                  ))}
+                  <button type="button" className={styles.addRow} onClick={addScore}>과목 추가</button>
+                </div>
+
+                <div className={styles.full}>
+                  <span className={styles.groupLabel}>가능 시간</span>
+                  <p className={styles.groupHint}>24시간 형식으로 입력하세요. 여러 구간은 쉼표로 구분합니다. 예: 18:00-21:00, 22:00-23:00</p>
+                  {DAY_FIELDS.map((day) => (
+                    <div className={styles.dayRow} key={day.key}>
+                      <span>{day.label}</span>
+                      <input
+                        value={((selected.availability ?? {})[day.key] ?? []).join(", ")}
+                        placeholder="18:00-21:00"
+                        onChange={(event) => updateDay(day.key, event.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <label className={styles.full}><span>소개 (한국어)</span><textarea rows={3} maxLength={600} value={selected.bio || ""} onChange={(event) => updateSelected("bio", event.target.value || null)} /></label>
+                <label className={styles.full}><span>소개 (영어)</span><textarea rows={3} maxLength={600} value={selected.bio_en || ""} onChange={(event) => updateSelected("bio_en", event.target.value || null)} /></label>
+                <label className={styles.full}><span>샘플 수업 영상 URL</span><input type="url" placeholder="https://www.youtube.com/embed/... 또는 https://.../lesson.mp4" value={selected.video_url || ""} onChange={(event) => updateSelected("video_url", event.target.value || null)} /></label>
+                <label><span>언어</span><input placeholder="한국어, 영어" value={selected.languages || ""} onChange={(event) => updateSelected("languages", event.target.value || null)} /></label>
+                <label><span>수업 형식</span><input placeholder="온라인 1:1" value={selected.lesson_format || ""} onChange={(event) => updateSelected("lesson_format", event.target.value || null)} /></label>
+
                 <label className={styles.toggle}><input type="checkbox" checked={selected.active} onChange={(event) => updateSelected("active", event.target.checked)} /><span>공개 명부에 표시</span></label>
               </div>
 
