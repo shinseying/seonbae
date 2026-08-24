@@ -1,0 +1,12 @@
+-- Bookkeeping only. 20260825_consultation_unify.sql was never executed against
+-- production, which left consultation_requests without its scheduling and Zoom
+-- columns while the deployed code already expected them, so creating a parent
+-- consultation failed with a 500.
+--
+-- The same statements were applied directly on 2026-08-25 in two steps: the
+-- columns, constraints, and policies first, then the merged tables dropped
+-- after the one scheduled consultation had been copied across. This file
+-- records that so the ledger matches the database; every statement in
+-- 20260825_consultation_unify.sql is idempotent, so re-running the pair on a
+-- fresh environment still produces this schema.
+notify pgrst, 'reload schema';
