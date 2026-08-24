@@ -1,7 +1,7 @@
 "use client";
 
 import FamilyLinkClient, { type LinkedStudent } from "./FamilyLinkClient";
-import ComplaintForm from "./ComplaintForm";
+import ComplaintForm from "../ComplaintForm";
 import { usePortalText } from "../PortalLocale";
 import styles from "../parent.module.css";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { usePortalText } from "../PortalLocale";
+import { usePortalText } from "./PortalLocale";
 import styles from "./complaint.module.css";
 
 export default function ComplaintForm() {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { PortalChatThread } from "../ChatPanel";
 import BookingsPanel, { type PortalBooking } from "../BookingsPanel";
+import ComplaintForm from "../ComplaintForm";
 import styles from "../portal.module.css";
 import { useSeonbaeLocale } from "../../../utils/i18n/client";
 
@@ -167,6 +168,8 @@ export default function TutorPortalDashboard({
         </section>
 
         <BookingsPanel bookings={bookings} />
+
+        <ComplaintForm />
       </section>
     </main>
   );
