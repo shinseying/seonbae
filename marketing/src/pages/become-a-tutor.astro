@@ -170,13 +170,13 @@ const keep = [
           <legend><T en="Scores for the subjects you want to teach" ko="가르칠 과목의 과목별 성적" /></legend>
           <p class="apply-hint"><T en="Add one row per subject, with the official score and its own proof. This is what your public card shows." ko="가르칠 과목마다 한 줄씩, 공식 성적과 해당 과목의 증빙을 함께 올려 주세요. 공개 카드에 표시되는 내용입니다." /></p>
           <div data-subject-rows></div>
-          <button type="button" class="subject-add" data-subject-add>
-            <T en="Add a subject" ko="과목 추가" />
+          <button type="button" class="subject-add" data-subject-add aria-label="과목 추가">
+            <span aria-hidden="true">+</span>
           </button>
         </fieldset>
 
         <div class="form-field">
-          <label for="ap-letter"><T en="Acceptance letter" ko="학교 합격통지서" /></label>
+          <label for="ap-letter"><T en="Certificate of enrolment" ko="학적증명서" /></label>
           <input id="ap-letter" name="acceptanceLetter" class="form-control apply-file" type="file" required accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" aria-describedby="ap-letter-hint" />
           <p class="apply-hint" id="ap-letter-hint"><T en="PDF, JPG, or PNG. Up to 10 MB." ko="PDF, JPG 또는 PNG. 최대 10MB." /></p>
         </div>
@@ -259,44 +259,65 @@ const keep = [
   .apply-note { color: var(--muted); font-size: 0.86rem; line-height: 1.55; }
   .apply-form .form-control:invalid:not(:placeholder-shown) { border-color: #bd332d; }
 
-  /* Scores by subject: each row keeps the subject, its score, and its proof
-     side by side so the three never drift apart. */
+  /* Scores by subject. Each entry keeps the subject and its score on one line
+     with the proof for that subject on the full-width line underneath, so a
+     grade is never separated from the file that backs it. */
   .subject-scores { border: 0; padding: 0; margin: 0; }
   .subject-scores legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
   .subject-row {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--white, #fffdf7);
+  }
+  .subject-row__head {
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr) minmax(0, 1.5fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.5fr) auto;
     gap: 10px;
     align-items: center;
-    margin-top: 10px;
+  }
+  .subject-row__proof {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+  }
+  .subject-row__proof-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
   }
   .subject-remove {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: transparent;
     color: var(--muted);
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
   }
   .subject-remove:hover { border-color: var(--coral); color: var(--coral); }
   .subject-add {
-    margin-top: 12px;
-    padding: 9px 16px;
+    margin-top: 14px;
+    width: 46px;
+    height: 46px;
     border: 1px dashed var(--line);
-    border-radius: 10px;
+    border-radius: 12px;
     background: transparent;
     color: var(--violet);
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1;
     cursor: pointer;
   }
-  .subject-add:hover { border-color: var(--violet); }
-  @media (max-width: 760px) {
-    .subject-row { grid-template-columns: minmax(0, 1fr) auto; }
-    .subject-row .apply-file { grid-column: 1 / -1; }
+  .subject-add:hover { border-color: var(--violet); background: var(--sage, #dde7db); }
+  @media (max-width: 620px) {
+    .subject-row__head { grid-template-columns: minmax(0, 1fr) auto; }
+    .subject-row__score { grid-column: 1; }
   }
 
 </style>
@@ -334,15 +355,20 @@ const keep = [
     const row = document.createElement('div');
     row.className = 'subject-row';
     row.innerHTML = `
-      <input class="form-control" type="text" name="subjectName" required maxlength="80"
-        data-placeholder-en="IB Math AA HL" data-placeholder-ko="IB 수학 AA HL"
-        aria-label="${t('Subject', '과목')}" />
-      <input class="form-control" type="text" name="subjectScore" required maxlength="24"
-        data-placeholder-en="7" data-placeholder-ko="7"
-        aria-label="${t('Score', '성적')}" />
-      <input class="form-control apply-file" type="file" name="subjectProof" required
-        accept="${FILE_TYPES}" aria-label="${t('Proof for this subject', '해당 과목 증빙')}" />
-      <button type="button" class="subject-remove" aria-label="${t('Remove subject', '과목 삭제')}">&times;</button>
+      <div class="subject-row__head">
+        <input class="form-control subject-row__name" type="text" name="subjectName" required maxlength="80"
+          data-placeholder-en="Subject" data-placeholder-ko="과목"
+          aria-label="${t('Subject', '과목')}" />
+        <input class="form-control subject-row__score" type="text" name="subjectScore" required maxlength="24"
+          data-placeholder-en="Score" data-placeholder-ko="성적"
+          aria-label="${t('Score', '성적')}" />
+        <button type="button" class="subject-remove" aria-label="${t('Remove subject', '과목 삭제')}">&times;</button>
+      </div>
+      <div class="subject-row__proof">
+        <span class="subject-row__proof-label">${t('Proof for this subject', '해당 과목 증빙')}</span>
+        <input class="form-control apply-file" type="file" name="subjectProof" required
+          accept="${FILE_TYPES}" aria-label="${t('Proof for this subject', '해당 과목 증빙')}" />
+      </div>
     `;
     row.querySelector('.subject-remove')?.addEventListener('click', () => {
       row.remove();

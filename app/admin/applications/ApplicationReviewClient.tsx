@@ -119,7 +119,7 @@ export default function ApplicationReviewClient({
                 <time>{formatDate(item.created_at)}</time>
               </div>
               {item.documentUrl && item.acceptance_letter_name
-                ? <a className={styles.document} href={item.documentUrl} target="_blank" rel="noreferrer">합격통지서 · {item.acceptance_letter_name}</a>
+                ? <a className={styles.document} href={item.documentUrl} target="_blank" rel="noreferrer">학적증명서 · {item.acceptance_letter_name}</a>
                 : <span className={styles.noDocument}>추가 제출 서류 없음</span>}
               {item.credentialUrl && item.credential_name && (
                 <a className={styles.document} href={item.credentialUrl} target="_blank" rel="noreferrer">성적·자격 증빙 · {item.credential_name}</a>

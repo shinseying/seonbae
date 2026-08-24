@@ -51,14 +51,14 @@ export async function POST(request: NextRequest) {
     return jsonError("회원가입에 필요한 필수 약관에 모두 동의해 주세요.", 400);
   }
   if (isTutor && (!(acceptanceLetter instanceof File) || acceptanceLetter.size === 0)) {
-    return jsonError("학교 합격통지서를 첨부해 주세요.", 400);
+    return jsonError("학적증명서를 첨부해 주세요.", 400);
   }
   if (
     isTutor
     && acceptanceLetter instanceof File
     && (acceptanceLetter.size > MAX_DOCUMENT_BYTES || !ALLOWED_DOCUMENT_TYPES.has(acceptanceLetter.type))
   ) {
-    return jsonError("합격통지서는 10MB 이하 PDF, JPG 또는 PNG만 제출할 수 있습니다.", 400);
+    return jsonError("학적증명서는 10MB 이하 PDF, JPG 또는 PNG만 제출할 수 있습니다.", 400);
   }
 
   let admin: ReturnType<typeof createAdminClient>;
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       await admin.auth.admin.deleteUser(data.user.id);
-      return jsonError("합격통지서를 안전하게 저장하지 못했습니다. 다시 시도해 주세요.", 500);
+      return jsonError("학적증명서를 안전하게 저장하지 못했습니다. 다시 시도해 주세요.", 500);
     }
   }
 

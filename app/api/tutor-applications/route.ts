@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
   if (!university) return error("대학교를 선택해 주세요.", 400);
   if (!languages || !lessonFormat) return error("수업 가능 언어와 수업 형식을 입력해 주세요.", 400);
 
-  const letterError = documentError(acceptanceLetter, "학교 합격통지서", true);
+  const letterError = documentError(acceptanceLetter, "학적증명서", true);
   if (letterError) return error(letterError, 400);
 
   // Every subject the applicant wants to teach needs a score and its proof.

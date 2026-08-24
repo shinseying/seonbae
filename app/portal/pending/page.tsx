@@ -65,7 +65,7 @@ export default async function PendingAccountPage() {
           <div><dt>신청자</dt><dd>{profile?.full_name || profile?.email || user.email}</dd></div>
           <div><dt>계정 유형</dt><dd>{roleLabel(role)}</dd></div>
           <div><dt>이메일</dt><dd>{profile?.email || user.email}</dd></div>
-          {role === "tutor" && <div><dt>제출 문서</dt><dd>{request?.acceptance_letter_name || "합격통지서 확인 중"}</dd></div>}
+          {role === "tutor" && <div><dt>제출 문서</dt><dd>{request?.acceptance_letter_name || "학적증명서 확인 중"}</dd></div>}
           <div><dt>접수일</dt><dd>{request?.created_at ? formatDate(request.created_at) : "이메일 인증 후 접수"}</dd></div>
           <div><dt>상태</dt><dd className={rejected ? styles.rejected : styles.pending}>{rejected ? "보완 요청" : "검토 중"}</dd></div>
         </dl>
