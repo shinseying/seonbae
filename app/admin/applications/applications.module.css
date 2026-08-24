@@ -32,7 +32,7 @@
 :global(html[data-theme="dark"]) .requestNote{background:#1d2634;color:#c2cbd8}
 
 .subjectScores{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
-.subjectScores li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:9px;font-size:.72rem}
+.subjectScores li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:9px;font-size:.72rem}
 .subjectScores b{font-weight:700}
 .subjectScores span{font-weight:800;color:var(--violet,#163a51)}
 .subjectScores a{color:var(--red);font-weight:700;text-decoration:none;white-space:nowrap}

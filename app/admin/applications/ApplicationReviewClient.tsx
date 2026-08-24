@@ -20,12 +20,7 @@ export type AccountApplication = {
   official_score: string | null;
   languages: string | null;
   lesson_format: string | null;
-  subject_scores: Array<{
-    subject: string;
-    score: string;
-    proofName: string | null;
-    proofUrl: string | null;
-  }>;
+  subject_scores: Array<{ subject: string; score: string }>;
   referral_code: string | null;
   contract_signed: boolean;
   status: string;
@@ -122,7 +117,7 @@ export default function ApplicationReviewClient({
                 ? <a className={styles.document} href={item.documentUrl} target="_blank" rel="noreferrer">학적증명서 · {item.acceptance_letter_name}</a>
                 : <span className={styles.noDocument}>추가 제출 서류 없음</span>}
               {item.credentialUrl && item.credential_name && (
-                <a className={styles.document} href={item.credentialUrl} target="_blank" rel="noreferrer">성적·자격 증빙 · {item.credential_name}</a>
+                <a className={styles.document} href={item.credentialUrl} target="_blank" rel="noreferrer">성적 증명 · {item.credential_name}</a>
               )}
               {item.requested_role === "tutor" && (item.university || item.curriculum) && (
                 <span className={styles.sent}>
@@ -135,9 +130,6 @@ export default function ApplicationReviewClient({
                     <li key={index}>
                       <b>{row.subject}</b>
                       <span>{row.score}</span>
-                      {row.proofUrl
-                        ? <a href={row.proofUrl} target="_blank" rel="noreferrer">{row.proofName || "증빙"} ↗</a>
-                        : <em>증빙 없음</em>}
                     </li>
                   ))}
                 </ul>

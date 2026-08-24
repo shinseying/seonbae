@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
   // three lists come back from FormData in the order the rows were filled.
   const subjectNames = form.getAll("subjectName");
   const subjectScoreValues = form.getAll("subjectScore");
-  const subjectProofs = form.getAll("subjectProof");
   const subjects = subjectNames
     .map((value) => (typeof value === "string" ? value.trim().slice(0, 80) : ""))
     .filter(Boolean)
@@ -52,6 +51,7 @@ export async function POST(request: NextRequest) {
   ].filter(Boolean).join("\n");
 
   const acceptanceLetter = form.get("acceptanceLetter");
+  const credential = form.get("credential");
 
   if (fullName.length < 2 || !isEmailAddress(email)) {
     return error("이름과 이메일 주소를 확인해 주세요.", 400);
@@ -66,10 +66,10 @@ export async function POST(request: NextRequest) {
   const letterError = documentError(acceptanceLetter, "학적증명서", true);
   if (letterError) return error(letterError, 400);
 
-  // Every subject the applicant wants to teach needs a score and its proof.
+  // Every subject the applicant wants to teach needs a score.
   if (!subjectNames.length) return error("가르칠 과목을 최소 하나 입력해 주세요.", 400);
-  if (subjectScoreValues.length !== subjectNames.length || subjectProofs.length !== subjectNames.length) {
-    return error("과목별 성적과 증빙을 모두 채워 주세요.", 400);
+  if (subjectScoreValues.length !== subjectNames.length) {
+    return error("과목별 성적을 모두 채워 주세요.", 400);
   }
 
   const subjectRows = subjectNames.map((value, index) => ({
@@ -77,16 +77,14 @@ export async function POST(request: NextRequest) {
     score: typeof subjectScoreValues[index] === "string"
       ? (subjectScoreValues[index] as string).trim().slice(0, 24)
       : "",
-    proof: subjectProofs[index],
   }));
-
-  for (const row of subjectRows) {
-    if (!row.subject || !row.score) {
-      return error("과목별 성적을 모두 채워 주세요.", 400);
-    }
-    const proofError = documentError(row.proof, `${row.subject} 증빙`, true);
-    if (proofError) return error(proofError, 400);
+  if (subjectRows.some((row) => !row.subject || !row.score)) {
+    return error("과목별 성적을 모두 채워 주세요.", 400);
   }
+
+  // One score report covers every subject listed above.
+  const credentialError = documentError(credential, "성적 증명", true);
+  if (credentialError) return error(credentialError, 400);
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
@@ -100,25 +98,12 @@ export async function POST(request: NextRequest) {
   const letterName = safeFileName(letter.name);
   const letterPath = `${folder}/letter-${letterName}`;
 
-  // Each subject keeps its proof next to its score, so a reviewer opening
-  // the application never has to guess which file backs which grade.
-  const subjectScores = subjectRows.map((row, index) => {
-    const file = row.proof as File;
-    const proofName = safeFileName(file.name);
-    return {
-      subject: row.subject,
-      score: row.score,
-      proofName,
-      proofPath: `${folder}/subject-${index + 1}-${proofName}`,
-      file,
-    };
-  });
+  // One score report backs every subject score listed above.
+  const proof = credential as File;
+  const proofName = safeFileName(proof.name);
+  const proofPath = `${folder}/credential-${proofName}`;
 
-  const uploads: Array<[string, File]> = [
-    [letterPath, letter],
-    ...subjectScores.map((row) => [row.proofPath, row.file] as [string, File]),
-  ];
-  for (const [path, file] of uploads) {
+  for (const [path, file] of [[letterPath, letter], [proofPath, proof]] as const) {
     const { error: uploadError } = await admin.storage
       .from("account-documents")
       .upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: false });
@@ -135,15 +120,12 @@ export async function POST(request: NextRequest) {
       requested_role: "tutor",
       acceptance_letter_path: letterPath,
       acceptance_letter_name: letterName,
+      credential_path: proofPath,
+      credential_name: proofName,
       university,
       subjects,
       curriculum: curriculum || null,
-      subject_scores: subjectScores.map(({ subject, score, proofName, proofPath }) => ({
-        subject,
-        score,
-        proofName,
-        proofPath,
-      })),
+      subject_scores: subjectRows,
       languages,
       lesson_format: lessonFormat,
       introduction: introduction || null,

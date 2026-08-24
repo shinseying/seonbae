@@ -69,16 +69,10 @@ export default async function AdminApplicationsPage() {
       || signedTutorIds.has(item.user_id),
     documentUrl: await signUrl(item.acceptance_letter_path),
     credentialUrl: await signUrl(item.credential_path),
-    // Each score carries its own proof, so the reviewer opens the file that
-    // backs the grade rather than one bundled document.
-    subject_scores: await Promise.all(
-      (Array.isArray(item.subject_scores) ? item.subject_scores : []).map(async (row) => ({
-        subject: String(row?.subject ?? ""),
-        score: String(row?.score ?? ""),
-        proofName: row?.proofName ? String(row.proofName) : null,
-        proofUrl: row?.proofPath ? await signUrl(String(row.proofPath)) : null,
-      })),
-    ),
+    subject_scores: (Array.isArray(item.subject_scores) ? item.subject_scores : []).map((row) => ({
+      subject: String(row?.subject ?? ""),
+      score: String(row?.score ?? ""),
+    })),
   })));
   const credentials: CredentialApplication[] = await Promise.all((credentialRows ?? []).map(async (item) => {
     const signed = await admin.storage.from("tutor-credentials").createSignedUrl(item.proof_path, 60 * 60);
