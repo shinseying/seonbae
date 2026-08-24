@@ -2,9 +2,16 @@
 
 import { FormEvent, useState } from "react";
 import { usePortalText } from "../../PortalLocale";
+import TutorCard from "../../TutorCard";
 import styles from "./profile.module.css";
 
 export type TutorProfile = {
+  registryId: string;
+  name: string;
+  university: string;
+  photoUrl: string | null;
+  exam: string;
+  score: string;
   availability: Record<string, string[]>;
   subjectScores: Array<{ subject: string; score: string }>;
   bio: string;
@@ -109,31 +116,25 @@ export default function TutorProfileForm({
               "This is what visitors see. You cannot edit it directly; send a change request and an admin will apply it.",
             )}
           </p>
-          <dl className={styles.readList}>
-            <div>
-              <dt>{l("과목별 성적", "Scores by subject")}</dt>
-              <dd>
-                {profile.subjectScores.length
-                  ? profile.subjectScores.map((row) => `${row.subject} · ${row.score}`).join(", ")
-                  : l("등록된 내용 없음", "Not set")}
-              </dd>
-            </div>
-            <div>
-              <dt>{l("가능 시간", "Availability")}</dt>
-              <dd>
-                {DAYS.some((day) => (profile.availability[day.key] || []).length)
-                  ? DAYS.filter((day) => (profile.availability[day.key] || []).length)
-                      .map((day) => `${l(day.ko, day.en)} ${(profile.availability[day.key] || []).join(", ")}`)
-                      .join(" / ")
-                  : l("등록된 내용 없음", "Not set")}
-              </dd>
-            </div>
-            <div><dt>{l("소개 (한국어)", "Description (Korean)")}</dt><dd>{profile.bio || l("등록된 내용 없음", "Not set")}</dd></div>
-            <div><dt>{l("소개 (영어)", "Description (English)")}</dt><dd>{profile.bioEn || l("등록된 내용 없음", "Not set")}</dd></div>
-            <div><dt>{l("샘플 수업 영상", "Sample lesson video")}</dt><dd>{profile.videoUrl || l("등록된 내용 없음", "Not set")}</dd></div>
-            <div><dt>{l("언어", "Languages")}</dt><dd>{profile.languages || l("등록된 내용 없음", "Not set")}</dd></div>
-            <div><dt>{l("수업 형식", "Lesson format")}</dt><dd>{profile.lessonFormat || l("등록된 내용 없음", "Not set")}</dd></div>
-          </dl>
+          <div className={styles.cardPreview}>
+            <TutorCard
+              tutor={{
+                registryId: profile.registryId,
+                name: profile.name,
+                university: profile.university,
+                photoUrl: profile.photoUrl,
+                exam: profile.exam,
+                score: profile.score,
+                subjectScores: profile.subjectScores,
+                availability: profile.availability,
+                bio: profile.bio,
+                bioEn: profile.bioEn,
+                videoUrl: profile.videoUrl,
+                languages: profile.languages,
+                lessonFormat: profile.lessonFormat,
+              }}
+            />
+          </div>
         </section>
 
         <div className={styles.actions}>

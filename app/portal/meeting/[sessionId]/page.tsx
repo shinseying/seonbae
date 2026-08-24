@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "../../../../utils/supabase/server";
+import { zoomJoinUrl } from "../../../../utils/zoom/join-url";
 import ZoomMeetingRoom from "./ZoomMeetingRoom";
 import styles from "./meeting.module.css";
 
@@ -30,7 +31,7 @@ export default async function MeetingPage({
     supabase
       .from("portal_sessions")
       .select(
-        "id,session_date,starts_at,duration_minutes,subject,title,zoom_meeting_number,zoom_status,tutor_registry_id,tutors(name)",
+        "id,session_date,starts_at,duration_minutes,subject,title,zoom_meeting_number,zoom_join_url,zoom_passcode,zoom_status,tutor_registry_id,tutors(name)",
       )
       .eq("id", sessionId)
       .single(),
@@ -84,7 +85,8 @@ export default async function MeetingPage({
       </section>
 
       <ZoomMeetingRoom
-        sessionId={session.id}
+        joinUrl={zoomJoinUrl(session.zoom_join_url, session.zoom_meeting_number)}
+        passcode={session.zoom_passcode}
         meetingReady={Boolean(session.zoom_meeting_number)}
         meetingStatus={session.zoom_status}
       />

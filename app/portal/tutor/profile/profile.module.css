@@ -45,3 +45,5 @@
 @media(max-width:600px){.pair{grid-template-columns:1fr}.dayRow{grid-template-columns:1fr}}
 :global(html[data-theme="dark"]) .block{background:#162133;border-color:rgba(235,241,249,.18)}
 :global(html[data-theme="dark"]) .block input,:global(html[data-theme="dark"]) .block textarea{background:#111b2b;border-color:rgba(235,241,249,.22);color:#f7f9fc}
+
+.cardPreview{display:flex;justify-content:center;padding:8px 0 4px}

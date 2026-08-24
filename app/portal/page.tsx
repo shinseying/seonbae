@@ -100,11 +100,12 @@ export default async function PortalPage() {
   let consultations: PortalConsultation[] = [];
   if (isParent) {
     const { data } = await supabase
-      .from("consultation_sessions")
+      .from("consultation_requests")
       .select(
-        "id,session_date,starts_at,duration_minutes,actual_minutes,topic,title,notes,zoom_meeting_number,zoom_status",
+        "id,session_date,starts_at,duration_minutes,actual_minutes,subject,meeting_title,notes,zoom_meeting_number,zoom_status",
       )
-      .eq("parent_id", user.id)
+      .eq("user_id", user.id)
+      .not("zoom_meeting_number", "is", null)
       .order("session_date", { ascending: true })
       .order("starts_at", { ascending: true });
     consultations = (data ?? []).map((row) => ({
@@ -113,8 +114,8 @@ export default async function PortalPage() {
       startsAt: row.starts_at,
       durationMinutes: row.duration_minutes,
       actualMinutes: row.actual_minutes,
-      topic: row.topic,
-      title: row.title,
+      topic: row.subject,
+      title: row.meeting_title,
       notes: row.notes,
       zoomMeetingNumber: row.zoom_meeting_number,
       zoomStatus: row.zoom_status,

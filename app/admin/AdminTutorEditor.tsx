@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AdminSidebar from "./AdminSidebar";
+import TutorCard from "../portal/TutorCard";
 import styles from "./admin.module.css";
 
 export type AdminTutor = {
@@ -131,6 +132,26 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
                 <span className={styles.previewPhoto}>{selected.photo_url ? <img src={selected.photo_url} alt={`${selected.name} 튜터`} /> : <b>{initials(selected.name)}<small>사진 준비 중</small></b>}</span>
                 <div><p>{selected.registry_id} · {selected.tier.toUpperCase()}</p><h2>{selected.name}</h2><span>{selected.university || "대학교 미입력"}</span></div>
                 <strong>{selected.score}<small>{selected.exam}</small></strong>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 16px" }}>
+                <TutorCard
+                  tutor={{
+                    registryId: selected.registry_id,
+                    name: selected.name,
+                    university: selected.university,
+                    photoUrl: selected.photo_url,
+                    exam: selected.exam,
+                    score: selected.score,
+                    subjectScores: selected.subject_scores,
+                    availability: selected.availability,
+                    bio: selected.bio,
+                    bioEn: selected.bio_en,
+                    videoUrl: selected.video_url,
+                    languages: selected.languages,
+                    lessonFormat: selected.lesson_format,
+                  }}
+                />
               </div>
 
               <div className={styles.formGrid}>

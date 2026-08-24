@@ -45,6 +45,7 @@ export default async function TutorPortalPage() {
       .from("booking_requests")
       .select("id,name,email,phone,subject,preferred_day,preferred_time,note,status,seen_by_tutor,created_at")
       .eq("tutor_registry_id", profile.tutor_registry_id)
+      .not("forwarded_at", "is", null)
       .order("created_at", { ascending: false })
       .limit(30),
   ]);

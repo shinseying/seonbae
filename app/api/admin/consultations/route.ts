@@ -9,8 +9,28 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const consultationFields =
-  "id,parent_id,session_date,starts_at,duration_minutes,topic,title,notes,zoom_meeting_number,zoom_host_email,zoom_status,zoom_started_at,zoom_ended_at,actual_minutes";
+// Parent consultations now live in consultation_requests. A row with a
+// zoom_meeting_number is a scheduled consultation (상담 일정); without one it is
+// an inbound inquiry (상담 신청). The client keeps the older field names, so map
+// the unified columns back to that shape on the way out.
+const consultationSelect =
+  "id,user_id,session_date,starts_at,duration_minutes,actual_minutes,subject,meeting_title,notes,zoom_meeting_number,zoom_host_email,zoom_status";
+
+function toClientConsultation(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    parent_id: row.user_id,
+    session_date: row.session_date,
+    starts_at: row.starts_at,
+    duration_minutes: row.duration_minutes,
+    actual_minutes: row.actual_minutes ?? null,
+    topic: row.subject,
+    title: row.meeting_title,
+    notes: row.notes,
+    zoom_meeting_number: row.zoom_meeting_number,
+    zoom_status: row.zoom_status,
+  };
+}
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin();
@@ -60,7 +80,7 @@ export async function POST(request: NextRequest) {
 
   const { data: parent } = await auth.supabase
     .from("profiles")
-    .select("id,role")
+    .select("id,role,full_name,email")
     .eq("id", parentId)
     .single();
   if (!parent || parent.role !== "parent") {
@@ -92,24 +112,30 @@ export async function POST(request: NextRequest) {
 
   const meetingNumber = String(meeting.id);
   const { data, error } = await auth.supabase
-    .from("consultation_sessions")
+    .from("consultation_requests")
     .insert({
-      parent_id: parentId,
+      user_id: parentId,
+      name: parent.full_name?.trim() || "보호자",
+      email: parent.email || null,
+      subject: topic,
       session_date: sessionDate,
       starts_at: `${startsAt}:00`,
       duration_minutes: durationMinutes,
-      topic,
-      title,
+      meeting_title: title,
       notes,
+      status: "contacted",
+      source: "website",
+      language: "ko",
       zoom_meeting_number: meetingNumber,
       zoom_meeting_uuid: meeting.uuid,
       zoom_passcode: meeting.password || null,
+      zoom_join_url: meeting.join_url || null,
       zoom_host_email: hostEmail,
       zoom_status: "scheduled",
       zoom_created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .select(consultationFields)
+    .select(consultationSelect)
     .single();
 
   if (error || !data) {
@@ -121,7 +147,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "상담 일정을 저장하지 못했습니다." }, { status: 500 });
   }
 
-  return NextResponse.json(data, {
+  return NextResponse.json(toClientConsultation(data), {
     status: 201,
     headers: { "Cache-Control": "private, no-store, max-age=0" },
   });
@@ -137,7 +163,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   const { data: consultation } = await auth.supabase
-    .from("consultation_sessions")
+    .from("consultation_requests")
     .select("id,zoom_meeting_number")
     .eq("id", consultationId)
     .single();
@@ -156,7 +182,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   const { error } = await auth.supabase
-    .from("consultation_sessions")
+    .from("consultation_requests")
     .update({
       zoom_status: "cancelled",
       updated_at: new Date().toISOString(),

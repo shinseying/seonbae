@@ -26,7 +26,7 @@ export default async function AdminBookingsPage() {
   const [{ data: rows }, { data: tutors }] = await Promise.all([
     admin
       .from("booking_requests")
-      .select("id,tutor_registry_id,name,email,phone,subject,preferred_day,preferred_time,note,status,seen_by_admin,created_at")
+      .select("id,tutor_registry_id,name,email,phone,subject,preferred_day,preferred_time,note,status,seen_by_admin,forwarded_at,created_at")
       .order("created_at", { ascending: false })
       .limit(100),
     admin.from("tutors").select("registry_id,name"),
@@ -46,6 +46,7 @@ export default async function AdminBookingsPage() {
     status: row.status,
     unread: !row.seen_by_admin,
     createdAt: row.created_at,
+    forwardedAt: row.forwarded_at,
   }));
 
   return (

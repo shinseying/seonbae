@@ -104,13 +104,16 @@ export async function POST(request: NextRequest) {
     return signupError("already registered");
   }
 
+  // Only tutors need an admin review. Students and parents self-serve: their
+  // account is approved on creation so they reach the portal after verifying
+  // their email, without an admissions gate.
   const { error: profileError } = await admin
     .from("profiles")
     .update({
       phone,
       role: accountRole,
-      account_status: "pending",
-      account_reviewed_at: null,
+      account_status: isTutor ? "pending" : "approved",
+      account_reviewed_at: isTutor ? null : new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", data.user.id);
@@ -143,58 +146,62 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { data: application, error: applicationError } = await admin
-    .from("account_creation_requests")
-    .insert({
-      user_id: data.user.id,
-      full_name: fullName,
-      email,
-      phone,
-      requested_role: accountRole,
-      acceptance_letter_path: documentPath,
-      acceptance_letter_name: documentName,
-      referral_code: referralCode || null,
-    })
-    .select("id")
-    .single();
-
-  if (applicationError || !application) {
-    if (documentPath) await admin.storage.from("account-documents").remove([documentPath]);
-    await admin.auth.admin.deleteUser(data.user.id);
-    return jsonError("가입 심사 요청을 저장하지 못했습니다. 다시 시도해 주세요.", 500);
-  }
-
+  // Admissions review record + email are tutor-only. Self-serve accounts skip
+  // the whole admin-review pipeline.
   let notificationError: string | null = null;
-  try {
-    let documentUrl: string | undefined;
-    if (documentPath) {
-      const { data: signed, error: signedError } = await admin.storage
-        .from("account-documents")
-        .createSignedUrl(documentPath, 7 * 24 * 60 * 60);
-      if (signedError || !signed?.signedUrl) throw signedError || new Error("No document URL");
-      documentUrl = signed.signedUrl;
+  if (isTutor) {
+    const { data: application, error: applicationError } = await admin
+      .from("account_creation_requests")
+      .insert({
+        user_id: data.user.id,
+        full_name: fullName,
+        email,
+        phone,
+        requested_role: accountRole,
+        acceptance_letter_path: documentPath,
+        acceptance_letter_name: documentName,
+        referral_code: referralCode || null,
+      })
+      .select("id")
+      .single();
+
+    if (applicationError || !application) {
+      if (documentPath) await admin.storage.from("account-documents").remove([documentPath]);
+      await admin.auth.admin.deleteUser(data.user.id);
+      return jsonError("가입 심사 요청을 저장하지 못했습니다. 다시 시도해 주세요.", 500);
     }
 
-    await sendAdmissionsAccountReviewEmail({
-      requestId: application.id,
-      fullName,
-      email,
-      phone,
-      role: accountRole,
-      letterName: documentName || undefined,
-      letterUrl: documentUrl,
-    });
-  } catch (mailError) {
-    notificationError = mailError instanceof Error ? mailError.message.slice(0, 500) : "Email failed";
-  }
+    try {
+      let documentUrl: string | undefined;
+      if (documentPath) {
+        const { data: signed, error: signedError } = await admin.storage
+          .from("account-documents")
+          .createSignedUrl(documentPath, 7 * 24 * 60 * 60);
+        if (signedError || !signed?.signedUrl) throw signedError || new Error("No document URL");
+        documentUrl = signed.signedUrl;
+      }
 
-  const updatedAt = new Date().toISOString();
-  await admin
-    .from("account_creation_requests")
-    .update(notificationError
-      ? { notification_error: notificationError, updated_at: updatedAt }
-      : { notification_sent_at: updatedAt, notification_error: null, updated_at: updatedAt })
-    .eq("id", application.id);
+      await sendAdmissionsAccountReviewEmail({
+        requestId: application.id,
+        fullName,
+        email,
+        phone,
+        role: accountRole,
+        letterName: documentName || undefined,
+        letterUrl: documentUrl,
+      });
+    } catch (mailError) {
+      notificationError = mailError instanceof Error ? mailError.message.slice(0, 500) : "Email failed";
+    }
+
+    const updatedAt = new Date().toISOString();
+    await admin
+      .from("account_creation_requests")
+      .update(notificationError
+        ? { notification_error: notificationError, updated_at: updatedAt }
+        : { notification_sent_at: updatedAt, notification_error: null, updated_at: updatedAt })
+      .eq("id", application.id);
+  }
 
   await setRememberCookie(Boolean(data.session));
   const destination = data.session
@@ -204,9 +211,11 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     destination,
     message: data.session
-      ? "가입 심사 요청이 접수되었습니다."
+      ? isTutor
+        ? "가입 심사 요청이 접수되었습니다."
+        : "가입이 완료되었습니다."
       : "인증 이메일을 보냈습니다.",
-    reviewPending: true,
+    reviewPending: isTutor,
     notificationQueued: Boolean(notificationError),
   });
 }

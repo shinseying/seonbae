@@ -97,6 +97,8 @@ const nextConfig = {
         ],
       },
       {
+        // The classroom hands off to the desktop Zoom app via a new-tab link,
+        // so the page itself loads no Zoom scripts and needs only a self CSP.
         source: "/portal/meeting/:path*",
         headers: [
           {
@@ -105,30 +107,15 @@ const nextConfig = {
               "default-src 'self'",
               "base-uri 'self'",
               "frame-ancestors 'self'",
-              "worker-src 'self' blob:",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://source.zoom.us",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://source.zoom.us https://*.zoom.us blob:",
-              "connect-src 'self' https://zoom.us https://*.zoom.us wss://*.zoom.us",
-              "img-src 'self' data: blob: https:",
-              "media-src 'self' blob: https:",
-              "font-src 'self' data: https://fonts.gstatic.com https://source.zoom.us",
-              "frame-src 'self' https://*.zoom.us",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "script-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data: https://fonts.gstatic.com",
             ].join("; "),
-          },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(self), microphone=(self), display-capture=(self)",
           },
         ],
       },
     ];
-  },
-  webpack(config) {
-    // Zoom 6.2 references its private download manager in the UMD bundle even
-    // though that module is not published to npm. The classroom does not use
-    // Zoom's file-download feature, so keep that optional branch disabled.
-    config.resolve.alias["@zoom/download-manager"] = false;
-    return config;
   },
 };
 

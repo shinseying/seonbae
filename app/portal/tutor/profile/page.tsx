@@ -24,11 +24,17 @@ export default async function TutorProfilePage() {
 
   const { data: row } = await supabase
     .from("tutors")
-    .select("availability,subject_scores,bio,bio_en,video_url,languages,lesson_format")
+    .select("name,university,photo_url,exam,score,availability,subject_scores,bio,bio_en,video_url,languages,lesson_format")
     .eq("registry_id", profile.tutor_registry_id)
     .single();
 
   const current: TutorProfile = {
+    registryId: profile.tutor_registry_id,
+    name: row?.name ?? "",
+    university: row?.university ?? "",
+    photoUrl: row?.photo_url ?? null,
+    exam: row?.exam ?? "",
+    score: row?.score ?? "",
     availability: (row?.availability as Record<string, string[]>) ?? {},
     subjectScores: (row?.subject_scores as Array<{ subject: string; score: string }>) ?? [],
     bio: row?.bio ?? "",

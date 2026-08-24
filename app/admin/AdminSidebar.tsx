@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
@@ -12,6 +13,7 @@ export type AdminSection =
   | "sessions"
   | "consultation-sessions"
   | "consultations"
+  | "complaints"
   | "applications"
   | "credentials";
 
@@ -32,18 +34,37 @@ export default function AdminSidebar({
     router.refresh();
   }
 
-  // One workspace per tab. Pages that used to stack two unrelated sections are
-  // split so a tab is a single job.
-  const links: Array<{ key: AdminSection; href: string; label: string }> = [
-    { key: "tutors", href: "/admin", label: "튜터 명부" },
-    { key: "tutor-accounts", href: "/admin/tutor-accounts", label: "튜터 계정 생성" },
-    { key: "bookings", href: "/admin/bookings", label: "수업 예약" },
-    { key: "card-requests", href: "/admin/card-requests", label: "카드 변경 요청" },
-    { key: "sessions", href: "/admin/sessions", label: "Zoom 수업" },
-    { key: "consultation-sessions", href: "/admin/consultation-sessions", label: "보호자 상담 일정" },
-    { key: "consultations", href: "/admin/consultations", label: "상담 신청" },
-    { key: "applications", href: "/admin/applications", label: "가입 심사" },
-    { key: "credentials", href: "/admin/credentials", label: "자격 검증" },
+  // Tabs grouped by who/what they concern, so the portal reads as sections
+  // (튜터 / 수업·매칭 / 상담·지원 / 계정) instead of one flat list.
+  const groups: Array<{ title: string; links: Array<{ key: AdminSection; href: string; label: string }> }> = [
+    {
+      title: "튜터",
+      links: [
+        { key: "tutors", href: "/admin", label: "튜터 명부" },
+        { key: "tutor-accounts", href: "/admin/tutor-accounts", label: "튜터 계정 생성" },
+        { key: "card-requests", href: "/admin/card-requests", label: "카드 변경 요청" },
+        { key: "credentials", href: "/admin/credentials", label: "자격 검증" },
+      ],
+    },
+    {
+      title: "수업·매칭",
+      links: [
+        { key: "bookings", href: "/admin/bookings", label: "수업 예약(매칭)" },
+        { key: "sessions", href: "/admin/sessions", label: "Zoom 수업" },
+      ],
+    },
+    {
+      title: "상담·지원",
+      links: [
+        { key: "consultations", href: "/admin/consultations", label: "상담 신청" },
+        { key: "consultation-sessions", href: "/admin/consultation-sessions", label: "보호자 상담 일정" },
+        { key: "complaints", href: "/admin/complaints", label: "컴플레인" },
+      ],
+    },
+    {
+      title: "계정",
+      links: [{ key: "applications", href: "/admin/applications", label: "가입 심사" }],
+    },
   ];
 
   return (
@@ -53,12 +74,16 @@ export default function AdminSidebar({
         <span><b>Seonbae</b><small>ADMIN PORTAL</small></span>
       </Link>
       <nav aria-label="관리자 포털 메뉴">
-        <span>OPERATIONS</span>
-        {links.map((link) => (
-          <Link className={active === link.key ? styles.active : undefined} href={link.href} key={link.key}>
-            <i aria-hidden="true" />
-            {link.label}
-          </Link>
+        {groups.map((group) => (
+          <Fragment key={group.title}>
+            <span>{group.title}</span>
+            {group.links.map((link) => (
+              <Link className={active === link.key ? styles.active : undefined} href={link.href} key={link.key}>
+                <i aria-hidden="true" />
+                {link.label}
+              </Link>
+            ))}
+          </Fragment>
         ))}
         <Link href="/#/ko/tutors"><i aria-hidden="true" />공개 명부 보기 <em aria-hidden="true">↗</em></Link>
       </nav>

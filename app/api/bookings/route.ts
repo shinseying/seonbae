@@ -84,20 +84,16 @@ export async function POST(request: NextRequest) {
 
   if (insertError || !booking) return error("예약을 저장하지 못했습니다.", 500);
 
-  // The tutor and the admin both see this in their portal. Email is the
-  // tutor's extra copy, and a failure to send never loses the booking.
-  const { data: tutorProfile } = await admin
-    .from("profiles")
-    .select("email")
-    .eq("tutor_registry_id", tutorRegistryId)
-    .maybeSingle();
-
-  if (tutorProfile?.email) {
+  // A match notifies the admin first. The admin reviews it in the portal and
+  // forwards it to the tutor from there (POST /api/admin/bookings), so the
+  // tutor is not emailed at booking time. A send failure never loses the row.
+  const adminEmail = process.env.ADMISSIONS_FROM_EMAIL;
+  if (adminEmail) {
     try {
       await sendBookingEmail({
         bookingId: booking.id,
-        tutorName: tutor.name,
-        tutorEmail: tutorProfile.email,
+        tutorName: `${tutor.name} 튜터`,
+        tutorEmail: adminEmail,
         name: requesterName,
         email: requesterEmail,
         phone: profile.phone ?? null,
@@ -105,7 +101,7 @@ export async function POST(request: NextRequest) {
         preferredDay,
         preferredTime,
         note,
-        portalUrl: `${request.nextUrl.origin}/portal/tutor`,
+        portalUrl: `${request.nextUrl.origin}/admin/bookings`,
       });
       await admin
         .from("booking_requests")

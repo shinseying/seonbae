@@ -1,0 +1,124 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  max-width: 340px;
+  padding: 28px 24px 24px;
+  border: 1px solid rgba(19, 24, 27, 0.12);
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 12px 30px rgba(21, 48, 63, 0.06);
+  color: #201e19;
+}
+.verified {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2f7a4d;
+  background: rgba(47, 122, 77, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.avatar {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-top: 12px;
+  background: #edf2ea;
+}
+.avatarFallback {
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #163a51;
+}
+.name {
+  margin: 6px 0 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.name small {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: rgba(32, 30, 25, 0.55);
+}
+.uni {
+  margin: 0;
+  color: #163a51;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.scores {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.scores li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: #fbeed8;
+}
+.scores b {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #163a51;
+}
+.scores span {
+  font-size: 0.74rem;
+  color: rgba(32, 30, 25, 0.7);
+}
+.bio {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(32, 30, 25, 0.85);
+}
+.bioEmpty,
+.videoEmpty {
+  opacity: 0.5;
+}
+.video {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c1663a;
+}
+.meta {
+  width: 100%;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 6px;
+}
+.meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  padding: 6px 0;
+  border-top: 1px solid rgba(19, 24, 27, 0.08);
+}
+.meta dt {
+  color: rgba(32, 30, 25, 0.6);
+}
+.meta dd {
+  margin: 0;
+  font-weight: 600;
+}

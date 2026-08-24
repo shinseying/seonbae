@@ -40,10 +40,11 @@ export default async function AdminConsultationSessionsPage() {
         .eq("role", "student")
         .order("full_name", { ascending: true }),
       supabase
-        .from("consultation_sessions")
+        .from("consultation_requests")
         .select(
-          "id,parent_id,session_date,starts_at,duration_minutes,actual_minutes,topic,title,notes,zoom_meeting_number,zoom_status",
+          "id,user_id,session_date,starts_at,duration_minutes,actual_minutes,subject,meeting_title,notes,zoom_meeting_number,zoom_status",
         )
+        .not("zoom_meeting_number", "is", null)
         .order("session_date", { ascending: false })
         .order("starts_at", { ascending: false })
         .limit(100),
@@ -51,6 +52,20 @@ export default async function AdminConsultationSessionsPage() {
     ]);
 
   const zoomConfigured = zoomConfigurationStatus().configured;
+
+  const mappedConsultations = (consultations ?? []).map((row) => ({
+    id: row.id,
+    parent_id: row.user_id,
+    session_date: row.session_date,
+    starts_at: row.starts_at,
+    duration_minutes: row.duration_minutes,
+    actual_minutes: row.actual_minutes ?? null,
+    topic: row.subject,
+    title: row.meeting_title,
+    notes: row.notes,
+    zoom_meeting_number: row.zoom_meeting_number,
+    zoom_status: row.zoom_status,
+  }));
 
   return (
     <main className={styles.page}>
@@ -74,7 +89,7 @@ export default async function AdminConsultationSessionsPage() {
           parents={(parents ?? []) as AdminParent[]}
           students={(students ?? []) as AdminParent[]}
           initialFamilyLinks={(familyLinks ?? []) as AdminFamilyLink[]}
-          initialConsultations={(consultations ?? []) as AdminConsultation[]}
+          initialConsultations={mappedConsultations as AdminConsultation[]}
           zoomConfigured={zoomConfigured}
         />
       </section>

@@ -21,3 +21,7 @@
 @media(max-width:600px){.list li{grid-template-columns:1fr}.when{justify-items:start;text-align:left}}
 :global(html[data-theme="dark"]) .list li{background:#162133;border-color:rgba(235,241,249,.16)}
 :global(html[data-theme="dark"]) .who span,:global(html[data-theme="dark"]) .when span,:global(html[data-theme="dark"]) .note{color:#b3bdcc}
+
+.forwardButton{margin-top:8px;padding:8px 16px;border:none;border-radius:7px;background:#163a51;color:#fffdf7;font-weight:700;cursor:pointer}
+.forwardButton:disabled{opacity:.55;cursor:default}
+.forwarded{margin-top:8px;display:inline-block;font-size:.82rem;font-weight:700;color:#2f7a4d}

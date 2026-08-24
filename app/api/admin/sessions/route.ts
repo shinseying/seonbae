@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
       zoom_meeting_number: meetingNumber,
       zoom_meeting_uuid: meeting.uuid,
       zoom_passcode: meeting.password || null,
+      zoom_join_url: meeting.join_url || null,
       zoom_host_email: hostEmail,
       zoom_status: "scheduled",
       zoom_created_at: new Date().toISOString(),

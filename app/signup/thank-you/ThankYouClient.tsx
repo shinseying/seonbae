@@ -7,7 +7,7 @@ import styles from "../verification.module.css";
 
 const CLOSE_SECONDS = 15;
 
-export default function ThankYouClient({ email }: { email: string }) {
+export default function ThankYouClient({ email, reviewPending = false }: { email: string; reviewPending?: boolean }) {
   const router = useRouter();
   const [seconds, setSeconds] = useState(CLOSE_SECONDS);
 
@@ -27,7 +27,7 @@ export default function ThankYouClient({ email }: { email: string }) {
         <section className={styles.card}>
           <p className={styles.eyebrow}>EMAIL VERIFIED</p>
           <h1>확인되었습니다.<br />반갑습니다.</h1>
-          <p className={styles.description}>{email} 인증이 완료되었고 로그인 상태가 유지됩니다. 가입 심사는 관리자 포털에서 이어집니다.</p>
+          <p className={styles.description}>{email} 인증이 완료되었고 로그인 상태가 유지됩니다. {reviewPending ? "가입 심사는 관리자 포털에서 이어집니다." : "이제 포털을 바로 이용하실 수 있습니다."}</p>
           <div className={styles.actions}>
             <button className={styles.primary} type="button" onClick={() => router.replace("/?verified=1")}>지금 홈으로 이동</button>
           </div>

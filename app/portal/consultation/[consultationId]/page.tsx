@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "../../../../utils/supabase/server";
+import { zoomJoinUrl } from "../../../../utils/zoom/join-url";
 import ZoomMeetingRoom from "../../meeting/[sessionId]/ZoomMeetingRoom";
 import styles from "../../meeting/[sessionId]/meeting.module.css";
 
@@ -28,9 +29,9 @@ export default async function ConsultationMeetingPage({
       .eq("id", user.id)
       .single(),
     supabase
-      .from("consultation_sessions")
+      .from("consultation_requests")
       .select(
-        "id,parent_id,session_date,starts_at,duration_minutes,topic,title,notes,zoom_meeting_number,zoom_status",
+        "id,user_id,session_date,starts_at,duration_minutes,subject,meeting_title,notes,zoom_meeting_number,zoom_join_url,zoom_passcode,zoom_status",
       )
       .eq("id", consultationId)
       .single(),
@@ -38,8 +39,10 @@ export default async function ConsultationMeetingPage({
 
   if (!profile || !consultation) notFound();
   const isAdmin = profile.role === "admin";
-  const isParent = profile.role === "parent" && consultation.parent_id === user.id;
+  const isParent = profile.role === "parent" && consultation.user_id === user.id;
   if (!isAdmin && !isParent) notFound();
+  const topic = consultation.subject;
+  const title = consultation.meeting_title;
 
   return (
     <main className={styles.page}>
@@ -52,24 +55,24 @@ export default async function ConsultationMeetingPage({
       <section className={styles.heading}>
         <div>
           <p>PARENT · STARTUP TEAM · PRIVATE MEETING</p>
-          <h1>{consultation.title}</h1>
+          <h1>{title}</h1>
           <span>
             {formatDate(consultation.session_date)} · {consultation.starts_at.slice(0, 5)}
             {" · "}{consultation.duration_minutes}분
           </span>
         </div>
         <div className={styles.lessonMeta}>
-          <span>상담 주제</span><b>{consultation.topic}</b>
+          <span>상담 주제</span><b>{topic}</b>
           <span>담당</span><b>선배 창업팀</b>
           <span>상태</span><b>{statusLabel(consultation.zoom_status)}</b>
         </div>
       </section>
 
       <ZoomMeetingRoom
-        sessionId={consultation.id}
+        joinUrl={zoomJoinUrl(consultation.zoom_join_url, consultation.zoom_meeting_number)}
+        passcode={consultation.zoom_passcode}
         meetingReady={Boolean(consultation.zoom_meeting_number)}
         meetingStatus={consultation.zoom_status}
-        signatureEndpoint="/api/zoom/consultation-signature"
       />
     </main>
   );

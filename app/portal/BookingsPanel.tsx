@@ -17,6 +17,7 @@ export type PortalBooking = {
   status: string;
   unread: boolean;
   createdAt: string;
+  forwardedAt?: string | null;
 };
 
 const DAY_KO: Record<string, string> = {
@@ -37,7 +38,27 @@ export default function BookingsPanel({
 }) {
   const { locale, text: l } = usePortalText();
   const [items, setItems] = useState(bookings);
+  const [forwardingId, setForwardingId] = useState<number | null>(null);
   const unread = items.filter((item) => item.unread).length;
+
+  async function forward(id: number) {
+    setForwardingId(id);
+    try {
+      const response = await fetch("/api/admin/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const result = await response.json().catch(() => null);
+      if (response.ok) {
+        setItems((rows) => rows.map((row) => (row.id === id ? { ...row, forwardedAt: result?.forwardedAt || new Date().toISOString() } : row)));
+      } else {
+        window.alert(result?.error || l("전달하지 못했습니다.", "Could not forward."));
+      }
+    } finally {
+      setForwardingId(null);
+    }
+  }
 
   useEffect(() => setItems(bookings), [bookings]);
 
@@ -89,6 +110,20 @@ export default function BookingsPanel({
                 <span>{formatDate(item.createdAt, locale)}</span>
               </div>
               {item.note && <p className={styles.note}>{item.note}</p>}
+              {showTutor && (
+                item.forwardedAt ? (
+                  <span className={styles.forwarded}>{l("튜터에게 전달됨", "Forwarded to tutor")}</span>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.forwardButton}
+                    onClick={() => forward(item.id)}
+                    disabled={forwardingId === item.id}
+                  >
+                    {forwardingId === item.id ? l("전달 중…", "Forwarding…") : l("튜터에게 전달", "Forward to tutor")}
+                  </button>
+                )
+              )}
             </li>
           ))}
         </ul>

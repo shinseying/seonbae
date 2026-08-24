@@ -20,9 +20,12 @@ export default async function AdminConsultationsPage() {
   if (profile?.role !== "admin") redirect("/portal");
 
   const admin = createAdminClient();
+  // Scheduled parent consultations share this table; the inbox shows only
+  // unscheduled inquiries (those without a Zoom meeting).
   const { data } = await admin
     .from("consultation_requests")
     .select("id,name,email,phone,curriculum,preferred_tutor,subject,goals,language,source,status,notification_sent_at,notification_error,created_at")
+    .is("zoom_meeting_number", null)
     .order("created_at", { ascending: false })
     .limit(200);
   const requests = (data ?? []) as AdminConsultationRequest[];

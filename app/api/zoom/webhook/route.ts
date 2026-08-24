@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
   const { data: consultation } = lesson
     ? { data: null }
     : await admin
-        .from("consultation_sessions")
+        .from("consultation_requests")
         .select("id,zoom_started_at,duration_minutes")
         .eq("zoom_meeting_number", meetingNumber)
         .maybeSingle();
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (event === "meeting.started" || event === "meeting.ended") {
-    const table = lesson ? "portal_sessions" : "consultation_sessions";
+    const table = lesson ? "portal_sessions" : "consultation_requests";
     const record = lesson || consultation;
     const now = new Date().toISOString();
     const startedAt =
@@ -136,8 +136,9 @@ export async function POST(request: NextRequest) {
   }
 
   if (
-    event === "meeting.participant_joined"
-    || event === "meeting.participant_left"
+    lesson
+    && (event === "meeting.participant_joined"
+      || event === "meeting.participant_left")
   ) {
     const participant = body.payload?.object?.participant;
     const participantId = participant?.id || participant?.user_id || null;
@@ -153,14 +154,10 @@ export async function POST(request: NextRequest) {
         participantId || participant?.user_name || "unknown",
       ].join(":");
 
-    await admin
-      .from(lesson ? "zoom_attendance" : "consultation_attendance")
-      .upsert(
+    await admin.from("zoom_attendance").upsert(
       {
         event_id: eventId,
-        ...(lesson
-          ? { session_id: lesson.id }
-          : { consultation_id: consultation!.id }),
+        session_id: lesson.id,
         zoom_participant_id: participantId,
         participant_name: participant?.user_name || null,
         participant_email: participant?.email || null,
