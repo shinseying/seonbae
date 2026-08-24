@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest) {
   if (kind === "account") {
     const { data: application } = await admin
       .from("account_creation_requests")
-      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction")
+      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,subject_scores,languages,lesson_format")
       .eq("id", id)
       .single();
     if (!application || application.status !== "pending") return jsonError("이미 처리됐거나 없는 신청입니다.", 404);

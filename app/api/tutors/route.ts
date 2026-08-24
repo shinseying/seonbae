@@ -31,7 +31,7 @@ export async function GET() {
   let { data, error } = await supabase
     .from("tutors")
     .select(
-      "registry_id,name,exam,score,category,tier,university,university_en,photo_url,banner_url,display_order,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format",
+      "registry_id,name,exam,score,category,university,university_en,photo_url,banner_url,display_order,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format",
     )
     .eq("active", true)
     .order("display_order", { ascending: true })
@@ -40,7 +40,7 @@ export async function GET() {
   if (error) {
     const fallback = await supabase
       .from("tutors")
-      .select("registry_id,name,exam,score,category,tier,display_order")
+      .select("registry_id,name,exam,score,category,display_order")
       .eq("active", true)
       .order("display_order", { ascending: true })
       .order("registry_id", { ascending: true });

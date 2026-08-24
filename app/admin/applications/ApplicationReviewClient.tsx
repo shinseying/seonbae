@@ -16,6 +16,16 @@ export type AccountApplication = {
   credentialUrl: string | null;
   university: string | null;
   subjects: string | null;
+  curriculum: string | null;
+  official_score: string | null;
+  languages: string | null;
+  lesson_format: string | null;
+  subject_scores: Array<{
+    subject: string;
+    score: string;
+    proofName: string | null;
+    proofUrl: string | null;
+  }>;
   referral_code: string | null;
   contract_signed: boolean;
   status: string;
@@ -114,8 +124,23 @@ export default function ApplicationReviewClient({
               {item.credentialUrl && item.credential_name && (
                 <a className={styles.document} href={item.credentialUrl} target="_blank" rel="noreferrer">성적·자격 증빙 · {item.credential_name}</a>
               )}
-              {item.requested_role === "tutor" && (item.university || item.subjects) && (
-                <span className={styles.sent}>{[item.university, item.subjects].filter(Boolean).join(" · ")}</span>
+              {item.requested_role === "tutor" && (item.university || item.curriculum) && (
+                <span className={styles.sent}>
+                  {[item.university, item.curriculum, item.languages, item.lesson_format].filter(Boolean).join(" · ")}
+                </span>
+              )}
+              {item.requested_role === "tutor" && item.subject_scores.length > 0 && (
+                <ul className={styles.subjectScores}>
+                  {item.subject_scores.map((row, index) => (
+                    <li key={index}>
+                      <b>{row.subject}</b>
+                      <span>{row.score}</span>
+                      {row.proofUrl
+                        ? <a href={row.proofUrl} target="_blank" rel="noreferrer">{row.proofName || "증빙"} ↗</a>
+                        : <em>증빙 없음</em>}
+                    </li>
+                  ))}
+                </ul>
               )}
               {item.requested_role === "tutor" && item.referral_code && (
                 <span className={styles.sent}>추천인 · {item.referral_code}</span>

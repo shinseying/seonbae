@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
   const [{ data: application }, { data: existing }] = await Promise.all([
     admin
       .from("account_creation_requests")
-      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,created_at")
+      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,subject_scores,languages,lesson_format,created_at")
       .eq("user_id", user.id)
       .eq("requested_role", "tutor")
       .maybeSingle(),

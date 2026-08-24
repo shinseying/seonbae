@@ -41,14 +41,29 @@ export async function POST(request: NextRequest) {
 
   // Two entry points: provision from a reviewed application, or create an
   // account outright when the admin already holds the tutor's details.
-  let application: { id: number | null; full_name: string; email: string; phone: string };
+  // The whole row travels onward: registryRowFromApplication reads the
+  // curriculum, score, university, and subjects the applicant submitted.
+  let application: {
+    id: number | null;
+    full_name: string;
+    email: string;
+    phone: string;
+    university?: string | null;
+    subjects?: string | null;
+    curriculum?: string | null;
+    official_score?: string | null;
+    introduction?: string | null;
+    languages?: string | null;
+    lesson_format?: string | null;
+    subject_scores?: unknown;
+  };
   if (requestId !== null) {
     if (!Number.isInteger(requestId)) {
       return NextResponse.json({ error: "지원서를 찾지 못했습니다." }, { status: 400 });
     }
     const { data: row } = await admin
       .from("account_creation_requests")
-      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,phone")
+      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,subject_scores,languages,lesson_format,phone")
       .eq("id", requestId)
       .single();
 
@@ -58,7 +73,7 @@ export async function POST(request: NextRequest) {
     if (row.user_id) {
       return NextResponse.json({ error: "이미 계정이 있는 지원서입니다." }, { status: 409 });
     }
-    application = { id: row.id, full_name: row.full_name, email: row.email, phone: row.phone };
+    application = { ...row, id: row.id };
   } else {
     const fullName = typeof body.fullName === "string" ? body.fullName.trim().slice(0, 80) : "";
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase().slice(0, 254) : "";

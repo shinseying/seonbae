@@ -5,7 +5,7 @@ import { parseProfile } from "../../../../utils/tutors/profile-patch";
 export const dynamic = "force-dynamic";
 
 const tutorFields =
-  "registry_id,name,exam,score,category,tier,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
+  "registry_id,name,exam,score,category,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -66,13 +66,11 @@ export async function PATCH(request: NextRequest) {
   }
 
   const category = cleanText(body.category, 20);
-  const tier = cleanText(body.tier, 20);
   const displayOrder = Number(body.display_order);
   const allowedCategories = new Set(["ib", "ap", "alevel", "sat", "english"]);
-  const allowedTiers = new Set(["premium", "standard"]);
 
-  if (!allowedCategories.has(category) || !allowedTiers.has(tier)) {
-    return NextResponse.json({ error: "분류 또는 등급 값이 올바르지 않습니다." }, { status: 400 });
+  if (!allowedCategories.has(category)) {
+    return NextResponse.json({ error: "분류 값이 올바르지 않습니다." }, { status: 400 });
   }
 
   if (!Number.isInteger(displayOrder) || displayOrder < 0 || displayOrder > 9999) {
@@ -109,7 +107,6 @@ export async function PATCH(request: NextRequest) {
     exam: cleanText(body.exam, 80),
     score: cleanText(body.score, 80),
     category,
-    tier,
     university: nullableText(body.university, 120),
     university_en: nullableText(body.university_en, 160),
     photo_url: safeAssetUrl(body.photo_url),

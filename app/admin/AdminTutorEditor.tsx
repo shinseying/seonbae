@@ -11,7 +11,6 @@ export type AdminTutor = {
   exam: string;
   score: string;
   category: "ib" | "ap" | "alevel" | "sat" | "english";
-  tier: "premium" | "standard";
   university: string | null;
   university_en: string | null;
   photo_url: string | null;
@@ -156,7 +155,7 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
             <div className={styles.editor}>
               <div className={styles.cardPreview} style={selected.banner_url ? { backgroundImage: `${bannerOverlay(selected.banner_url)},url("${selected.banner_url}")` } : undefined}>
                 <span className={styles.previewPhoto}>{selected.photo_url ? <img src={selected.photo_url} alt={`${selected.name} 튜터`} /> : <b>{initials(selected.name)}<small>사진 준비 중</small></b>}</span>
-                <div><p>{selected.registry_id} · {selected.tier.toUpperCase()}</p><h2>{selected.name}</h2><span>{selected.university || "대학교 미입력"}</span></div>
+                <div><p>{selected.registry_id}</p><h2>{selected.name}</h2><span>{selected.university || "대학교 미입력"}</span></div>
                 <strong>{selected.score}<small>{selected.exam}</small></strong>
               </div>
 
@@ -187,8 +186,7 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
                 <label><span>시험 / 커리큘럼</span><input value={selected.exam} onChange={(event) => updateSelected("exam", event.target.value)} /></label>
                 <label><span>검증 성적</span><input value={selected.score} onChange={(event) => updateSelected("score", event.target.value)} /></label>
                 <label><span>카테고리</span><select value={selected.category} onChange={(event) => updateSelected("category", event.target.value as AdminTutor["category"])}><option value="ib">IB</option><option value="ap">AP</option><option value="alevel">A-Level</option><option value="sat">SAT / ACT</option><option value="english">영어 시험</option></select></label>
-                <label><span>등급</span><select value={selected.tier} onChange={(event) => updateSelected("tier", event.target.value as AdminTutor["tier"])}><option value="premium">Premium</option><option value="standard">Standard</option></select></label>
-                <label><span>대학교 (한국어)</span><input value={selected.university || ""} onChange={(event) => updateSelected("university", event.target.value || null)} /></label>
+                                <label><span>대학교 (한국어)</span><input value={selected.university || ""} onChange={(event) => updateSelected("university", event.target.value || null)} /></label>
                 <label><span>대학교 (영문)</span><input value={selected.university_en || ""} onChange={(event) => updateSelected("university_en", event.target.value || null)} /></label>
                 <label><span>대학교 배너</span><select value={selected.banner_url || ""} onChange={(event) => updateSelected("banner_url", event.target.value || null)}><option value="">배너 없음</option>{bannerOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
                 <label><span>Zoom 호스트 이메일</span><input type="email" placeholder="tutor@seonbae.com" value={selected.zoom_host_email || ""} onChange={(event) => updateSelected("zoom_host_email", event.target.value || null)} /></label>

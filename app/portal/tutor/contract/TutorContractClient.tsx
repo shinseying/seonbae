@@ -188,7 +188,28 @@ export default function TutorContractClient({
             </div>
             <div className={styles.formGrid}>
               <label><span>{l("성명", "Legal name")}</span><input value={signerName} onChange={(event) => setSignerName(event.target.value)} minLength={2} maxLength={80} autoComplete="name" required /></label>
-              <label><span>{l("생년월일", "Date of birth")}</span><input type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} max={new Date().toISOString().slice(0, 10)} required /></label>
+              <label className={styles.dateField}>
+                <span>{l("생년월일", "Date of birth")}</span>
+                <input
+                  type="date"
+                  value={birthDate}
+                  onChange={(event) => setBirthDate(event.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  min="1940-01-01"
+                  data-empty={birthDate ? undefined : "true"}
+                  // Chrome only opens the calendar from its small icon, so the
+                  // whole field acts as the trigger.
+                  onClick={(event) => {
+                    const input = event.currentTarget as HTMLInputElement & { showPicker?: () => void };
+                    try {
+                      input.showPicker?.();
+                    } catch {
+                      // Safari and Firefox open on focus; nothing to do here.
+                    }
+                  }}
+                  required
+                />
+              </label>
               <label><span>{l("소속·학과", "University and department")}</span><input value={affiliation} onChange={(event) => setAffiliation(event.target.value)} minLength={2} maxLength={120} placeholder={l("예: 서울대학교 경제학부", "e.g. Seoul National University, Economics")} required /></label>
               <label><span>{l("연락처", "Phone")}</span><input value={identity.phone} readOnly /></label>
               <label className={styles.fullField}><span>{l("이메일", "Email")}</span><input value={identity.email} readOnly /></label>

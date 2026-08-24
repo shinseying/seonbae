@@ -24,7 +24,7 @@ export default async function AdminApplicationsPage() {
   const [{ data: accountRows }, { data: credentialRows }] = await Promise.all([
     admin
       .from("account_creation_requests")
-      .select("id,user_id,full_name,email,phone,requested_role,acceptance_letter_path,acceptance_letter_name,credential_path,credential_name,university,subjects,referral_code,status,notification_sent_at,notification_error,created_at")
+      .select("id,user_id,full_name,email,phone,requested_role,acceptance_letter_path,acceptance_letter_name,credential_path,credential_name,university,subjects,subject_scores,languages,lesson_format,curriculum,official_score,referral_code,status,notification_sent_at,notification_error,created_at")
       .eq("status", "pending")
       .order("created_at", { ascending: true }),
     admin
@@ -69,6 +69,16 @@ export default async function AdminApplicationsPage() {
       || signedTutorIds.has(item.user_id),
     documentUrl: await signUrl(item.acceptance_letter_path),
     credentialUrl: await signUrl(item.credential_path),
+    // Each score carries its own proof, so the reviewer opens the file that
+    // backs the grade rather than one bundled document.
+    subject_scores: await Promise.all(
+      (Array.isArray(item.subject_scores) ? item.subject_scores : []).map(async (row) => ({
+        subject: String(row?.subject ?? ""),
+        score: String(row?.score ?? ""),
+        proofName: row?.proofName ? String(row.proofName) : null,
+        proofUrl: row?.proofPath ? await signUrl(String(row.proofPath)) : null,
+      })),
+    ),
   })));
   const credentials: CredentialApplication[] = await Promise.all((credentialRows ?? []).map(async (item) => {
     const signed = await admin.storage.from("tutor-credentials").createSignedUrl(item.proof_path, 60 * 60);

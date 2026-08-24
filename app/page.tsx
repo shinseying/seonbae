@@ -4,10 +4,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type View = "home" | "tutors" | "verification" | "about" | "consult";
 type Language = "ko" | "en";
-type Tier = "premium" | "standard";
 type Tutor = {
   id:string;
-  tier:Tier;
   name:string;
   school:string;
   major:string;
@@ -39,8 +37,6 @@ function routeFromHash(): { view:View; language:Language } {
 const initialTutors: Tutor[] = [];
 
 const filters = ["all","IB","AP","A-Level","IGCSE","SAT","ACT","TOEFL","IELTS","TOEIC","내신","학습코칭"];
-const premiumTracks = ["IB","AP","A-Level","IGCSE","SAT","ACT"];
-const standardTracks = ["TOEFL","IELTS","TOEIC","내신","학습코칭"];
 
 const schoolNames: Record<string,string> = {
   "서울대학교":"Seoul National University",
@@ -147,7 +143,6 @@ const pageCopy = {
 export default function Page() {
   const [view,setView] = useState<View>("home");
   const [language,setLanguage] = useState<Language>("ko");
-  const [tier,setTier] = useState<Tier>("premium");
   const [filter,setFilter] = useState("all");
   const [query,setQuery] = useState("");
   const [tutors,setTutors] = useState<Tutor[]>(initialTutors);
@@ -164,11 +159,10 @@ export default function Page() {
   const displayMajor = (major:string) => isEnglish ? (majorNames[major] || major) : major;
 
   const visibleTutors = useMemo(() => tutors.filter(tutor => {
-    const matchesTier = tutor.tier === tier;
     const matchesFilter = filter === "all" || tutor.track === filter;
     const localizedHaystack = `${tutor.subject} ${tutor.track} ${displayTrack(tutor.track)} ${tutor.school} ${displaySchool(tutor.school)} ${tutor.major} ${displayMajor(tutor.major)}`.toLowerCase();
-    return matchesTier && matchesFilter && localizedHaystack.includes(query.toLowerCase());
-  }),[tier,filter,query,language]);
+    return matchesFilter && localizedHaystack.includes(query.toLowerCase());
+  }),[filter,query,language]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -182,12 +176,10 @@ export default function Page() {
         name:string;
         exam:string;
         score:string;
-        tier:Tier;
       }>) => {
         const colors = ["yellow","coral","mint","violet"];
         setTutors(rows.map((row,index) => ({
           id:row.registry_id,
-          tier:row.tier,
           name:row.name,
           school:"",
           major:"",
@@ -272,8 +264,7 @@ export default function Page() {
     <section className="registry section" id="tutors">
       <div className="sectionKicker lightKicker"><span>02</span><p>FIND A TUTOR</p></div>
       <div className="registryIntro"><h2>{isEnglish ? <>The score report<br/><em>is the résumé.</em></> : <>성적표가 곧<br/><em>이력서입니다.</em></>}</h2><p>{t.registryBody}</p></div>
-      <div className="tierTabs" role="tablist"><button className={tier==="premium"?"active":""} onClick={()=>{setTier("premium");setFilter("all")}} role="tab" aria-selected={tier==="premium"}>{t.premium} <span>IB · AP · A-Level · IGCSE · SAT · ACT</span></button><button className={tier==="standard"?"active":""} onClick={()=>{setTier("standard");setFilter("all")}} role="tab" aria-selected={tier==="standard"}>{t.standard} <span>TOEFL · IELTS · TOEIC · {displayTrack("내신")} · {displayTrack("학습코칭")}</span></button></div>
-      <div className="directoryTools"><div className="filterChips">{filters.filter(item=>item==="all"||(tier==="premium"?premiumTracks:standardTracks).includes(item)).map(item=><button className={filter===item?"active":""} onClick={()=>setFilter(item)} key={item}>{filterLabels[language][item] || item}</button>)}</div><label><span>{t.search}</span><input value={query} onChange={event=>setQuery(event.target.value)} placeholder={t.searchPlaceholder} /></label></div>
+      <div className="directoryTools"><div className="filterChips">{filters.map(item=><button className={filter===item?"active":""} onClick={()=>setFilter(item)} key={item}>{filterLabels[language][item] || item}</button>)}</div><label><span>{t.search}</span><input value={query} onChange={event=>setQuery(event.target.value)} placeholder={t.searchPlaceholder} /></label></div>
       <p className="resultCount">{t.listed} <b>{visibleTutors.length}</b>{t.people}</p>
       <div className="directoryGrid">{visibleTutors.map(tutor=><article className="directoryCard" key={tutor.id}><div className={`resultPanel ${tutor.color}`}><span>{tutor.id} · {displayTrack(tutor.track)}</span><b>{tutor.result}</b><p>{tutor.subject}</p></div><div className="person"><h3>{displayTutorName(tutor)}</h3><span>{t.verified}</span><b>{displaySchool(tutor.school)}</b><p>{displayMajor(tutor.major)} · {displayTrack(tutor.track)}</p></div><div className="cardActions"><span>{t.credentials}</span><a href={tabHref("consult")}>{t.requestConsult}</a></div></article>)}</div>
       {visibleTutors.length===0&&<p className="emptyState">{t.noResults}</p>}

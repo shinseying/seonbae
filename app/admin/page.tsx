@@ -23,7 +23,7 @@ export default async function AdminPage() {
   const { data } = await supabase
     .from("tutors")
     .select(
-      "registry_id,name,exam,score,category,tier,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format",
+      "registry_id,name,exam,score,category,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format",
     )
     .order("display_order", { ascending: true })
     .order("registry_id", { ascending: true });

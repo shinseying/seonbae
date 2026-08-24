@@ -151,27 +151,34 @@ const keep = [
             </select>
           </div>
           <div class="form-field">
-            <label for="ap-score"><T en="Official score" ko="공식 성적" /></label>
-            <input id="ap-score" name="score" class="form-control" type="text" required maxlength="120" placeholder="IB 43/45" />
+            <label for="ap-languages"><T en="Languages you teach in" ko="수업 가능 언어" /></label>
+            <input id="ap-languages" name="languages" class="form-control" type="text" required maxlength="80" data-placeholder-en="Korean, English" data-placeholder-ko="한국어, 영어" />
           </div>
         </div>
 
         <div class="form-field">
-          <label for="ap-subjects"><T en="Subjects you can teach" ko="가르칠 수 있는 과목" /></label>
-          <input id="ap-subjects" name="subjects" class="form-control" type="text" required maxlength="300" data-placeholder-en="IB Math AA, AP Calculus" data-placeholder-ko="IB 수학 AA, AP 미적분" />
+          <label for="ap-format"><T en="Lesson format you prefer" ko="선호하는 수업 형식" /></label>
+          <select id="ap-format" name="lessonFormat" class="form-control" required>
+            <option value="온라인 1:1" data-label-en="Online 1:1" data-label-ko="온라인 1:1">온라인 1:1</option>
+            <option value="온라인 소그룹" data-label-en="Online small group" data-label-ko="온라인 소그룹">온라인 소그룹</option>
+            <option value="대면 1:1" data-label-en="In person 1:1" data-label-ko="대면 1:1">대면 1:1</option>
+            <option value="온라인·대면 모두" data-label-en="Online or in person" data-label-ko="온라인·대면 모두">온라인·대면 모두</option>
+          </select>
         </div>
 
-        <div class="form-grid">
-          <div class="form-field">
-            <label for="ap-letter"><T en="Acceptance letter" ko="학교 합격통지서" /></label>
-            <input id="ap-letter" name="acceptanceLetter" class="form-control apply-file" type="file" required accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" aria-describedby="ap-letter-hint" />
-            <p class="apply-hint" id="ap-letter-hint"><T en="PDF, JPG, or PNG. Up to 10 MB." ko="PDF, JPG 또는 PNG. 최대 10MB." /></p>
-          </div>
-          <div class="form-field">
-            <label for="ap-credential"><T en="Official score report" ko="공식 성적표 원본" /></label>
-            <input id="ap-credential" name="credential" class="form-control apply-file" type="file" required accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" aria-describedby="ap-credential-hint" />
-            <p class="apply-hint" id="ap-credential-hint"><T en="PDF, JPG, or PNG. Up to 10 MB." ko="PDF, JPG 또는 PNG. 최대 10MB." /></p>
-          </div>
+        <fieldset class="form-field subject-scores">
+          <legend><T en="Scores for the subjects you want to teach" ko="가르칠 과목의 과목별 성적" /></legend>
+          <p class="apply-hint"><T en="Add one row per subject, with the official score and its own proof. This is what your public card shows." ko="가르칠 과목마다 한 줄씩, 공식 성적과 해당 과목의 증빙을 함께 올려 주세요. 공개 카드에 표시되는 내용입니다." /></p>
+          <div data-subject-rows></div>
+          <button type="button" class="subject-add" data-subject-add>
+            <T en="Add a subject" ko="과목 추가" />
+          </button>
+        </fieldset>
+
+        <div class="form-field">
+          <label for="ap-letter"><T en="Acceptance letter" ko="학교 합격통지서" /></label>
+          <input id="ap-letter" name="acceptanceLetter" class="form-control apply-file" type="file" required accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" aria-describedby="ap-letter-hint" />
+          <p class="apply-hint" id="ap-letter-hint"><T en="PDF, JPG, or PNG. Up to 10 MB." ko="PDF, JPG 또는 PNG. 최대 10MB." /></p>
         </div>
 
         <div class="form-field">
@@ -251,6 +258,47 @@ const keep = [
   .apply-status[data-tone='ok'] { background: var(--sage); color: var(--sage-ink); }
   .apply-note { color: var(--muted); font-size: 0.86rem; line-height: 1.55; }
   .apply-form .form-control:invalid:not(:placeholder-shown) { border-color: #bd332d; }
+
+  /* Scores by subject: each row keeps the subject, its score, and its proof
+     side by side so the three never drift apart. */
+  .subject-scores { border: 0; padding: 0; margin: 0; }
+  .subject-scores legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
+  .subject-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr) minmax(0, 1.5fr) auto;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .subject-remove {
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .subject-remove:hover { border-color: var(--coral); color: var(--coral); }
+  .subject-add {
+    margin-top: 12px;
+    padding: 9px 16px;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--violet);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .subject-add:hover { border-color: var(--violet); }
+  @media (max-width: 760px) {
+    .subject-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .subject-row .apply-file { grid-column: 1 / -1; }
+  }
+
 </style>
 
 <script>
@@ -274,6 +322,39 @@ const keep = [
   document.querySelectorAll('[data-set-lang]').forEach((button) => {
     button.addEventListener('click', () => requestAnimationFrame(refreshLanguage));
   });
+
+  // One row per subject the applicant wants to teach: the score and its proof
+  // travel together, so the reviewer never has to match a file to a subject.
+  const rowHost = form?.querySelector('[data-subject-rows]') as HTMLElement | null;
+  const addRowButton = form?.querySelector('[data-subject-add]') as HTMLButtonElement | null;
+  const FILE_TYPES = 'application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png';
+
+  const addSubjectRow = () => {
+    if (!rowHost) return;
+    const row = document.createElement('div');
+    row.className = 'subject-row';
+    row.innerHTML = `
+      <input class="form-control" type="text" name="subjectName" required maxlength="80"
+        data-placeholder-en="IB Math AA HL" data-placeholder-ko="IB 수학 AA HL"
+        aria-label="${t('Subject', '과목')}" />
+      <input class="form-control" type="text" name="subjectScore" required maxlength="24"
+        data-placeholder-en="7" data-placeholder-ko="7"
+        aria-label="${t('Score', '성적')}" />
+      <input class="form-control apply-file" type="file" name="subjectProof" required
+        accept="${FILE_TYPES}" aria-label="${t('Proof for this subject', '해당 과목 증빙')}" />
+      <button type="button" class="subject-remove" aria-label="${t('Remove subject', '과목 삭제')}">&times;</button>
+    `;
+    row.querySelector('.subject-remove')?.addEventListener('click', () => {
+      row.remove();
+      // Always leave one row so the fieldset never looks broken.
+      if (rowHost.children.length === 0) addSubjectRow();
+    });
+    rowHost.appendChild(row);
+    refreshLanguage();
+  };
+
+  addRowButton?.addEventListener('click', addSubjectRow);
+  addSubjectRow();
 
   const show = (message: string, tone: 'ok' | 'error') => {
     if (!status) return;

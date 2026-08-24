@@ -28,19 +28,30 @@ export async function POST(request: NextRequest) {
   const email = text(form, "email", 254).toLowerCase();
   const phone = normalizePhone(text(form, "phone", 24));
   const university = text(form, "university", 80);
-  const subjects = text(form, "subjects", 300);
   const curriculum = text(form, "curriculum", 60);
-  const officialScore = text(form, "score", 120);
+  const languages = text(form, "languages", 80);
+  const lessonFormat = text(form, "lessonFormat", 80);
+
+  // One row per subject: name, score, and the proof for that subject. The
+  // three lists come back from FormData in the order the rows were filled.
+  const subjectNames = form.getAll("subjectName");
+  const subjectScoreValues = form.getAll("subjectScore");
+  const subjectProofs = form.getAll("subjectProof");
+  const subjects = subjectNames
+    .map((value) => (typeof value === "string" ? value.trim().slice(0, 80) : ""))
+    .filter(Boolean)
+    .join(", ")
+    .slice(0, 300);
   const introduction = text(form, "introduction", 2000);
   const note = [
     text(form, "major", 120) && `전공/학년: ${text(form, "major", 120)}`,
-    text(form, "curriculum", 60) && `지원 커리큘럼: ${text(form, "curriculum", 60)}`,
-    text(form, "score", 120) && `공식 성적: ${text(form, "score", 120)}`,
-    text(form, "introduction", 2000) && `소개: ${text(form, "introduction", 2000)}`,
+    curriculum && `지원 커리큘럼: ${curriculum}`,
+    languages && `수업 가능 언어: ${languages}`,
+    lessonFormat && `수업 형식: ${lessonFormat}`,
+    introduction && `소개: ${introduction}`,
   ].filter(Boolean).join("\n");
 
   const acceptanceLetter = form.get("acceptanceLetter");
-  const credential = form.get("credential");
 
   if (fullName.length < 2 || !isEmailAddress(email)) {
     return error("이름과 이메일 주소를 확인해 주세요.", 400);
@@ -49,12 +60,33 @@ export async function POST(request: NextRequest) {
     return error("튜터 지원은 .ac.kr로 끝나는 학교 이메일로만 접수됩니다.", 400);
   }
   if (!phone) return error("휴대전화 번호를 국가 번호와 함께 입력해 주세요.", 400);
-  if (!university || !subjects) return error("대학교와 수업 가능 과목을 입력해 주세요.", 400);
+  if (!university) return error("대학교를 선택해 주세요.", 400);
+  if (!languages || !lessonFormat) return error("수업 가능 언어와 수업 형식을 입력해 주세요.", 400);
 
   const letterError = documentError(acceptanceLetter, "학교 합격통지서", true);
   if (letterError) return error(letterError, 400);
-  const credentialError = documentError(credential, "성적·자격 증빙 서류", true);
-  if (credentialError) return error(credentialError, 400);
+
+  // Every subject the applicant wants to teach needs a score and its proof.
+  if (!subjectNames.length) return error("가르칠 과목을 최소 하나 입력해 주세요.", 400);
+  if (subjectScoreValues.length !== subjectNames.length || subjectProofs.length !== subjectNames.length) {
+    return error("과목별 성적과 증빙을 모두 채워 주세요.", 400);
+  }
+
+  const subjectRows = subjectNames.map((value, index) => ({
+    subject: typeof value === "string" ? value.trim().slice(0, 80) : "",
+    score: typeof subjectScoreValues[index] === "string"
+      ? (subjectScoreValues[index] as string).trim().slice(0, 24)
+      : "",
+    proof: subjectProofs[index],
+  }));
+
+  for (const row of subjectRows) {
+    if (!row.subject || !row.score) {
+      return error("과목별 성적을 모두 채워 주세요.", 400);
+    }
+    const proofError = documentError(row.proof, `${row.subject} 증빙`, true);
+    if (proofError) return error(proofError, 400);
+  }
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
@@ -65,13 +97,28 @@ export async function POST(request: NextRequest) {
 
   const folder = `applications/${crypto.randomUUID()}`;
   const letter = acceptanceLetter as File;
-  const proof = credential as File;
   const letterName = safeFileName(letter.name);
-  const proofName = safeFileName(proof.name);
   const letterPath = `${folder}/letter-${letterName}`;
-  const proofPath = `${folder}/credential-${proofName}`;
 
-  for (const [path, file] of [[letterPath, letter], [proofPath, proof]] as const) {
+  // Each subject keeps its proof next to its score, so a reviewer opening
+  // the application never has to guess which file backs which grade.
+  const subjectScores = subjectRows.map((row, index) => {
+    const file = row.proof as File;
+    const proofName = safeFileName(file.name);
+    return {
+      subject: row.subject,
+      score: row.score,
+      proofName,
+      proofPath: `${folder}/subject-${index + 1}-${proofName}`,
+      file,
+    };
+  });
+
+  const uploads: Array<[string, File]> = [
+    [letterPath, letter],
+    ...subjectScores.map((row) => [row.proofPath, row.file] as [string, File]),
+  ];
+  for (const [path, file] of uploads) {
     const { error: uploadError } = await admin.storage
       .from("account-documents")
       .upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: false });
@@ -88,12 +135,17 @@ export async function POST(request: NextRequest) {
       requested_role: "tutor",
       acceptance_letter_path: letterPath,
       acceptance_letter_name: letterName,
-      credential_path: proofPath,
-      credential_name: proofName,
       university,
       subjects,
       curriculum: curriculum || null,
-      official_score: officialScore || null,
+      subject_scores: subjectScores.map(({ subject, score, proofName, proofPath }) => ({
+        subject,
+        score,
+        proofName,
+        proofPath,
+      })),
+      languages,
+      lesson_format: lessonFormat,
       introduction: introduction || null,
       applicant_note: note || null,
     })
