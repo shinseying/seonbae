@@ -29,3 +29,7 @@
 .dayRow>span{font-size:.76rem;font-weight:700;color:#4b5567}
 @media(max-width:640px){.pairRow{grid-template-columns:1fr}.dayRow{grid-template-columns:1fr}}
 :global(html[data-theme="dark"]) .pairRow button,:global(html[data-theme="dark"]) .addRow{background:#111b2b;color:#f0f4fa}
+
+.actionButtons{display:flex;align-items:center;gap:10px}
+.deleteButton{background:transparent!important;color:#b3452a!important;border:1px solid rgba(179,69,42,.4)!important;box-shadow:none!important}
+.deleteButton:disabled{opacity:.5}

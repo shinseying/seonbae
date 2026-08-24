@@ -48,6 +48,7 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
   const [tutors, setTutors] = useState(initialTutors);
   const [selectedId, setSelectedId] = useState(initialTutors[0]?.registry_id ?? "");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
   const selected = tutors.find((tutor) => tutor.registry_id === selectedId) ?? null;
 
@@ -97,6 +98,31 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
     setTutors((current) => current.map((tutor) => tutor.registry_id === selectedId ? result : tutor));
     setMessage("저장되었습니다. 공개 튜터 명부에도 바로 반영됩니다.");
     setSaving(false);
+  }
+
+  async function deleteTutor() {
+    if (!selected) return;
+    if (!window.confirm(`${selected.name} (${selected.registry_id}) 튜터 카드를 삭제할까요? 공개 명부에서 즉시 사라지며 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    setDeleting(true);
+    setMessage("");
+    const response = await fetch(`/api/admin/tutors?registry_id=${encodeURIComponent(selected.registry_id)}`, {
+      method: "DELETE",
+    });
+    const result = await response.json().catch(() => null);
+    setDeleting(false);
+
+    if (!response.ok) {
+      setMessage(result?.error || "삭제하지 못했습니다.");
+      return;
+    }
+
+    const remaining = tutors.filter((tutor) => tutor.registry_id !== selected.registry_id);
+    setTutors(remaining);
+    setSelectedId(remaining[0]?.registry_id ?? "");
+    setMessage(`${selected.name} 튜터를 삭제했습니다.`);
   }
 
   return (
@@ -215,7 +241,12 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
 
               <footer className={styles.actions}>
                 <p className={message.startsWith("저장") ? styles.success : ""}>{message || "필수 정보와 이미지 설정을 확인한 뒤 저장하세요."}</p>
-                <button type="button" onClick={saveTutor} disabled={saving}>{saving ? "저장 중..." : "Supabase에 저장"} <span>↗</span></button>
+                <div className={styles.actionButtons}>
+                  <button type="button" className={styles.deleteButton} onClick={deleteTutor} disabled={saving || deleting}>
+                    {deleting ? "삭제 중..." : "튜터 삭제"}
+                  </button>
+                  <button type="button" onClick={saveTutor} disabled={saving || deleting}>{saving ? "저장 중..." : "Supabase에 저장"} <span>↗</span></button>
+                </div>
               </footer>
             </div>
           ) : <div className={styles.noTutor}>관리할 튜터가 없습니다.</div>}

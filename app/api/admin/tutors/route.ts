@@ -189,3 +189,74 @@ function safeAssetUrl(value: unknown) {
     return null;
   }
 }
+
+// Removing a tutor deletes the public card. The row is only safe to delete
+// while it has no history: the contract-signature FK blocks the delete
+// outright, and homework, chat, and bookings would cascade away with it. When
+// history exists the admin is pointed at the visibility toggle instead.
+export async function DELETE(request: NextRequest) {
+  const auth = await requireAdmin();
+  if ("error" in auth) return auth.error;
+
+  const registryId = cleanText(request.nextUrl.searchParams.get("registry_id"), 24);
+  if (!registryId) {
+    return NextResponse.json({ error: "명부 번호가 필요합니다." }, { status: 400 });
+  }
+
+  const countFor = async (table: string, column: string) => {
+    const { count } = await auth.supabase
+      .from(table)
+      .select("*", { count: "exact", head: true })
+      .eq(column, registryId);
+    return count ?? 0;
+  };
+
+  const [sessions, assignments, threads, contracts] = await Promise.all([
+    countFor("portal_sessions", "tutor_registry_id"),
+    countFor("portal_assignments", "tutor_registry_id"),
+    countFor("chat_threads", "tutor_registry_id"),
+    countFor("tutor_contract_signatures", "tutor_registry_id"),
+  ]);
+
+  const blockers = [
+    sessions && `수업 ${sessions}건`,
+    assignments && `숙제 ${assignments}건`,
+    threads && `대화 ${threads}건`,
+    contracts && `계약 서명 ${contracts}건`,
+  ].filter(Boolean);
+
+  if (blockers.length) {
+    return NextResponse.json(
+      {
+        error: `기록이 남아 있어 삭제할 수 없습니다 (${blockers.join(", ")}). 카드를 감추려면 ‘공개 명부에 표시’를 해제해 주세요.`,
+      },
+      { status: 409 },
+    );
+  }
+
+  // The account keeps its tutor role after the registry row goes, so hand it
+  // back to a plain student account before deleting the card.
+  await auth.supabase
+    .from("profiles")
+    .update({
+      role: "student",
+      tutor_registry_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tutor_registry_id", registryId)
+    .neq("role", "admin");
+
+  const { error } = await auth.supabase
+    .from("tutors")
+    .delete()
+    .eq("registry_id", registryId);
+
+  if (error) {
+    return NextResponse.json({ error: "튜터를 삭제하지 못했습니다." }, { status: 500 });
+  }
+
+  return NextResponse.json(
+    { deleted: registryId },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
+}
