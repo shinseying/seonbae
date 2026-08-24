@@ -69,8 +69,14 @@ export async function POST(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "tutor" || profile.account_status !== "pending") {
-    return jsonError("관리자 승인 대기 중인 튜터 계정만 계약할 수 있습니다.", 403);
+  // Approved accounts sign here too: the contract gates portal access, so a
+  // tutor provisioned by an admin still has to sign before the account works.
+  if (
+    !profile
+    || profile.role !== "tutor"
+    || (profile.account_status !== "pending" && profile.account_status !== "approved")
+  ) {
+    return jsonError("튜터 계정만 계약할 수 있습니다.", 403);
   }
   if (!sameIdentity(signerName, profile.full_name || "")) {
     return jsonError("서명자 성명은 승인된 계정의 이름과 같아야 합니다.", 400);
@@ -98,12 +104,19 @@ export async function POST(request: NextRequest) {
       .maybeSingle(),
   ]);
 
-  if (!application || application.status !== "pending") {
-    return jsonError("관리자 승인 대기 상태를 확인하지 못했습니다.", 403);
+  // A signature row references the application, so one has to exist. Only the
+  // decision matters here: an approved tutor signs on the same page as a
+  // pending one, and a rejected application cannot sign at all.
+  if (!application) {
+    return jsonError("튜터 지원 기록을 확인하지 못했습니다.", 403);
   }
+  if (application.status === "rejected") {
+    return jsonError("보완 요청된 지원서입니다. 입학팀 안내를 확인해 주세요.", 403);
+  }
+  const destination = profile.account_status === "approved" ? "/portal/tutor" : "/portal/pending";
   if (existing) {
     return NextResponse.json(
-      { signed: true, signedAt: existing.signed_at, destination: "/portal/pending" },
+      { signed: true, signedAt: existing.signed_at, destination },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   }
@@ -122,7 +135,7 @@ export async function POST(request: NextRequest) {
       .from("profiles")
       .update({ tutor_registry_id: tutorRegistryId, updated_at: new Date().toISOString() })
       .eq("id", user.id)
-      .eq("account_status", "pending");
+      .in("account_status", ["pending", "approved"]);
     if (profileError) return jsonError("계약용 튜터 기록을 연결하지 못했습니다.", 500);
   }
 
@@ -161,7 +174,7 @@ export async function POST(request: NextRequest) {
         applicationRequestId: application.id,
         status: application.status,
         applicationCreatedAt: application.created_at,
-        signedBeforeAdminDecision: true,
+        signedBeforeAdminDecision: application.status === "pending",
       },
       ip_address_hash: auditHash(auditSecret, clientIp(request)),
       user_agent_hash: auditHash(auditSecret, request.headers.get("user-agent") || "unknown"),
@@ -173,7 +186,7 @@ export async function POST(request: NextRequest) {
     await admin.storage.from("tutor-contract-signatures").remove([signaturePath]);
     if (insert.error?.code === "23505") {
       return NextResponse.json(
-        { signed: true, destination: "/portal/pending" },
+        { signed: true, destination },
         { headers: { "Cache-Control": "private, no-store, max-age=0" } },
       );
     }
@@ -182,7 +195,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { signed: true, signedAt: insert.data.signed_at, destination: "/portal/pending" },
+    { signed: true, signedAt: insert.data.signed_at, destination },
     { headers: { "Cache-Control": "private, no-store, max-age=0" } },
   );
 }

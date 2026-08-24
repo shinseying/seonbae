@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "../../../../utils/supabase/server";
+import { requireSignedTutorContract } from "../../../../utils/contracts/tutor-signature";
 import { PortalText } from "../../PortalLocale";
 import TutorSessionForm, { type TutorStudent, type ScheduledSession } from "./TutorSessionForm";
 import styles from "./sessions.module.css";
@@ -20,6 +21,10 @@ export default async function TutorSessionsPage() {
     .single();
   if (profile?.account_status !== "approved") redirect("/portal/pending");
   if (profile?.role !== "tutor" || !profile.tutor_registry_id) redirect("/portal");
+
+  // The contract gates the account: an approved tutor still cannot use the
+  // portal until the current version is signed.
+  await requireSignedTutorContract(user.id);
 
   // The roster is whoever the tutor already has a thread or a session with, so
   // the dropdown can never offer a student the API would reject.

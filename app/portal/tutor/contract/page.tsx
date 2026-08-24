@@ -20,8 +20,10 @@ export default async function TutorContractPage() {
 
   if (profile?.role === "admin") redirect("/admin");
   if (profile?.role !== "tutor") redirect(profile?.account_status === "approved" ? "/portal" : "/portal/pending");
-  if (profile.account_status !== "pending") {
-    redirect(profile.account_status === "approved" ? "/portal/tutor" : "/portal/pending");
+  // An approved tutor still belongs here until they sign, so only a rejected
+  // account is sent away. The signature check below decides what to render.
+  if (profile.account_status !== "pending" && profile.account_status !== "approved") {
+    redirect("/portal/pending");
   }
 
   const admin = createAdminClient();
@@ -40,7 +42,14 @@ export default async function TutorContractPage() {
       .maybeSingle(),
   ]);
 
-  if (!application || application.status !== "pending") {
+  // An approved tutor who has signed is done here. A pending one keeps seeing
+  // their signed receipt while admissions reviews the account.
+  if (signed && profile.account_status === "approved") {
+    redirect("/portal/tutor");
+  }
+  // A signature references the application row, so without one there is
+  // nothing to sign. A rejected application waits on admissions instead.
+  if (!application || application.status === "rejected") {
     redirect("/portal/pending");
   }
 

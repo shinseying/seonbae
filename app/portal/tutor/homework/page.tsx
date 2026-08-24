@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "../../../../utils/supabase/server";
+import { requireSignedTutorContract } from "../../../../utils/contracts/tutor-signature";
 import TutorHomeworkClient, { type TutorHomeworkItem, type TutorStudent } from "./TutorHomeworkClient";
 import styles from "./tutor-homework.module.css";
 import { PortalText } from "../../PortalLocale";
@@ -20,6 +21,10 @@ export default async function TutorHomeworkPage() {
     .single();
   if (profile?.account_status !== "approved") redirect("/portal/pending");
   if (profile?.role !== "tutor" || !profile.tutor_registry_id) redirect("/portal");
+
+  // The contract gates the account: an approved tutor still cannot use the
+  // portal until the current version is signed.
+  await requireSignedTutorContract(user.id);
 
   const [{ data: sessionRows }, { data: assignmentRows }] = await Promise.all([
     supabase

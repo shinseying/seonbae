@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { createClient } from "../../utils/supabase/server";
+import { hasSignedTutorContract } from "../../utils/contracts/tutor-signature";
 import PortalHeader from "./PortalHeader";
 import TutorPortalHeader from "./tutor/TutorPortalHeader";
 
@@ -20,6 +21,12 @@ export default async function PortalLayout({ children }: { children: ReactNode }
     .single();
 
   if (!profile || profile.role === "admin" || profile.account_status !== "approved") {
+    return children;
+  }
+
+  // Until the contract is signed every tutor route bounces back to it, so the
+  // nav would only offer dead ends.
+  if (profile.role === "tutor" && !(await hasSignedTutorContract(user.id))) {
     return children;
   }
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "../../../utils/supabase/server";
+import { requireSignedTutorContract } from "../../../utils/contracts/tutor-signature";
 import type { PortalChatThread } from "../ChatPanel";
 import type { PortalBooking } from "../BookingsPanel";
 import TutorPortalDashboard, {
@@ -26,6 +27,10 @@ export default async function TutorPortalPage() {
   if (profile?.role !== "tutor" || !profile.tutor_registry_id) {
     redirect("/portal");
   }
+
+  // The contract gates the account: an approved tutor still cannot use the
+  // portal until the current version is signed.
+  await requireSignedTutorContract(user.id);
 
   const [{ data: sessionRows }, { data: threadRows }, { data: bookingRows }] = await Promise.all([
     supabase
