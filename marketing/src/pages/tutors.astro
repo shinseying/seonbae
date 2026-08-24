@@ -593,7 +593,11 @@ const roster = true;
     { key: 'sun', en: 'Sun', ko: '일' },
   ];
 
-  const scoresOf = (tutor: Tutor) => Array.isArray(tutor.subject_scores) ? tutor.subject_scores : [];
+  // A subject with no score yet (carried over from the application) would
+  // render an empty badge, so only complete pairs reach the card.
+  const scoresOf = (tutor: Tutor) => Array.isArray(tutor.subject_scores)
+    ? tutor.subject_scores.filter((row) => (row?.subject || '').trim() && (row?.score || '').trim())
+    : [];
   const slotsOf = (tutor: Tutor) => (tutor.availability && typeof tutor.availability === 'object') ? tutor.availability : {};
   const hasSlots = (tutor: Tutor) => DAYS.some((day) => (slotsOf(tutor)[day.key] || []).length > 0);
   const bioOf = (tutor: Tutor) => tr(tutor.bio_en || tutor.bio || '', tutor.bio || tutor.bio_en || '');

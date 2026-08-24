@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
+import { registryRowFromApplication } from "../../../../utils/tutors/from-application";
 import { sendTutorAccountCreatedEmail } from "../../../../utils/email/tutor-account";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
     const { data: row } = await admin
       .from("account_creation_requests")
-      .select("id,user_id,full_name,email,phone,requested_role,status")
+      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,phone")
       .eq("id", requestId)
       .single();
 
@@ -105,20 +106,11 @@ export async function POST(request: NextRequest) {
   // public.tutors, and the tutor portal gates on profiles.tutor_registry_id.
   // The row starts hidden so an empty card never appears on the live site.
   const registryId = `T-${created.user.id.slice(0, 8).toUpperCase()}`;
-  const { error: registryError } = await admin.from("tutors").upsert(
-    {
-      registry_id: registryId,
-      name: application.full_name,
-      exam: "자격 검증 중",
-      score: "검토 중",
-      category: "english",
-      tier: "standard",
-      zoom_host_email: application.email,
-      active: false,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "registry_id" },
-  );
+  const { error: registryError } = await admin
+    .from("tutors")
+    .upsert(registryRowFromApplication(registryId, application), {
+      onConflict: "registry_id",
+    });
 
   if (registryError) {
     await admin.auth.admin.deleteUser(created.user.id);

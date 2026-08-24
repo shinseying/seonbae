@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import { TUTOR_CONTRACT_VERSION } from "../../../../utils/contracts/tutor-contract";
+import { registryRowFromApplication } from "../../../../utils/tutors/from-application";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export async function PATCH(request: NextRequest) {
   if (kind === "account") {
     const { data: application } = await admin
       .from("account_creation_requests")
-      .select("id,user_id,email,full_name,requested_role,status")
+      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction")
       .eq("id", id)
       .single();
     if (!application || application.status !== "pending") return jsonError("이미 처리됐거나 없는 신청입니다.", 404);
@@ -58,17 +59,11 @@ export async function PATCH(request: NextRequest) {
         .eq("id", application.user_id)
         .single();
       tutorRegistryId = currentProfile.data?.tutor_registry_id || `T-${application.user_id.slice(0, 8).toUpperCase()}`;
-      const { error: tutorError } = await admin.from("tutors").upsert({
-        registry_id: tutorRegistryId,
-        name: application.full_name,
-        exam: "자격 검증 중",
-        score: "검토 중",
-        category: "english",
-        tier: "standard",
-        zoom_host_email: application.email,
-        active: false,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "registry_id" });
+      const { error: tutorError } = await admin
+        .from("tutors")
+        .upsert(registryRowFromApplication(tutorRegistryId, application), {
+          onConflict: "registry_id",
+        });
       if (tutorError) return jsonError("튜터 명부 초안을 만들지 못했습니다.", 500);
     }
 

@@ -29,6 +29,9 @@ export async function POST(request: NextRequest) {
   const phone = normalizePhone(text(form, "phone", 24));
   const university = text(form, "university", 80);
   const subjects = text(form, "subjects", 300);
+  const curriculum = text(form, "curriculum", 60);
+  const officialScore = text(form, "score", 120);
+  const introduction = text(form, "introduction", 2000);
   const note = [
     text(form, "major", 120) && `전공/학년: ${text(form, "major", 120)}`,
     text(form, "curriculum", 60) && `지원 커리큘럼: ${text(form, "curriculum", 60)}`,
@@ -89,6 +92,9 @@ export async function POST(request: NextRequest) {
       credential_name: proofName,
       university,
       subjects,
+      curriculum: curriculum || null,
+      official_score: officialScore || null,
+      introduction: introduction || null,
       applicant_note: note || null,
     })
     .select("id")

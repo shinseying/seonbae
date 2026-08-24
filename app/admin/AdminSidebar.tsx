@@ -15,7 +15,7 @@ export type AdminSection =
   | "consultations"
   | "complaints"
   | "applications"
-  | "credentials";
+  | "completed-applications";
 
 export default function AdminSidebar({
   active,
@@ -43,7 +43,6 @@ export default function AdminSidebar({
         { key: "tutors", href: "/admin", label: "튜터 명부" },
         { key: "tutor-accounts", href: "/admin/tutor-accounts", label: "튜터 계정 생성" },
         { key: "card-requests", href: "/admin/card-requests", label: "카드 변경 요청" },
-        { key: "credentials", href: "/admin/credentials", label: "자격 검증" },
       ],
     },
     {
@@ -63,7 +62,10 @@ export default function AdminSidebar({
     },
     {
       title: "계정",
-      links: [{ key: "applications", href: "/admin/applications", label: "가입 심사" }],
+      links: [
+        { key: "applications", href: "/admin/applications", label: "가입 심사 · 자격 검증" },
+        { key: "completed-applications", href: "/admin/applications/completed", label: "완료된 가입 신청" },
+      ],
     },
   ];
 

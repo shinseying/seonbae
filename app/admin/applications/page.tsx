@@ -82,12 +82,12 @@ export default async function AdminApplicationsPage() {
         <header className={styles.heading}>
           <div>
             <p>ADMISSIONS DESK</p>
-            <h1>가입 심사</h1>
-            <span>학생·보호자 가입 요청과 튜터 지원서를 확인합니다.</span>
+            <h1>가입 심사 · 자격 검증</h1>
+            <span>튜터 지원서와 자격 증빙을 한 화면에서 확인하고 처리합니다.</span>
           </div>
-          <b>{accounts.length}건 대기</b>
+          <b>{accounts.length + credentials.length}건 대기</b>
         </header>
-        <ApplicationReviewClient accounts={accounts} credentials={credentials} show="accounts" />
+        <ApplicationReviewClient accounts={accounts} credentials={credentials} show="both" />
       </section>
     </main>
   );

@@ -10,6 +10,7 @@ import {
   TUTOR_CONTRACT_TITLE,
   TUTOR_CONTRACT_VERSION,
 } from "../../../utils/contracts/tutor-contract";
+import { registryRowFromApplication } from "../../../utils/tutors/from-application";
 import { createAdminClient } from "../../../utils/supabase/admin";
 import { createClient } from "../../../utils/supabase/server";
 
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
   const [{ data: application }, { data: existing }] = await Promise.all([
     admin
       .from("account_creation_requests")
-      .select("id,status,created_at,full_name,email")
+      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,created_at")
       .eq("user_id", user.id)
       .eq("requested_role", "tutor")
       .maybeSingle(),
@@ -110,17 +111,11 @@ export async function POST(request: NextRequest) {
   let tutorRegistryId = profile.tutor_registry_id;
   if (!tutorRegistryId) {
     tutorRegistryId = `T-${user.id.slice(0, 8).toUpperCase()}`;
-    const { error: tutorError } = await admin.from("tutors").upsert({
-      registry_id: tutorRegistryId,
-      name: application.full_name,
-      exam: "자격 검증 중",
-      score: "검토 중",
-      category: "english",
-      tier: "standard",
-      zoom_host_email: application.email,
-      active: false,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "registry_id" });
+    const { error: tutorError } = await admin
+      .from("tutors")
+      .upsert(registryRowFromApplication(tutorRegistryId, application), {
+        onConflict: "registry_id",
+      });
     if (tutorError) return jsonError("계약용 튜터 기록을 준비하지 못했습니다.", 500);
 
     const { error: profileError } = await admin
