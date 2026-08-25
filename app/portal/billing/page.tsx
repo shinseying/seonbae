@@ -80,7 +80,8 @@ export default async function BillingPage() {
       <BillingPageContent
         locked={!access}
         accessExpiresAt={access?.expiresAt ?? null}
-        methods={{ email: Boolean(profile.email || user.email), phone: Boolean(profile.phone || user.phone) }}
+        // Phone OTP is off until SMS delivery is provisioned.
+        methods={{ email: Boolean(profile.email || user.email), phone: false }}
         items={items}
       />
     </main>

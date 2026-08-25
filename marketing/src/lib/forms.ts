@@ -10,6 +10,11 @@ export const FORM_ENDPOINT = '/api/consultations';
 
 export type SubmitMode = 'posted';
 
+// The merged goal field opens with the subject, so its first line is the best
+// short label for the admin list.
+const firstLine = (value?: string) =>
+  (value || '').split('\n')[0].trim().slice(0, 120);
+
 export const readForm = (form: HTMLFormElement): Record<string, string> => {
   const out: Record<string, string> = {};
   new FormData(form).forEach((value, key) => {
@@ -30,9 +35,11 @@ export async function submitForm(form: HTMLFormElement, subject: string): Promis
   // Honeypot: bots fill hidden fields, people do not.
   if (data.company) return 'posted';
 
-  const curriculum = data.curriculum || data.subject || data.level || 'General enquiry';
+  // The level answer is the curriculum now: the matching form no longer asks a
+  // separate subject, and the goal field carries the subject with it.
+  const curriculum = data.curriculum || data.level || data.subject || 'General enquiry';
   const detailLines = [
-    data.goal && `Goal: ${data.goal}`,
+    data.goal && `Subject and goal: ${data.goal}`,
     data.times && `Preferred times: ${data.times}`,
     data.preference && `Lesson preference: ${data.preference}`,
     data.context && `Context: ${data.context}`,
@@ -50,7 +57,7 @@ export async function submitForm(form: HTMLFormElement, subject: string): Promis
       phone: data.phone || '',
       curriculum,
       preferredTutor: data.preferredTutor || 'Manager consultation',
-      subject: data.subject || subject,
+      subject: data.subject || firstLine(data.goal) || subject,
       goals,
       language: document.documentElement.dataset.lang === 'en' ? 'en' : 'ko',
       source: 'website',

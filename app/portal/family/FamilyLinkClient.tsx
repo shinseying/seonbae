@@ -21,7 +21,8 @@ export default function FamilyLinkClient({
 }) {
   const router = useRouter();
   const { text: l } = usePortalText();
-  const [method, setMethod] = useState<Method>("phone");
+  // Phone OTP is off until SMS delivery is provisioned.
+  const [method, setMethod] = useState<Method>("email");
   const [target, setTarget] = useState("");
   const [challenge, setChallenge] = useState("");
   const [token, setToken] = useState("");
@@ -126,18 +127,19 @@ export default function FamilyLinkClient({
           <form className={styles.form} onSubmit={requestOtp}>
             <fieldset className={styles.methodChoice}>
               <legend>{l("인증 방법", "Verification method")}</legend>
-              <label data-selected={method === "phone"}>
+              <label data-selected={method === "phone"} data-disabled>
                 <input
                   type="radio"
                   name="family-method"
                   value="phone"
                   checked={method === "phone"}
+                  disabled
                   onChange={() => {
                     setMethod("phone");
                     setTarget("");
                   }}
                 />
-                <span><b>{l("휴대전화 OTP", "Phone OTP")}</b><small>{l("문자 인증번호 입력", "Enter a text-message code")}</small></span>
+                <span><b>{l("휴대전화 OTP", "Phone OTP")}</b><small>{l("휴대전화 OTP는 아직 사용할 수 없습니다.", "Phone OTP not available yet.")}</small></span>
               </label>
               <label data-selected={method === "email"}>
                 <input

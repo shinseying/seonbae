@@ -162,3 +162,14 @@
 @keyframes pendingPulse{to{opacity:.42;transform:scale(.72)}}
 @media(max-width:860px){.portalSidebar .sidebarLogoBox{width:44px;height:44px}.portalSidebar .sidebarLogoBox img{width:34px;height:34px}.portalSidebar .sidebarNav{justify-content:flex-start;gap:8px;margin-block:18px}.mobileBrand>.mobileLogoBox{display:grid}}
 @media(prefers-reduced-motion:reduce){.sidebarNav a[data-pending=true]::after{animation:none}}
+
+.requestList{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.requestHeading{margin:0 0 2px;font-size:.72rem;font-weight:800;letter-spacing:.06em;color:#7a808b;text-transform:uppercase}
+.requestCard{padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;flex-direction:column;gap:6px}
+.requestCard header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.requestCard header b{font-size:.92rem}
+.requestCard header span{flex:none;padding:3px 10px;border-radius:999px;font-size:.68rem;font-weight:800;background:rgba(22,58,81,.08);color:#163a51}
+.requestCard header span[data-status="closed"]{background:rgba(79,124,82,.12);color:#4f7c52}
+.requestMeta{margin:0;font-size:.76rem;color:#7a808b}
+.requestGoals{margin:0;font-size:.82rem;line-height:1.55;white-space:pre-wrap}
+.requestCard time{font-size:.7rem;color:#9aa3af}

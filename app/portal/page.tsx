@@ -3,6 +3,7 @@ import { createClient } from "../../utils/supabase/server";
 import PortalDashboard, {
   type PortalConsultation,
   type PortalSession,
+  type PortalConsultationRequest,
 } from "./PortalDashboard";
 import type { PortalChatThread } from "./ChatPanel";
 
@@ -122,6 +123,26 @@ export default async function PortalPage() {
     }));
   }
 
+  // The requests the parent filed themselves, before anything is scheduled.
+  // A request sent while signed out has no user_id, so it cannot appear here.
+  let consultationRequests: PortalConsultationRequest[] = [];
+  if (isParent) {
+    const { data } = await supabase
+      .from("consultation_requests")
+      .select("id,subject,curriculum,goals,status,created_at")
+      .eq("user_id", user.id)
+      .is("zoom_meeting_number", null)
+      .order("created_at", { ascending: false });
+    consultationRequests = (data ?? []).map((row) => ({
+      id: row.id,
+      subject: row.subject,
+      curriculum: row.curriculum,
+      goals: row.goals,
+      status: row.status,
+      createdAt: row.created_at,
+    }));
+  }
+
   let chatThreads: PortalChatThread[] = [];
   if (!isParent) {
     const { data: rows } = await supabase
@@ -153,6 +174,7 @@ export default async function PortalPage() {
       }}
       sessions={sessions}
       consultations={consultations}
+      consultationRequests={consultationRequests}
       chatThreads={chatThreads}
       linkedStudentCount={isParent ? studentIds.length : 0}
     />

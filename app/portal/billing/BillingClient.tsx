@@ -118,7 +118,7 @@ function BillingGate({ methods }: { methods: { email: boolean; phone: boolean } 
                 setChallenge("");
               }}
             />
-            <span><b>{l("휴대전화", "Phone")}</b><small>{l("문자 OTP", "Text-message OTP")}</small></span>
+            <span><b>{l("휴대전화", "Phone")}</b><small>{l("휴대전화 OTP는 아직 사용할 수 없습니다.", "Phone OTP not available yet.")}</small></span>
           </label>
           <label data-selected={method === "email"} data-disabled={!methods.email}>
             <input

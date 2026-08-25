@@ -9,15 +9,6 @@ const levels = [
   { value: 'University prep', en: 'University prep', ko: '대학 입시 준비' },
   { value: 'Adult learner', en: 'Adult learner', ko: '성인 학습자' },
 ];
-const subjects = [
-  { value: 'IB Diploma', en: 'IB Diploma', ko: 'IB 디플로마' },
-  { value: 'Advanced Placement', en: 'Advanced Placement', ko: 'AP' },
-  { value: 'A Level', en: 'A Level', ko: 'A레벨' },
-  { value: 'IGCSE', en: 'IGCSE', ko: 'IGCSE' },
-  { value: 'Standardized Tests', en: 'Standardized Tests', ko: '표준화 시험' },
-  { value: 'English and Writing', en: 'English and Writing', ko: '영어·글쓰기' },
-  { value: 'Not sure yet', en: 'Not sure yet', ko: '아직 잘 모르겠어요' },
-];
 const prefs = [
   { v: 'weekly', en: 'Weekly momentum', ko: '매주 꾸준히', den: 'A standing slot with one tutor', dko: '한 튜터와 정해진 시간에 수업' },
   { v: 'hourly', en: 'By the hour', ko: '필요할 때 한 시간씩', den: 'Occasional, when I need it', dko: '필요한 때만 수업' },
@@ -73,16 +64,9 @@ const stepLabels = [
             <fieldset class="step" data-step="2" hidden>
               <legend class="step-legend"><T en="What subject, and what for?" ko="어떤 과목을, 무엇을 위해 배우나요?" /></legend>
               <div class="form-field">
-                <span class="field-label"><T en="Subject" ko="과목" /></span>
-                <div class="choice-grid choice-grid--3">
-                  {subjects.map((s, i) => (
-                    <label class="choice"><input type="radio" name="subject" value={s.value} checked={i === 0} /><span><T en={s.en} ko={s.ko} /></span></label>
-                  ))}
-                </div>
-              </div>
-              <div class="form-field" style="margin-top:20px">
-                <label for="m-goal"><T en="The goal" ko="학습 목표" /> <span class="req">*</span></label>
-                <input class="form-control" id="m-goal" name="goal" type="text" required data-placeholder-en="A predicted 7, a 1500 SAT, or steadier confidence" data-placeholder-ko="예상 7점, SAT 1500점, 또는 자신감 회복" />
+                <label for="m-goal"><T en="Subject and goal" ko="과목과 학습 목표" /> <span class="req">*</span></label>
+                <textarea class="form-control" id="m-goal" name="goal" rows="4" required maxlength="1000" data-placeholder-en="IB Economics HL, aiming for a predicted 7 before the next session" data-placeholder-ko="IB 경제 HL, 다음 학기 전 예상 7점 목표"></textarea>
+                <p class="field-hint"><T en="Tell us the subject and what you want to achieve." ko="어떤 과목을, 무엇을 위해 배우려는지 함께 적어 주세요." /></p>
               </div>
             </fieldset>
 
@@ -317,16 +301,15 @@ const stepLabels = [
   const pickerEmpty = picker?.querySelector('[data-tutor-empty]') as HTMLElement | null;
   let tutors: Tutor[] = [];
 
+  // The level answer is what narrows the tutor list now that the overlapping
+  // subject picker is gone.
   const curriculumAliases: Record<string, string[]> = {
-    'IB Diploma': ['IB'],
-    'Advanced Placement': ['AP'],
-    'A Level': ['A LEVEL', 'A-LEVEL'],
     IGCSE: ['IGCSE'],
-    'Standardized Tests': ['SAT', 'ACT', 'IELTS', 'TOEFL'],
-    'English and Writing': ['IELTS', 'TOEFL', 'ENGLISH'],
+    'IB or A Level': ['IB', 'A LEVEL', 'A-LEVEL'],
+    'University prep': ['SAT', 'ACT', 'IB', 'AP'],
   };
 
-  const activeCurriculum = () => (form?.querySelector('input[name="subject"]:checked') as HTMLInputElement | null)?.value || '';
+  const activeCurriculum = () => (form?.querySelector('input[name="level"]:checked') as HTMLInputElement | null)?.value || '';
   const matchingTutors = () => {
     const aliases = curriculumAliases[activeCurriculum()] || [];
     if (!aliases.length) return tutors;
@@ -395,7 +378,7 @@ const stepLabels = [
   document.addEventListener('click', (event) => {
     if (picker && !picker.contains(event.target as Node)) setTutorMenu(false);
   });
-  form?.querySelectorAll('input[name="subject"]').forEach((input) => input.addEventListener('change', () => {
+  form?.querySelectorAll('input[name="level"]').forEach((input) => input.addEventListener('change', () => {
     if (pickerValue) pickerValue.value = 'Manager consultation';
     if (pickerLabel) pickerLabel.dataset.manager = 'true';
     refreshDynamicLanguage();

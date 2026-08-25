@@ -29,6 +29,15 @@ export type PortalSession = {
   } | null;
 };
 
+export type PortalConsultationRequest = {
+  id: number;
+  subject: string | null;
+  curriculum: string | null;
+  goals: string | null;
+  status: string;
+  createdAt: string;
+};
+
 export type PortalConsultation = {
   id: number;
   sessionDate: string;
@@ -49,6 +58,7 @@ export default function PortalDashboard({
   user,
   sessions,
   consultations,
+  consultationRequests,
   chatThreads,
   linkedStudentCount,
 }: {
@@ -56,6 +66,7 @@ export default function PortalDashboard({
   user: PortalUser;
   sessions: PortalSession[];
   consultations: PortalConsultation[];
+  consultationRequests: PortalConsultationRequest[];
   chatThreads: PortalChatThread[];
   linkedStudentCount: number;
 }) {
@@ -371,6 +382,7 @@ export default function PortalDashboard({
         {user.role === "parent" && (
           <ParentConsultations
             consultations={consultations}
+            consultationRequests={consultationRequests}
             completedCount={completedConsultations}
             locale={locale}
           />
@@ -382,10 +394,12 @@ export default function PortalDashboard({
 
 function ParentConsultations({
   consultations,
+  consultationRequests,
   completedCount,
   locale,
 }: {
   consultations: PortalConsultation[];
+  consultationRequests: PortalConsultationRequest[];
   completedCount: number;
   locale: "ko" | "en";
 }) {
@@ -434,6 +448,25 @@ function ParentConsultations({
           </div>
         )}
       </div>
+
+      {consultationRequests.length > 0 && (
+        <div className={styles.requestList}>
+          <p className={styles.requestHeading}>
+            {l("접수된 상담 신청", "Consultation requests you filed")}
+          </p>
+          {consultationRequests.map((request) => (
+            <article className={styles.requestCard} key={request.id}>
+              <header>
+                <b>{request.subject || l("상담 신청", "Consultation request")}</b>
+                <span data-status={request.status}>{requestStatusLabel(request.status, locale)}</span>
+              </header>
+              {request.curriculum && <p className={styles.requestMeta}>{request.curriculum}</p>}
+              {request.goals && <p className={styles.requestGoals}>{request.goals}</p>}
+              <time>{formatDate(request.createdAt.slice(0, 10), locale)}</time>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -533,4 +566,18 @@ function consultationZoomIsAvailable(session: PortalConsultation) {
     && session.zoomStatus !== "cancelled"
     && session.zoomStatus !== "ended"
   );
+}
+
+function requestStatusLabel(status: string, locale: "ko" | "en") {
+  const ko: Record<string, string> = {
+    new: "접수됨",
+    contacted: "연락 완료",
+    closed: "처리 완료",
+  };
+  const en: Record<string, string> = {
+    new: "Received",
+    contacted: "Contacted",
+    closed: "Closed",
+  };
+  return (locale === "ko" ? ko : en)[status] || status;
 }

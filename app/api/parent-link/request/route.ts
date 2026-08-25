@@ -34,6 +34,9 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const method = body.method === "phone" ? "phone" : "email";
+  // Phone OTP is switched off until SMS delivery is provisioned; the UI
+  // disables the option and this rejects anything that gets past it.
+  if (body.method === "phone") return errorResponse("휴대전화 인증은 아직 지원하지 않습니다. 이메일 인증을 사용해 주세요.", 501);
   const rawTarget = typeof body.target === "string" ? body.target.trim() : "";
   const target = method === "phone" ? normalizePhone(rawTarget) : rawTarget.toLowerCase();
   if (!target || (method === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target))) {
