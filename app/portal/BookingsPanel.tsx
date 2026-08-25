@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePortalText } from "./PortalLocale";
 import Spinner from "./Spinner";
 import styles from "./bookings.module.css";
@@ -47,6 +48,7 @@ export default function BookingsPanel({
   classrooms?: ClassroomOption[];
 }) {
   const { locale, text: l } = usePortalText();
+  const router = useRouter();
   const [items, setItems] = useState(bookings);
   const [forwardingId, setForwardingId] = useState<number | null>(null);
   const unread = items.filter((item) => item.unread).length;
@@ -97,6 +99,7 @@ export default function BookingsPanel({
         return;
       }
       setItems((rows) => rows.filter((row) => row.id !== id));
+      router.refresh();
     } finally {
       setDecidingId(null);
     }

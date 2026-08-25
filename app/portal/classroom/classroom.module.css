@@ -1,6 +1,6 @@
 /* Same shell as the other portal tabs: their tokens, their responsive padding,
    and the same 1120px column, so this page scales with them. */
-.page{--navy:#09192f;--blue:#132a4b;--paper:#f4f0e7;--card:#fffdf8;--line:rgba(19,42,75,.15);--red:#c7443b;--text:#17223a;--muted:#667083;min-height:100vh;background:radial-gradient(820px 420px at 92% -7%,rgba(199,68,59,.10),transparent 62%),var(--paper);color:var(--text);font-family:"Pretendard","Noto Sans KR",sans-serif}
+.page{--navy:#09192f;--blue:#132a4b;--paper:#f4f0e7;--card:#fffdf8;--line:rgba(19,42,75,.15);--red:#c7443b;--text:#17223a;--muted:#667083;min-height:100vh;background:radial-gradient(820px 420px at 92% -7%,rgba(199,68,59,.10),transparent 62%),var(--paper);color:var(--text);font-family:"Pretendard","Noto Sans KR",sans-serif;padding-left:304px;transition:padding-left .22s ease}
 .shell{max-width:1120px;margin:0 auto;padding:clamp(28px,4vw,56px) clamp(16px,4vw,42px) 72px;display:flex;flex-direction:column;gap:18px}
 .heading p{margin:0;font:700 .64rem "Courier Prime",monospace;letter-spacing:.16em;color:var(--red)}
 .heading h1{font-family:"Gowun Batang",serif;font-size:clamp(2.1rem,4.4vw,3.6rem);line-height:1.05;letter-spacing:-.05em;color:var(--blue);margin:6px 0 10px}
@@ -72,3 +72,31 @@
 .toolMessage{margin:10px 0 0;padding:10px 13px;border-radius:9px;font-size:.8rem;background:rgba(19,42,75,.06)}
 .toolMessage[data-tone="error"]{background:#fbeee9;color:#8f302b}
 @media(max-width:760px){.toolForm{grid-template-columns:1fr}}
+
+/* The rail is fixed, so the page carries its width as padding and follows it
+   when the sidebar folds — same rule the other portal tabs use. */
+:global(.portal-shell-collapsed) .page{padding-left:112px}
+@media(max-width:860px){
+  .page,:global(.portal-shell-collapsed) .page{padding-left:0;padding-top:66px}
+}
+
+.calHead{display:flex;align-items:center;justify-content:center;gap:16px;margin:14px 0 10px}
+.calHead b{min-width:150px;text-align:center;font-size:.92rem}
+.calHead button{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--card);cursor:pointer;font-size:.9rem}
+.calGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.calDow{text-align:center;font-size:.68rem;font-weight:800;color:var(--muted);padding-bottom:4px}
+.calCell{min-height:74px;display:flex;flex-direction:column;gap:4px;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.calCell[data-empty]{border-color:transparent;background:transparent}
+.calDay{font-size:.7rem;color:var(--muted)}
+.calLesson{width:100%;padding:5px 6px;border:0;border-radius:7px;background:var(--blue);color:#fff;font-size:.66rem;font-weight:700;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.calLesson:hover{opacity:.88}
+.calCancelled{padding:5px 6px;border-radius:7px;background:rgba(199,68,59,.12);color:var(--red);font-size:.66rem;font-weight:700}
+.calNone{flex:1}
+.cancelBox{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:13px;background:var(--card);display:grid;gap:10px}
+.cancelBox label{display:grid;gap:6px;font-size:.72rem;font-weight:700;color:var(--muted)}
+.cancelBox textarea{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font:inherit;font-size:.82rem}
+.cancelActions{display:flex;gap:8px}
+.cancelActions button{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:700;font-size:.8rem;cursor:pointer}
+.cancelActions button:disabled{opacity:.55;cursor:default}
+.cancelGhost{background:transparent!important;color:var(--muted)!important;border:1px solid var(--line)!important}
+@media(max-width:640px){.calCell{min-height:60px}.calLesson,.calCancelled{font-size:.6rem}}

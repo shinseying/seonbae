@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import { zoomJoinUrl } from "../../../../utils/zoom/join-url";
+import ClassroomCalendar from "./ClassroomCalendar";
 import ClassroomTools from "./ClassroomTools";
 import styles from "../classroom.module.css";
 
@@ -57,18 +58,37 @@ export default async function ClassroomDetailPage({
   }
   if (!isTutor && !isStudent && !isMember) notFound();
 
-  const [{ data: tutor }, { data: student }] = await Promise.all([
+  const [{ data: tutor }, { data: student }, { data: memberRows }] = await Promise.all([
     admin.from("tutors").select("name").eq("registry_id", room.tutor_registry_id).maybeSingle(),
     room.student_id
       ? admin.from("profiles").select("full_name,email").eq("id", room.student_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    admin
+      .from("classroom_members")
+      .select("user_id,role")
+      .eq("classroom_id", room.id)
+      .eq("status", "approved"),
   ]);
+
+  // Who else is in the room, so opening it shows the parents too.
+  const memberIds = (memberRows ?? []).map((row) => row.user_id);
+  const { data: memberProfiles } = memberIds.length
+    ? await admin.from("profiles").select("id,full_name,email").in("id", memberIds)
+    : { data: [] as Array<{ id: string; full_name: string | null; email: string }> };
+  const members = (memberRows ?? []).map((row) => {
+    const person = (memberProfiles ?? []).find((item) => item.id === row.user_id);
+    return {
+      id: row.user_id,
+      name: person?.full_name || person?.email || "회원",
+      role: row.role,
+    };
+  });
 
   const [{ data: lessons }, { data: homework }] = await Promise.all([
     room.student_id
       ? admin
           .from("portal_sessions")
-          .select("id,session_date,starts_at,duration_minutes,subject,title,notes,zoom_status,zoom_meeting_number,zoom_join_url,recording_url")
+          .select("id,session_date,starts_at,duration_minutes,subject,title,notes,zoom_status,zoom_meeting_number,zoom_join_url,recording_url,cancellation_reason")
           .eq("user_id", room.student_id)
           .eq("tutor_registry_id", room.tutor_registry_id)
           .order("session_date", { ascending: false })
@@ -116,6 +136,18 @@ export default async function ClassroomDetailPage({
           />
         )}
 
+        <ClassroomCalendar
+          lessons={(lessons ?? []).map((lesson) => ({
+            id: lesson.id,
+            date: lesson.session_date,
+            startsAt: lesson.starts_at,
+            title: lesson.title,
+            subject: lesson.subject,
+            status: lesson.zoom_status,
+            cancellationReason: lesson.cancellation_reason,
+          }))}
+        />
+
         <section className={styles.block}>
           <h3>Zoom 수업</h3>
           {(lessons ?? []).length ? (lessons ?? []).map((lesson) => {
@@ -156,6 +188,17 @@ export default async function ClassroomDetailPage({
               {item.feedback && <p className={styles.feedback}>{item.feedback}</p>}
             </article>
           )) : <p className={styles.blockEmpty}>등록된 숙제가 없습니다.</p>}
+        </section>
+
+        <section className={styles.block}>
+          <h3>참여 중인 보호자</h3>
+          {members.filter((member) => member.role === "parent").length ? (
+            <p className={styles.blockEmpty}>
+              {members.filter((member) => member.role === "parent").map((member) => member.name).join(", ")}
+            </p>
+          ) : (
+            <p className={styles.blockEmpty}>아직 참여 중인 보호자가 없습니다.</p>
+          )}
         </section>
       </section>
     </main>
