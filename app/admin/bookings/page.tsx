@@ -59,9 +59,9 @@ export default async function AdminBookingsPage() {
       <section className={styles.main}>
         <header className={styles.heading}>
           <div>
-            <p>LESSON BOOKINGS</p>
-            <h1>수업 예약</h1>
-            <span>튜터 카드에서 접수된 수업 예약 요청입니다. 튜터에게도 메일이 발송됩니다.</span>
+            <p>MATCH REQUESTS</p>
+            <h1>매칭 요청</h1>
+            <span>튜터 카드에서 접수된 매칭 요청입니다. 확인 후 ‘튜터에게 전달’을 누르면 튜터에게 메일이 발송됩니다.</span>
           </div>
           <b>{bookings.filter((booking) => booking.unread).length}건 신규</b>
         </header>

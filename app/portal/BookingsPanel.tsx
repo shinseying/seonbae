@@ -78,15 +78,15 @@ export default function BookingsPanel({
     <section className={styles.panel}>
       <header className={styles.head}>
         <div>
-          <p>BOOKINGS</p>
-          <h2>{l("수업 예약 요청", "Lesson requests")}</h2>
+          <p>MATCH REQUESTS</p>
+          <h2>{l("매칭 요청", "Match requests")}</h2>
         </div>
         {unread > 0 && <span className={styles.badge}>{l(`새 요청 ${unread}건`, `${unread} new`)}</span>}
       </header>
 
       {items.length === 0 ? (
         <p className={styles.empty}>
-          {l("아직 예약 요청이 없습니다.", "No booking requests yet.")}
+          {l("아직 매칭 요청이 없습니다.", "No match requests yet.")}
         </p>
       ) : (
         <ul className={styles.list}>

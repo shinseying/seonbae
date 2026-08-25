@@ -96,7 +96,7 @@ const roster = true;
                   </ul>
                   <div class="tcardx__foot">
                     <button type="button" class="tcardx__book" disabled>
-                      <T en="Book lessons" ko="수업 예약하기" />
+                      <T en="Request a match" ko="매칭 요청하기" />
                     </button>
                   </div>
                 </article>
@@ -141,7 +141,7 @@ const roster = true;
   <dialog class="book" id="book-dialog" aria-labelledby="book-heading">
     <div class="book__panel">
       <button type="button" class="book__close" data-close-book aria-label="Close">×</button>
-      <p class="book__eyebrow"><T en="Book lessons" ko="수업 예약" /></p>
+      <p class="book__eyebrow"><T en="Request a match" ko="매칭 요청" /></p>
       <h2 class="h3" id="book-heading"><span data-book-title></span></h2>
 
       <p class="book__gate" data-book-gate hidden></p>
@@ -179,7 +179,7 @@ const roster = true;
           <textarea id="bk-note" name="note" class="form-control" rows="3" maxlength="1000"></textarea>
         </div>
         <button type="submit" class="btn btn--primary btn--lg book__submit">
-          <span><T en="Send booking request" ko="예약 요청 보내기" /></span>
+          <span><T en="Send match request" ko="매칭 요청 보내기" /></span>
           <span class="btn__disc" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
         <p class="book__status" role="status" aria-live="polite" data-book-status hidden></p>
@@ -684,7 +684,7 @@ const roster = true;
           ${meta}
           <div class="tcardx__foot">
             <button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}" data-tutor-name="${escapeHtml(displayName)}">
-              ${calendarIcon}${tr('Book lessons', '수업 예약하기')}
+              ${calendarIcon}${tr('Request a match', '매칭 요청하기')}
             </button>
           </div>
         </article>
@@ -794,7 +794,7 @@ const roster = true;
 
       <div class="pf__foot">
         <button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}">
-          ${calendarIcon}${tr('Book lessons', '수업 예약하기')}
+          ${calendarIcon}${tr('Request a match', '매칭 요청하기')}
         </button>
       </div>`;
 
@@ -831,8 +831,8 @@ const roster = true;
       bookGate.innerHTML = allowed
         ? ''
         : viewer.authenticated
-          ? tr('Only student and parent accounts can book lessons.', '학생 또는 보호자 계정만 수업을 예약할 수 있습니다.')
-          : `${tr('Sign in to book lessons.', '수업을 예약하려면 로그인해 주세요.')} <a href="/login">${tr('Log in', '로그인')}</a>`;
+          ? tr('Only student and parent accounts can request a match.', '학생 또는 보호자 계정만 매칭을 요청할 수 있습니다.')
+          : `${tr('Sign in to request a match.', '매칭을 요청하려면 로그인해 주세요.')} <a href="/login">${tr('Log in', '로그인')}</a>`;
     }
     if (bookForm) bookForm.hidden = !allowed;
 
@@ -919,7 +919,7 @@ const roster = true;
       bookForm.reset();
       dialog?.querySelectorAll('.book__slot').forEach((node) => node.classList.remove('is-on'));
       if (bookStatus) {
-        bookStatus.textContent = tr('Booked. The tutor and our team have been notified.', '예약 요청이 접수되었습니다. 튜터와 담당자에게 전달했습니다.');
+        bookStatus.textContent = tr('Match requested. Our team will review it and connect you with the tutor.', '매칭 요청이 접수되었습니다. 담당자가 확인 후 튜터와 연결해 드립니다.');
         bookStatus.dataset.tone = 'ok';
         bookStatus.hidden = false;
       }

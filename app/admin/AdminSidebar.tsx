@@ -48,7 +48,7 @@ export default function AdminSidebar({
     {
       title: "수업·매칭",
       links: [
-        { key: "bookings", href: "/admin/bookings", label: "수업 예약(매칭)" },
+        { key: "bookings", href: "/admin/bookings", label: "매칭 요청" },
         { key: "sessions", href: "/admin/sessions", label: "Zoom 수업" },
       ],
     },

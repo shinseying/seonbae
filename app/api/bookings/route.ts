@@ -7,14 +7,14 @@ export const dynamic = "force-dynamic";
 
 const DAYS = new Set(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
 
-// A signed-in student or parent books lessons with a tutor. Intro calls are
-// withdrawn, so there is no anonymous path into this route.
+// A signed-in student or parent asks to be matched with a tutor. The admin
+// handles the request in the portal, so there is no anonymous path in here.
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return error("로그인 후 예약할 수 있습니다.", 401);
+  if (!user) return error("로그인 후 매칭을 요청할 수 있습니다.", 401);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (!profile || (profile.role !== "student" && profile.role !== "parent")) {
-    return error("학생 또는 보호자 계정만 예약할 수 있습니다.", 403);
+    return error("학생 또는 보호자 계정만 매칭을 요청할 수 있습니다.", 403);
   }
   if (profile.account_status !== "approved") {
-    return error("계정 승인 후 예약할 수 있습니다.", 403);
+    return error("계정 승인 후 매칭을 요청할 수 있습니다.", 403);
   }
 
   let body: Record<string, unknown>;
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   try {
     admin = createAdminClient();
   } catch {
-    return error("예약 시스템이 아직 설정되지 않았습니다.", 503);
+    return error("매칭 요청 시스템이 아직 설정되지 않았습니다.", 503);
   }
 
   const { data: tutor } = await admin
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     .select("registry_id,name,active")
     .eq("registry_id", tutorRegistryId)
     .single();
-  if (!tutor || !tutor.active) return error("해당 튜터는 예약을 받을 수 없습니다.", 404);
+  if (!tutor || !tutor.active) return error("해당 튜터는 매칭 요청을 받을 수 없습니다.", 404);
 
   const requesterName = profile.full_name || profile.email || "회원";
   const requesterEmail = profile.email || user.email || "";
@@ -82,11 +82,11 @@ export async function POST(request: NextRequest) {
     .select("id")
     .single();
 
-  if (insertError || !booking) return error("예약을 저장하지 못했습니다.", 500);
+  if (insertError || !booking) return error("매칭 요청을 저장하지 못했습니다.", 500);
 
   // A match notifies the admin first. The admin reviews it in the portal and
   // forwards it to the tutor from there (POST /api/admin/bookings), so the
-  // tutor is not emailed at booking time. A send failure never loses the row.
+  // tutor is not emailed when the request arrives. A send failure never loses the row.
   const adminEmail = process.env.ADMISSIONS_FROM_EMAIL;
   if (adminEmail) {
     try {
@@ -137,7 +137,7 @@ export async function PATCH(request: NextRequest) {
   try {
     admin = createAdminClient();
   } catch {
-    return error("예약 시스템이 아직 설정되지 않았습니다.", 503);
+    return error("매칭 요청 시스템이 아직 설정되지 않았습니다.", 503);
   }
 
   if (profile.role === "admin") {

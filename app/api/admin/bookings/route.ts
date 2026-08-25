@@ -27,13 +27,13 @@ export async function POST(request: NextRequest) {
     return error("요청 형식이 올바르지 않습니다.", 400);
   }
   const id = Number(body.id);
-  if (!Number.isInteger(id)) return error("예약을 확인하지 못했습니다.", 400);
+  if (!Number.isInteger(id)) return error("매칭 요청을 확인하지 못했습니다.", 400);
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
   } catch {
-    return error("예약 시스템이 아직 설정되지 않았습니다.", 503);
+    return error("매칭 요청 시스템이 아직 설정되지 않았습니다.", 503);
   }
 
   const { data: booking } = await admin
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     .select("id,tutor_registry_id,name,email,phone,subject,preferred_day,preferred_time,note")
     .eq("id", id)
     .single();
-  if (!booking) return error("예약을 찾지 못했습니다.", 404);
+  if (!booking) return error("매칭 요청을 찾지 못했습니다.", 404);
 
   const [{ data: tutor }, { data: tutorProfile }] = await Promise.all([
     admin.from("tutors").select("name").eq("registry_id", booking.tutor_registry_id).maybeSingle(),
