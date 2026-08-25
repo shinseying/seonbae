@@ -27,6 +27,14 @@ export type AdminTutor = {
   lesson_format?: string | null;
 };
 
+export type AdminAccount = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role: string;
+  tutor_registry_id: string | null;
+};
+
 const DAY_FIELDS = [
   { key: "mon", label: "월요일" },
   { key: "tue", label: "화요일" },
@@ -82,8 +90,18 @@ function nextRegistryId(tutors: AdminTutor[]) {
   return `P-${String(next).padStart(3, "0")}`;
 }
 
-export default function AdminTutorEditor({ adminName, initialTutors }: { adminName: string; initialTutors: AdminTutor[] }) {
+export default function AdminTutorEditor({
+  adminName,
+  initialTutors,
+  accounts,
+}: {
+  adminName: string;
+  initialTutors: AdminTutor[];
+  accounts: AdminAccount[];
+}) {
   const [tutors, setTutors] = useState(initialTutors);
+  const [links, setLinks] = useState(accounts);
+  const [assigning, setAssigning] = useState(false);
   const [draft, setDraft] = useState<AdminTutor | null>(null);
   const [selectedId, setSelectedId] = useState(initialTutors[0]?.registry_id ?? "");
   const [saving, setSaving] = useState(false);
@@ -91,6 +109,9 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
   const [message, setMessage] = useState("");
   const isDraft = selectedId === DRAFT_KEY;
   const selected = isDraft ? draft : tutors.find((tutor) => tutor.registry_id === selectedId) ?? null;
+  const linkedAccount = selected && !isDraft
+    ? links.find((account) => account.tutor_registry_id === selected.registry_id) ?? null
+    : null;
 
   function updateSelected<K extends keyof AdminTutor>(key: K, value: AdminTutor[K]) {
     if (isDraft) setDraft((current) => current && { ...current, [key]: value });
@@ -159,6 +180,46 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
       setMessage("저장되었습니다. 공개 튜터 명부에도 바로 반영됩니다.");
     }
     setSaving(false);
+  }
+
+  // Assigning writes profiles.tutor_registry_id, which is what the tutor portal
+  // gates on. It is a separate call from saving the card so the two cannot half
+  // apply.
+  async function assignAccount(profileId: string | null) {
+    if (!selected || isDraft) return;
+    const registryId = selected.registry_id;
+    const target = profileId ? links.find((account) => account.id === profileId) : null;
+    if (!profileId && !window.confirm(`${selected.name} (${registryId}) 카드의 계정 연결을 해제할까요? 해당 계정은 학생으로 돌아갑니다.`)) {
+      return;
+    }
+
+    setAssigning(true);
+    setMessage("");
+    const response = await fetch("/api/admin/tutors/assignment", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registry_id: registryId, profile_id: profileId }),
+    });
+    const result = await response.json().catch(() => null);
+    setAssigning(false);
+
+    if (!response.ok) {
+      setMessage(result?.error || "계정 연결을 바꾸지 못했습니다.");
+      return;
+    }
+
+    setLinks((current) => current.map((account) => {
+      if (account.tutor_registry_id === registryId) {
+        return { ...account, role: "student", tutor_registry_id: null };
+      }
+      if (account.id === profileId) {
+        return { ...account, role: "tutor", tutor_registry_id: registryId };
+      }
+      return account;
+    }));
+    setMessage(profileId
+      ? `${accountLabel(target)} 계정에 ${registryId} 카드를 연결했습니다.`
+      : `${registryId} 카드의 계정 연결을 해제했습니다.`);
   }
 
   async function deleteTutor() {
@@ -310,6 +371,45 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
                 <label><span>언어</span><input placeholder="한국어, 영어" value={selected.languages || ""} onChange={(event) => updateSelected("languages", event.target.value || null)} /></label>
                 <label><span>수업 형식</span><input placeholder="온라인 1:1" value={selected.lesson_format || ""} onChange={(event) => updateSelected("lesson_format", event.target.value || null)} /></label>
 
+                <div className={styles.full}>
+                  <span className={styles.groupLabel}>연결된 튜터 계정</span>
+                  <p className={styles.groupHint}>
+                    이 카드를 소유할 계정을 직접 고릅니다. 연결된 계정만 튜터 포털에서 이 카드의 수업, 숙제, 대화를 볼 수 있습니다.
+                    이메일이 같다고 자동으로 연결되지는 않습니다.
+                  </p>
+                  {isDraft ? (
+                    <p className={styles.groupHint}>카드를 먼저 만든 뒤 계정을 연결할 수 있습니다.</p>
+                  ) : (
+                    <div className={styles.assignRow}>
+                      <select
+                        value={linkedAccount?.id || ""}
+                        disabled={assigning}
+                        onChange={(event) => assignAccount(event.target.value || null)}
+                        aria-label="연결할 튜터 계정"
+                      >
+                        <option value="">연결 안 함</option>
+                        {links.map((account) => (
+                          <option
+                            value={account.id}
+                            key={account.id}
+                            disabled={Boolean(account.tutor_registry_id) && account.tutor_registry_id !== selected.registry_id}
+                          >
+                            {accountLabel(account)}
+                            {account.tutor_registry_id && account.tutor_registry_id !== selected.registry_id
+                              ? ` · ${account.tutor_registry_id} 연결됨`
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
+                      {linkedAccount && (
+                        <button type="button" onClick={() => assignAccount(null)} disabled={assigning}>
+                          연결 해제
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <label className={styles.toggle}><input type="checkbox" checked={selected.active} onChange={(event) => updateSelected("active", event.target.checked)} /><span>공개 명부에 표시</span></label>
               </div>
 
@@ -343,6 +443,11 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
       </section>
     </main>
   );
+}
+
+function accountLabel(account: AdminAccount | null | undefined) {
+  if (!account) return "계정";
+  return `${account.full_name || "이름 없음"} · ${account.email || "이메일 없음"}`;
 }
 
 function byDisplayOrder(left: AdminTutor, right: AdminTutor) {

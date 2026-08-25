@@ -42,3 +42,11 @@
 .addTutor:disabled{opacity:.4;cursor:not-allowed}
 .noTutor{display:grid;gap:16px;place-items:center}
 .noTutor .addTutor{max-width:200px}
+
+/* Card-to-account assignment. The select carries the current owner, so it sits
+   on its own row with the release button rather than in the two-column grid. */
+.assignRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.assignRow select{flex:1;min-width:220px;min-height:42px;border:1px solid var(--line);border-radius:7px;padding:0 10px;background:var(--card);color:inherit;font:inherit;font-size:.72rem}
+.assignRow button{min-height:42px;padding:0 14px;border:1px solid var(--line);border-radius:7px;background:transparent;color:#8a8279;font-size:.68rem;font-weight:700;cursor:pointer}
+.assignRow button:hover:not(:disabled){border-color:var(--red);color:var(--red)}
+.assignRow button:disabled,.assignRow select:disabled{opacity:.5;cursor:wait}

@@ -4,8 +4,6 @@ import { parseProfile } from "../../../../utils/tutors/profile-patch";
 
 export const dynamic = "force-dynamic";
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
-
 const tutorFields =
   "registry_id,name,exam,score,category,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
 
@@ -94,33 +92,6 @@ function buildTutorRow(body: Record<string, unknown>) {
   return row;
 }
 
-// An account whose email matches the card's Zoom host becomes that tutor. When
-// the host changes, the account that used to hold the card goes back to being a
-// plain student.
-async function syncHostProfile(
-  supabase: SupabaseServerClient,
-  registryId: string,
-  zoomHostEmail: string | null,
-  previousHostEmail?: string | null,
-) {
-  const now = new Date().toISOString();
-  if (previousHostEmail && previousHostEmail.toLowerCase() !== zoomHostEmail?.toLowerCase()) {
-    await supabase
-      .from("profiles")
-      .update({ role: "student", tutor_registry_id: null, updated_at: now })
-      .eq("tutor_registry_id", registryId)
-      .neq("role", "admin");
-  }
-
-  if (zoomHostEmail) {
-    await supabase
-      .from("profiles")
-      .update({ role: "tutor", tutor_registry_id: registryId, updated_at: now })
-      .ilike("email", zoomHostEmail)
-      .neq("role", "admin");
-  }
-}
-
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin();
   if ("error" in auth) return auth.error;
@@ -142,12 +113,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: updates }, { status: 400 });
   }
 
-  const existingTutor = await auth.supabase
-    .from("tutors")
-    .select("zoom_host_email")
-    .eq("registry_id", registryId)
-    .single();
-
   const { data, error } = await auth.supabase
     .from("tutors")
     .update(updates)
@@ -158,13 +123,6 @@ export async function PATCH(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: "튜터 정보를 저장하지 못했습니다." }, { status: 500 });
   }
-
-  await syncHostProfile(
-    auth.supabase,
-    registryId,
-    updates.zoom_host_email,
-    existingTutor.data?.zoom_host_email,
-  );
 
   return NextResponse.json(data, {
     headers: { "Cache-Control": "no-store, max-age=0" },
@@ -215,8 +173,6 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: "튜터 카드를 만들지 못했습니다." }, { status: 500 });
   }
-
-  await syncHostProfile(auth.supabase, registryId, insert.zoom_host_email);
 
   return NextResponse.json(data, {
     status: 201,
