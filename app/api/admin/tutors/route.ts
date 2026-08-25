@@ -4,6 +4,8 @@ import { parseProfile } from "../../../../utils/tutors/profile-patch";
 
 export const dynamic = "force-dynamic";
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
 const tutorFields =
   "registry_id,name,exam,score,category,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
 
@@ -49,6 +51,76 @@ export async function GET() {
   });
 }
 
+const ALLOWED_CATEGORIES = new Set(["ib", "ap", "alevel", "sat", "english"]);
+
+// Create and edit write the same columns, so both go through here. Returns a
+// message string when a value is malformed.
+function buildTutorRow(body: Record<string, unknown>) {
+  const category = cleanText(body.category, 20);
+  if (!ALLOWED_CATEGORIES.has(category)) return "분류 값이 올바르지 않습니다.";
+
+  const displayOrder = Number(body.display_order);
+  if (!Number.isInteger(displayOrder) || displayOrder < 0 || displayOrder > 9999) {
+    return "표시 순서는 0~9999 사이의 정수여야 합니다.";
+  }
+
+  const zoomHostEmail = cleanText(body.zoom_host_email, 254).toLowerCase();
+  if (zoomHostEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(zoomHostEmail)) {
+    return "Zoom 호스트 이메일 형식을 확인해 주세요.";
+  }
+
+  // Same profile fields the tutor edits themselves, so an admin can correct a
+  // card without asking.
+  const profilePatch = parseProfile(body);
+  if (typeof profilePatch === "string") return profilePatch;
+
+  const row = {
+    ...profilePatch,
+    name: cleanText(body.name, 80),
+    exam: cleanText(body.exam, 80),
+    score: cleanText(body.score, 80),
+    category,
+    university: nullableText(body.university, 120),
+    university_en: nullableText(body.university_en, 160),
+    photo_url: safeAssetUrl(body.photo_url),
+    banner_url: safeAssetUrl(body.banner_url),
+    zoom_host_email: zoomHostEmail || null,
+    display_order: displayOrder,
+    active: body.active === true,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (!row.name || !row.exam || !row.score) return "이름, 시험, 성적을 모두 입력해 주세요.";
+  return row;
+}
+
+// An account whose email matches the card's Zoom host becomes that tutor. When
+// the host changes, the account that used to hold the card goes back to being a
+// plain student.
+async function syncHostProfile(
+  supabase: SupabaseServerClient,
+  registryId: string,
+  zoomHostEmail: string | null,
+  previousHostEmail?: string | null,
+) {
+  const now = new Date().toISOString();
+  if (previousHostEmail && previousHostEmail.toLowerCase() !== zoomHostEmail?.toLowerCase()) {
+    await supabase
+      .from("profiles")
+      .update({ role: "student", tutor_registry_id: null, updated_at: now })
+      .eq("tutor_registry_id", registryId)
+      .neq("role", "admin");
+  }
+
+  if (zoomHostEmail) {
+    await supabase
+      .from("profiles")
+      .update({ role: "tutor", tutor_registry_id: registryId, updated_at: now })
+      .ilike("email", zoomHostEmail)
+      .neq("role", "admin");
+  }
+}
+
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin();
   if ("error" in auth) return auth.error;
@@ -65,16 +137,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "명부 번호가 필요합니다." }, { status: 400 });
   }
 
-  const category = cleanText(body.category, 20);
-  const displayOrder = Number(body.display_order);
-  const allowedCategories = new Set(["ib", "ap", "alevel", "sat", "english"]);
-
-  if (!allowedCategories.has(category)) {
-    return NextResponse.json({ error: "분류 값이 올바르지 않습니다." }, { status: 400 });
-  }
-
-  if (!Number.isInteger(displayOrder) || displayOrder < 0 || displayOrder > 9999) {
-    return NextResponse.json({ error: "표시 순서는 0~9999 사이의 정수여야 합니다." }, { status: 400 });
+  const updates = buildTutorRow(body);
+  if (typeof updates === "string") {
+    return NextResponse.json({ error: updates }, { status: 400 });
   }
 
   const existingTutor = await auth.supabase
@@ -82,44 +147,6 @@ export async function PATCH(request: NextRequest) {
     .select("zoom_host_email")
     .eq("registry_id", registryId)
     .single();
-  const zoomHostEmailInput = cleanText(body.zoom_host_email, 254).toLowerCase();
-  if (
-    zoomHostEmailInput
-    && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(zoomHostEmailInput)
-  ) {
-    return NextResponse.json(
-      { error: "Zoom 호스트 이메일 형식을 확인해 주세요." },
-      { status: 400 },
-    );
-  }
-  const zoomHostEmail = zoomHostEmailInput || null;
-
-  // Same profile fields the tutor edits themselves, so an admin can correct a
-  // card without asking. Returns a message string when a value is malformed.
-  const profilePatch = parseProfile(body);
-  if (typeof profilePatch === "string") {
-    return NextResponse.json({ error: profilePatch }, { status: 400 });
-  }
-
-  const updates = {
-    ...profilePatch,
-    name: cleanText(body.name, 80),
-    exam: cleanText(body.exam, 80),
-    score: cleanText(body.score, 80),
-    category,
-    university: nullableText(body.university, 120),
-    university_en: nullableText(body.university_en, 160),
-    photo_url: safeAssetUrl(body.photo_url),
-    banner_url: safeAssetUrl(body.banner_url),
-    zoom_host_email: zoomHostEmail,
-    display_order: displayOrder,
-    active: body.active === true,
-    updated_at: new Date().toISOString(),
-  };
-
-  if (!updates.name || !updates.exam || !updates.score) {
-    return NextResponse.json({ error: "이름, 시험, 성적을 모두 입력해 주세요." }, { status: 400 });
-  }
 
   const { data, error } = await auth.supabase
     .from("tutors")
@@ -132,35 +159,67 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "튜터 정보를 저장하지 못했습니다." }, { status: 500 });
   }
 
-  const previousHostEmail = existingTutor.data?.zoom_host_email;
-  if (
-    previousHostEmail
-    && previousHostEmail.toLowerCase() !== zoomHostEmail?.toLowerCase()
-  ) {
-    await auth.supabase
-      .from("profiles")
-      .update({
-        role: "student",
-        tutor_registry_id: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("tutor_registry_id", registryId)
-      .neq("role", "admin");
-  }
-
-  if (zoomHostEmail) {
-    await auth.supabase
-      .from("profiles")
-      .update({
-        role: "tutor",
-        tutor_registry_id: registryId,
-        updated_at: new Date().toISOString(),
-      })
-      .ilike("email", zoomHostEmail)
-      .neq("role", "admin");
-  }
+  await syncHostProfile(
+    auth.supabase,
+    registryId,
+    updates.zoom_host_email,
+    existingTutor.data?.zoom_host_email,
+  );
 
   return NextResponse.json(data, {
+    headers: { "Cache-Control": "no-store, max-age=0" },
+  });
+}
+
+// Adding a card. The admin fills in a blank card in the editor and picks its
+// own registry number, so the id is validated here rather than generated: an
+// existing number would otherwise silently overwrite a live tutor.
+export async function POST(request: NextRequest) {
+  const auth = await requireAdmin();
+  if ("error" in auth) return auth.error;
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
+  }
+
+  const registryId = cleanText(body.registry_id, 24).toUpperCase();
+  if (!/^[A-Z][A-Z0-9-]{1,23}$/.test(registryId)) {
+    return NextResponse.json(
+      { error: "명부 번호는 영문 대문자로 시작하고 영문·숫자·하이픈만 쓸 수 있습니다. 예: P-004" },
+      { status: 400 },
+    );
+  }
+
+  const insert = buildTutorRow(body);
+  if (typeof insert === "string") {
+    return NextResponse.json({ error: insert }, { status: 400 });
+  }
+
+  const { count } = await auth.supabase
+    .from("tutors")
+    .select("registry_id", { count: "exact", head: true })
+    .eq("registry_id", registryId);
+  if (count) {
+    return NextResponse.json({ error: `명부 번호 ${registryId}는 이미 사용 중입니다.` }, { status: 409 });
+  }
+
+  const { data, error } = await auth.supabase
+    .from("tutors")
+    .insert({ ...insert, registry_id: registryId })
+    .select(tutorFields)
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: "튜터 카드를 만들지 못했습니다." }, { status: 500 });
+  }
+
+  await syncHostProfile(auth.supabase, registryId, insert.zoom_host_email);
+
+  return NextResponse.json(data, {
+    status: 201,
     headers: { "Cache-Control": "no-store, max-age=0" },
   });
 }

@@ -43,16 +43,71 @@ const bannerOptions = [
   { value: "/university-yonsei-banner.png", label: "연세대학교 배너" },
 ];
 
+// A card being created lives outside the saved list until it is written, so
+// editing its registry number does not break the selection.
+const DRAFT_KEY = "__draft__";
+
+function emptyTutor(registryId: string, displayOrder: number): AdminTutor {
+  return {
+    registry_id: registryId,
+    name: "",
+    exam: "",
+    score: "",
+    category: "ib",
+    university: null,
+    university_en: null,
+    photo_url: null,
+    banner_url: null,
+    zoom_host_email: null,
+    display_order: displayOrder,
+    active: false,
+    subject_scores: [],
+    availability: {},
+    bio: null,
+    bio_en: null,
+    video_url: null,
+    languages: null,
+    lesson_format: null,
+  };
+}
+
+// Registry numbers on manually added cards run P-001, P-002, ... Suggest the
+// next free one; the admin can still type something else.
+function nextRegistryId(tutors: AdminTutor[]) {
+  const used = tutors
+    .map((tutor) => /^P-(\d+)$/.exec(tutor.registry_id)?.[1])
+    .filter(Boolean)
+    .map(Number);
+  const next = used.length ? Math.max(...used) + 1 : 1;
+  return `P-${String(next).padStart(3, "0")}`;
+}
+
 export default function AdminTutorEditor({ adminName, initialTutors }: { adminName: string; initialTutors: AdminTutor[] }) {
   const [tutors, setTutors] = useState(initialTutors);
+  const [draft, setDraft] = useState<AdminTutor | null>(null);
   const [selectedId, setSelectedId] = useState(initialTutors[0]?.registry_id ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
-  const selected = tutors.find((tutor) => tutor.registry_id === selectedId) ?? null;
+  const isDraft = selectedId === DRAFT_KEY;
+  const selected = isDraft ? draft : tutors.find((tutor) => tutor.registry_id === selectedId) ?? null;
 
   function updateSelected<K extends keyof AdminTutor>(key: K, value: AdminTutor[K]) {
-    setTutors((current) => current.map((tutor) => tutor.registry_id === selectedId ? { ...tutor, [key]: value } : tutor));
+    if (isDraft) setDraft((current) => current && { ...current, [key]: value });
+    else setTutors((current) => current.map((tutor) => tutor.registry_id === selectedId ? { ...tutor, [key]: value } : tutor));
+    setMessage("");
+  }
+
+  function startDraft() {
+    const order = tutors.reduce((max, tutor) => Math.max(max, tutor.display_order), 0) + 1;
+    setDraft(emptyTutor(nextRegistryId(tutors), order));
+    setSelectedId(DRAFT_KEY);
+    setMessage("빈 카드입니다. 이름, 시험, 성적을 채운 뒤 저장하세요.");
+  }
+
+  function discardDraft() {
+    setDraft(null);
+    setSelectedId(tutors[0]?.registry_id ?? "");
     setMessage("");
   }
 
@@ -77,7 +132,7 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
     setSaving(true);
     setMessage("");
     const response = await fetch("/api/admin/tutors", {
-      method: "PATCH",
+      method: isDraft ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...selected,
@@ -94,8 +149,15 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
       setSaving(false);
       return;
     }
-    setTutors((current) => current.map((tutor) => tutor.registry_id === selectedId ? result : tutor));
-    setMessage("저장되었습니다. 공개 튜터 명부에도 바로 반영됩니다.");
+    if (isDraft) {
+      setTutors((current) => [...current, result].sort(byDisplayOrder));
+      setDraft(null);
+      setSelectedId(result.registry_id);
+      setMessage(`${result.name} 튜터 카드를 만들었습니다. ${result.active ? "공개 명부에 바로 표시됩니다." : "‘공개 명부에 표시’를 켜면 사이트에 나타납니다."}`);
+    } else {
+      setTutors((current) => current.map((tutor) => tutor.registry_id === selectedId ? result : tutor));
+      setMessage("저장되었습니다. 공개 튜터 명부에도 바로 반영됩니다.");
+    }
     setSaving(false);
   }
 
@@ -137,6 +199,17 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
         <div className={styles.workspace}>
           <aside className={styles.tutorList}>
             <div className={styles.listHeading}><span>등재 튜터</span><b>{tutors.length}</b></div>
+            {draft && (
+              <button
+                type="button"
+                className={isDraft ? styles.selectedTutor : ""}
+                onClick={() => { setSelectedId(DRAFT_KEY); setMessage(""); }}
+              >
+                <span className={styles.listAvatar}>{draft.name ? initials(draft.name) : "＋"}</span>
+                <span><b>{draft.name || "새 튜터 카드"}</b><small>{draft.registry_id} · 저장 전</small></span>
+                <i className={styles.hidden} />
+              </button>
+            )}
             {tutors.map((tutor) => (
               <button
                 type="button"
@@ -149,6 +222,9 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
                 <i className={tutor.active ? styles.live : styles.hidden} />
               </button>
             ))}
+            <button type="button" className={styles.addTutor} onClick={startDraft} disabled={Boolean(draft)}>
+              ＋ 카드 추가
+            </button>
           </aside>
 
           {selected ? (
@@ -180,7 +256,7 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
               </div>
 
               <div className={styles.formGrid}>
-                <label><span>명부 번호</span><input value={selected.registry_id} disabled /></label>
+                <label><span>명부 번호</span><input value={selected.registry_id} disabled={!isDraft} placeholder="P-004" onChange={(event) => updateSelected("registry_id", event.target.value.toUpperCase())} /></label>
                 <label><span>표시 순서</span><input type="number" min="0" max="9999" value={selected.display_order} onChange={(event) => updateSelected("display_order", Number(event.target.value))} /></label>
                 <label><span>튜터 이름</span><input value={selected.name} onChange={(event) => updateSelected("name", event.target.value)} /></label>
                 <label><span>시험 / 커리큘럼</span><input value={selected.exam} onChange={(event) => updateSelected("exam", event.target.value)} /></label>
@@ -238,20 +314,39 @@ export default function AdminTutorEditor({ adminName, initialTutors }: { adminNa
               </div>
 
               <footer className={styles.actions}>
-                <p className={message.startsWith("저장") ? styles.success : ""}>{message || "필수 정보와 이미지 설정을 확인한 뒤 저장하세요."}</p>
+                <p className={message.startsWith("저장") || message.includes("만들었습니다") ? styles.success : ""}>
+                  {message || (isDraft ? "이름, 시험, 성적은 반드시 입력해야 합니다." : "필수 정보와 이미지 설정을 확인한 뒤 저장하세요.")}
+                </p>
                 <div className={styles.actionButtons}>
-                  <button type="button" className={styles.deleteButton} onClick={deleteTutor} disabled={saving || deleting}>
-                    {deleting ? "삭제 중..." : "튜터 삭제"}
+                  {isDraft ? (
+                    <button type="button" className={styles.deleteButton} onClick={discardDraft} disabled={saving}>
+                      취소
+                    </button>
+                  ) : (
+                    <button type="button" className={styles.deleteButton} onClick={deleteTutor} disabled={saving || deleting}>
+                      {deleting ? "삭제 중..." : "튜터 삭제"}
+                    </button>
+                  )}
+                  <button type="button" onClick={saveTutor} disabled={saving || deleting}>
+                    {saving ? (isDraft ? "만드는 중..." : "저장 중...") : (isDraft ? "카드 만들기" : "Supabase에 저장")} <span>↗</span>
                   </button>
-                  <button type="button" onClick={saveTutor} disabled={saving || deleting}>{saving ? "저장 중..." : "Supabase에 저장"} <span>↗</span></button>
                 </div>
               </footer>
             </div>
-          ) : <div className={styles.noTutor}>관리할 튜터가 없습니다.</div>}
+          ) : (
+            <div className={styles.noTutor}>
+              <p>등재된 튜터가 없습니다.</p>
+              <button type="button" className={styles.addTutor} onClick={startDraft}>＋ 카드 추가</button>
+            </div>
+          )}
         </div>
       </section>
     </main>
   );
+}
+
+function byDisplayOrder(left: AdminTutor, right: AdminTutor) {
+  return left.display_order - right.display_order || left.registry_id.localeCompare(right.registry_id);
 }
 
 function initials(value: string) {
