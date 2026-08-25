@@ -33,6 +33,7 @@ export default function TutorPortalHeader({
     { href: "/portal/tutor", label: l("개요", "Overview"), active: pathname === "/portal/tutor" },
     { href: "/portal/tutor/homework", label: l("숙제", "Homework"), active: pathname.startsWith("/portal/tutor/homework") },
     { href: "/portal/tutor/sessions", label: l("Zoom 수업", "Zoom lessons"), active: pathname.startsWith("/portal/tutor/sessions") },
+    { href: "/portal/classroom", label: l("내 교실", "My classroom"), active: pathname.startsWith("/portal/classroom") },
     { href: "/portal/tutor/profile", label: l("내 카드", "My card"), active: pathname.startsWith("/portal/tutor/profile") },
   ];
 

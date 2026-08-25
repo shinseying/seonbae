@@ -57,7 +57,8 @@ export async function submitForm(form: HTMLFormElement, subject: string): Promis
       phone: data.phone || '',
       curriculum,
       preferredTutor: data.preferredTutor || 'Manager consultation',
-      preferredTimes: data.times || '',
+      // The date travels with the slots so the admin reads one answer.
+      preferredTimes: [data.preferredDate, data.times].filter(Boolean).join(' '),
       subject: data.subject || firstLine(data.goal) || subject,
       goals,
       language: document.documentElement.dataset.lang === 'en' ? 'en' : 'ko',

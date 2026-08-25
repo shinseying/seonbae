@@ -1,0 +1,52 @@
+.page{min-height:100vh;background:var(--paper,#fbf7ef);padding:32px 20px 60px}
+.shell{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.heading p{margin:0;font:700 .66rem "Courier Prime",monospace;letter-spacing:.16em;color:#c1663a}
+.heading h1{margin:6px 0 4px;font-size:2rem;font-weight:800}
+.heading span{font-size:.88rem;color:#565759}
+.message{margin:0;padding:12px 14px;border-radius:10px;background:#fbeed8;font-size:.84rem}
+
+.requests{background:#fffdf7;border:1px solid var(--line,#e5ddcd);border-radius:16px;padding:18px}
+.requests h2{margin:0 0 12px;font-size:1rem}
+.requests article{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--line,#e5ddcd)}
+.requests article b{display:block;font-size:.9rem}
+.requests article small{color:#7a808b;font-size:.72rem}
+.requestActions{display:flex;gap:8px}
+.requestActions button{padding:8px 16px;border:0;border-radius:8px;background:#163a51;color:#fff;font-weight:700;font-size:.78rem;cursor:pointer}
+.ghost{background:transparent!important;color:#b3452a!important;border:1px solid rgba(179,69,42,.4)!important}
+
+.joinForm{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;background:#fffdf7;border:1px solid var(--line,#e5ddcd);border-radius:16px;padding:18px}
+.joinForm>div{grid-column:1/-1}
+.joinForm h2{margin:0 0 4px;font-size:1rem}
+.joinForm p{margin:0;font-size:.8rem;color:#7a808b}
+.joinForm label{display:grid;gap:6px;font-size:.74rem;font-weight:700;color:#53636c}
+.joinForm input{padding:11px 13px;border:1px solid var(--line,#e5ddcd);border-radius:9px;background:#fff;font:inherit;font-size:.86rem}
+.joinForm button{padding:12px 20px;border:0;border-radius:9px;background:#163a51;color:#fff;font-weight:700;cursor:pointer}
+.joinForm button:disabled{opacity:.6}
+
+.layout{display:grid;grid-template-columns:250px 1fr;gap:18px;align-items:start}
+.roomList{display:flex;flex-direction:column;gap:8px}
+.roomList button{text-align:left;padding:13px 15px;border:1px solid var(--line,#e5ddcd);border-radius:12px;background:#fffdf7;cursor:pointer}
+.roomList button b{display:block;font-size:.88rem}
+.roomList button small{color:#7a808b;font-size:.7rem}
+.activeRoom{border-color:#163a51!important;box-shadow:0 0 0 2px rgba(22,58,81,.1)}
+
+.room{background:#fffdf7;border:1px solid var(--line,#e5ddcd);border-radius:16px;padding:22px}
+.room>header h2{margin:0;font-size:1.2rem}
+.room>header p{margin:4px 0 0;font-size:.8rem;color:#7a808b}
+.codeBox{display:flex;flex-wrap:wrap;gap:20px;margin-top:16px;padding:14px 16px;border-radius:12px;background:#fbeed8}
+.codeBox small{display:block;font-size:.68rem;color:#7a808b}
+.codeBox b{font-size:1rem;font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em}
+.codeBox p{flex:1 1 100%;margin:0;font-size:.72rem;color:#7a808b}
+
+.block{margin-top:22px;padding-top:16px;border-top:1px solid var(--line,#e5ddcd)}
+.block h3{margin:0 0 10px;font-size:.92rem}
+.blockEmpty{margin:0;font-size:.8rem;color:#7a808b}
+.item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:11px 13px;border:1px solid var(--line,#e5ddcd);border-radius:11px;margin-bottom:8px}
+.item b{display:block;font-size:.88rem}
+.item small{color:#7a808b;font-size:.72rem}
+.item span{padding:3px 10px;border-radius:999px;font-size:.68rem;font-weight:800;background:rgba(22,58,81,.08);color:#163a51}
+.item span[data-status="graded"]{background:rgba(79,124,82,.12);color:#4f7c52}
+.item a{color:#c1663a;font-weight:700;font-size:.78rem;text-decoration:none}
+.feedback{grid-column:1/-1;margin:6px 0 0;padding:10px 12px;border-radius:9px;background:rgba(0,0,0,.03);font-size:.8rem;line-height:1.55;white-space:pre-wrap}
+.empty{padding:40px;text-align:center;color:#7a808b;font-size:.86rem;background:#fffdf7;border:1px solid var(--line,#e5ddcd);border-radius:16px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}.joinForm{grid-template-columns:1fr}}

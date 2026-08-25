@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../utils/supabase/server";
+import { createAdminClient } from "../../../../utils/supabase/admin";
+import { ensureClassroom } from "../../../../utils/classrooms/server";
 import {
   createZoomMeeting,
   deleteZoomMeeting,
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
   const [{ data: student }, { data: tutor }] = await Promise.all([
     auth.supabase
       .from("profiles")
-      .select("id,role")
+      .select("id,role,full_name")
       .eq("id", userId)
       .single(),
     auth.supabase
@@ -147,6 +149,14 @@ export async function POST(request: NextRequest) {
       { error: "수업 일정을 저장하지 못했습니다." },
       { status: 500 },
     );
+  }
+
+  // The classroom is the same pair as the chat thread; creating it here means
+  // the join code exists as soon as the first lesson is booked.
+  try {
+    await ensureClassroom(createAdminClient(), userId, tutorRegistryId, `${student.full_name || "학생"} · ${tutor.name}`);
+  } catch {
+    // A missing classroom is recoverable; the lesson itself is what matters.
   }
 
   await auth.supabase.from("chat_threads").upsert(

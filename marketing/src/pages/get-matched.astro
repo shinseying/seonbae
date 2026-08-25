@@ -97,7 +97,8 @@ const stepLabels = [
                 <p class="field-hint"><T en="The list updates to tutors matching the curriculum selected above." ko="위에서 선택한 커리큘럼에 맞는 튜터만 표시됩니다." /></p>
               </div>
               <div class="form-field">
-                <span class="field-label"><T en="Times that suit you" ko="상담 가능한 시간" /></span>
+                <span class="field-label"><T en="Date and time that suit you" ko="상담 가능한 날짜와 시간" /></span>
+                <input class="form-control slot-date" id="m-date" name="preferredDate" type="date" aria-label="상담 희망 날짜" />
                 <div class="slot-grid">
                   {slots.map((slot) => (
                     <label class="slot"><input type="checkbox" name="times" value={slot} /><span>{slot}</span></label>
@@ -269,6 +270,8 @@ const stepLabels = [
   }
   .slot input:focus-visible + span { outline: 2px solid var(--violet); outline-offset: 2px; }
 
+  .slot-date { margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+
 </style>
 
 <script>
@@ -338,6 +341,10 @@ const stepLabels = [
     'IB or A Level': ['IB', 'A LEVEL', 'A-LEVEL'],
     'University prep': ['SAT', 'ACT', 'IB', 'AP'],
   };
+
+  // Consultations are booked forward, so yesterday is not offered.
+  const dateField = form?.querySelector('#m-date') as HTMLInputElement | null;
+  if (dateField) dateField.min = new Date().toISOString().slice(0, 10);
 
   const activeCurriculum = () => (form?.querySelector('input[name="level"]:checked') as HTMLInputElement | null)?.value || '';
   const matchingTutors = () => {

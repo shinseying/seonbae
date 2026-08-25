@@ -76,7 +76,27 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (phoneLookupError) return jsonError("휴대전화 번호 중복 여부를 확인하지 못했습니다.", 503);
-  if (existingPhone) return jsonError("이미 다른 계정에서 사용 중인 휴대전화 번호입니다.", 409);
+  if (existingPhone) {
+    return jsonError(
+      "입력하신 휴대전화 번호로 이미 가입된 계정이 있습니다. 해당 계정으로 로그인하거나 아이디 찾기를 이용해 주세요.",
+      409,
+    );
+  }
+
+  // Supabase hides whether an address is taken, so the check happens here and
+  // the applicant is told plainly rather than seeing a generic failure.
+  const { data: existingEmail } = await admin
+    .from("profiles")
+    .select("id")
+    .ilike("email", email)
+    .limit(1)
+    .maybeSingle();
+  if (existingEmail) {
+    return jsonError(
+      "입력하신 이메일로 이미 가입된 계정이 있습니다. 해당 계정으로 로그인하거나 비밀번호 재설정을 이용해 주세요.",
+      409,
+    );
+  }
 
   const supabase = await createClient();
   const confirmationDestination = "/signup/thank-you";
@@ -256,7 +276,7 @@ function signupError(message = "") {
   const rateLimited = normalized.includes("rate limit");
   return jsonError(
     duplicate
-      ? "이미 가입했거나 사용 중인 이메일입니다. 로그인해 주세요."
+      ? "입력하신 정보로 이미 가입된 계정이 있습니다. 해당 계정으로 로그인해 주세요."
       : rateLimited
         ? "가입 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
         : "가입 요청을 완료하지 못했습니다. 입력한 정보를 다시 확인해 주세요.",
