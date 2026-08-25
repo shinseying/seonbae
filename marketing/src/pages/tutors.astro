@@ -478,16 +478,64 @@ const roster = true;
   /* Profile dialog */
   .pf { position: fixed; inset: 0; width: min(calc(100vw - 32px), 720px); max-width: none; max-height: min(calc(100dvh - 32px), 880px); margin: auto; padding: 0; border: 0; border-radius: var(--r-xl); background: transparent; color: var(--ink); box-shadow: var(--shadow-lift); }
   .pf::backdrop { background: rgba(19, 24, 27, .56); backdrop-filter: blur(4px); }
-  .pf__head { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 20px; align-items: center; margin-top: 10px; }
-  .pf__head img { width: 96px; height: 96px; border-radius: 50%; object-fit: contain; background: var(--violet-soft); }
-  .pf__head p { margin-top: 4px; color: var(--muted); }
-  .pf__head .tcardx__scores { justify-content: flex-start; margin-top: 12px; }
-  .pf__sub { margin-top: 26px; font-family: var(--display); font-size: 1rem; font-weight: 750; }
-  .pf__video { margin-top: 12px; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #0d1418; }
+  /* The panel scrolls under a pinned footer, so the match CTA stays reachable
+     however long the profile runs. */
+  .pf .book__panel { display: flex; flex-direction: column; padding-bottom: 0; }
+
+  .pf__head {
+    display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 24px; align-items: center;
+    margin-top: 16px; padding: 22px; border-radius: var(--r-lg); background: var(--canvas);
+  }
+  .pf__portrait { display: grid; justify-items: center; gap: 10px; }
+  .pf__portrait img {
+    width: 118px; height: 118px; border-radius: 50%; object-fit: contain;
+    background: var(--violet-soft); border: 5px solid var(--white);
+  }
+  .pf__verified {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: var(--r-pill); border: 1px solid var(--line);
+    background: var(--white); color: var(--violet); font-size: .7rem; font-weight: 700;
+    white-space: nowrap;
+  }
+  .pf__ident { min-width: 0; }
+  .pf__name {
+    font-family: var(--display); font-weight: 800; font-size: clamp(1.5rem, 3.4vw, 1.95rem);
+    letter-spacing: -.03em; line-height: 1.12; color: var(--violet);
+  }
+  .pf__uni { margin-top: 5px; font-size: 1rem; font-weight: 600; color: var(--ink); }
+  .pf__ident .tcardx__scores { justify-content: flex-start; margin-top: 14px; }
+
+  .pf__meta {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
+    margin: 18px 0 0; padding: 0;
+  }
+  .pf__meta div { display: grid; gap: 3px; }
+  .pf__meta dt { font-size: .72rem; color: var(--muted-soft); }
+  .pf__meta dd { margin: 0; font-size: .88rem; font-weight: 600; color: var(--ink); }
+
+  /* One hairline per section instead of bare margins, matching the quiet rules
+     the rest of the site separates blocks with. */
+  .pf__block { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .pf__sub { font-family: var(--display); font-size: 1rem; font-weight: 750; color: var(--ink); }
+  .pf__video { margin-top: 14px; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #0d1418; }
   .pf__video :global(video), .pf__video :global(iframe) { width: 100%; height: 100%; border: 0; display: block; }
   .pf__bio { margin-top: 10px; color: var(--muted); line-height: 1.65; white-space: pre-wrap; }
-  .pf__empty { margin-top: 10px; padding: 14px 16px; border: 1px dashed var(--line); border-radius: var(--r-sm); color: var(--muted-soft); font-size: .92rem; }
-  .pf__foot { margin-top: 28px; }
+  /* A tutor with no video, no bio, and no hours used to stack three dashed
+     boxes and read as broken. One quiet line each says the same thing. */
+  .pf__empty { margin-top: 10px; color: var(--muted-soft); font-size: .92rem; line-height: 1.55; }
+  .pf__block .book__calendar { margin-top: 14px; }
+
+  .pf__foot {
+    position: sticky; bottom: 0; margin-top: 26px;
+    padding: 16px 0 clamp(24px, 4vw, 40px);
+    background: linear-gradient(to bottom, transparent, var(--white) 18%);
+  }
+
+  @media (max-width: 560px) {
+    .pf__head { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 20px 16px; }
+    .pf__ident .tcardx__scores { justify-content: center; }
+    .pf__meta { grid-template-columns: 1fr; }
+  }
 
   .vid__title { font-size: 1.2rem; padding-right: 48px; }
   .vid__frame { margin-top: 16px; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #0d1418; }
@@ -760,10 +808,13 @@ const roster = true;
 
     profileBody.innerHTML = `
       <header class="pf__head">
-        <img src="${cardPhoto}" alt="" width="320" height="320" />
-        <div>
-          <h2 class="h3">${escapeHtml(name)}</h2>
-          <p>${uni}</p>
+        <div class="pf__portrait">
+          <img src="${cardPhoto}" alt="" width="320" height="320" />
+          <span class="pf__verified">${verifyIcon}${tr('Verified', '검증 완료')}</span>
+        </div>
+        <div class="pf__ident">
+          <h2 class="pf__name" id="profile-name">${escapeHtml(name)}</h2>
+          ${uni ? `<p class="pf__uni">${uni}</p>` : ''}
           <ul class="tcardx__scores">${
             scores.length
               ? scores.map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')
@@ -772,31 +823,50 @@ const roster = true;
         </div>
       </header>
 
-      <h3 class="pf__sub">${tr('Sample lesson', '샘플 수업')}</h3>
-      ${video
-        ? (/\.(mp4|webm|ogg)$/i.test(video)
-            ? `<div class="pf__video"><video src="${video}" controls playsinline preload="metadata"></video></div>`
-            : `<div class="pf__video"><iframe src="${video}" title="${escapeHtml(name)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`)
-        : `<p class="pf__empty">${tr('This tutor has not uploaded a sample lesson yet.', '아직 등록된 샘플 수업이 없습니다.')}</p>`}
+      <dl class="pf__meta">
+        <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(tutor.languages || tr('Korean, English', '한국어, 영어'))}</dd></div>
+        <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(tutor.lesson_format || tr('Online 1:1', '온라인 1:1'))}</dd></div>
+      </dl>
 
-      <h3 class="pf__sub">${tr('Introduction', '소개')}</h3>
-      ${bio ? `<p class="pf__bio">${escapeHtml(bio)}</p>` : `<p class="pf__empty">${tr('Introduction coming soon.', '소개글 준비 중입니다.')}</p>`}
+      <section class="pf__block">
+        <h3 class="pf__sub">${tr('Sample lesson', '샘플 수업')}</h3>
+        ${video
+          ? (/\.(mp4|webm|ogg)$/i.test(video)
+              ? `<div class="pf__video"><video src="${video}" controls playsinline preload="metadata"></video></div>`
+              : `<div class="pf__video"><iframe src="${video}" title="${escapeHtml(name)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`)
+          : `<p class="pf__empty">${tr('No sample lesson yet.', '아직 등록된 샘플 수업이 없습니다.')}</p>`}
+      </section>
 
-      <h3 class="pf__sub">${tr('Available hours', '가능 시간')}</h3>
-      ${hasSlots(tutor)
-        ? `<div class="book__calendar">${DAYS.map((day) => {
-            const ranges = slots[day.key] || [];
-            return `<div class="book__day"><span class="book__dow">${tr(day.en, day.ko)}</span><div class="book__ranges">${
-              ranges.length ? ranges.map((range) => `<span class="book__fixed">${escapeHtml(range)}</span>`).join('') : `<span class="book__none">&mdash;</span>`
-            }</div></div>`;
-          }).join('')}</div>`
-        : `<p class="pf__empty">${tr('Hours are arranged on request.', '가능 시간은 협의 후 정합니다.')}</p>`}
+      <section class="pf__block">
+        <h3 class="pf__sub">${tr('Introduction', '소개')}</h3>
+        ${bio
+          ? `<p class="pf__bio">${escapeHtml(bio)}</p>`
+          : `<p class="pf__empty">${tr('Introduction coming soon.', '소개글 준비 중입니다.')}</p>`}
+      </section>
+
+      <section class="pf__block">
+        <h3 class="pf__sub">${tr('Available hours', '가능 시간')}</h3>
+        ${hasSlots(tutor)
+          ? `<div class="book__calendar">${DAYS.map((day) => {
+              const ranges = slots[day.key] || [];
+              return `<div class="book__day"><span class="book__dow">${tr(day.en, day.ko)}</span><div class="book__ranges">${
+                ranges.length ? ranges.map((range) => `<span class="book__fixed">${escapeHtml(range)}</span>`).join('') : `<span class="book__none">&mdash;</span>`
+              }</div></div>`;
+            }).join('')}</div>`
+          : `<p class="pf__empty">${tr('Hours are arranged with you after matching.', '가능 시간은 매칭 후 협의해 정합니다.')}</p>`}
+      </section>
 
       <div class="pf__foot">
         <button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}">
           ${calendarIcon}${tr('Request a match', '매칭 요청하기')}
         </button>
       </div>`;
+
+    // Injected markup carries no data-astro-cid-*, so every scoped rule in this
+    // file misses it and the dialog renders as bare HTML. Stamp it like the grid.
+    applyScope(profileBody);
+    // Announce the tutor rather than the static "Tutor profile" eyebrow.
+    profileDialog.setAttribute('aria-labelledby', 'profile-name');
 
     if (typeof profileDialog.showModal === 'function') profileDialog.showModal();
     else profileDialog.setAttribute('open', '');
@@ -835,6 +905,7 @@ const roster = true;
           : `${tr('Sign in to request a match.', '매칭을 요청하려면 로그인해 주세요.')} <a href="/login">${tr('Log in', '로그인')}</a>`;
     }
     if (bookForm) bookForm.hidden = !allowed;
+    if (bookGate) applyScope(bookGate);
 
     // Published hours become one-tap presets; the day and time controls stay
     // editable so a visitor can always propose their own slot.
@@ -850,6 +921,7 @@ const roster = true;
             }).join('');
           }).join('')
         : `<p class="book__empty">${tr('This tutor has not published hours. Choose any time below and we will arrange it.', '등록된 가능 시간이 없습니다. 아래에서 원하는 시간을 선택해 주시면 조율해 드립니다.')}</p>`;
+      applyScope(bookCal);
     }
 
     if (typeof dialog.showModal === 'function') dialog.showModal();
