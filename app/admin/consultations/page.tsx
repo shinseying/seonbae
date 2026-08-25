@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { createAdminClient } from "../../../utils/supabase/admin";
 import { createClient } from "../../../utils/supabase/server";
-import ConsultationRequestList, { type AdminConsultationRequest } from "./ConsultationRequestList";
+import ConsultationRequestList, {
+  type AdminConsultationRequest,
+  type AdminScheduledConsultation,
+} from "./ConsultationRequestList";
 import AdminSidebar from "../AdminSidebar";
 import styles from "./consultations.module.css";
 
@@ -20,23 +23,35 @@ export default async function AdminConsultationsPage() {
   if (profile?.role !== "admin") redirect("/portal");
 
   const admin = createAdminClient();
-  // Scheduled parent consultations share this table; the inbox shows only
-  // unscheduled inquiries (those without a Zoom meeting).
-  const { data } = await admin
-    .from("consultation_requests")
-    .select("id,name,email,phone,curriculum,preferred_tutor,subject,goals,language,source,status,notification_sent_at,notification_error,created_at")
-    .is("zoom_meeting_number", null)
-    .order("created_at", { ascending: false })
-    .limit(200);
-  const requests = (data ?? []) as AdminConsultationRequest[];
+  // Inquiries and scheduled consultations are the same row at two stages, so
+  // both are read here and the page manages the whole life cycle.
+  const columns =
+    "id,name,email,phone,curriculum,preferred_tutor,preferred_times,subject,goals,language,source,status,notification_sent_at,notification_error,created_at";
+  const [{ data: inbox }, { data: booked }] = await Promise.all([
+    admin
+      .from("consultation_requests")
+      .select(columns)
+      .is("zoom_meeting_number", null)
+      .order("created_at", { ascending: false })
+      .limit(200),
+    admin
+      .from("consultation_requests")
+      .select(`${columns},user_id,session_date,starts_at,duration_minutes,meeting_title,notes,zoom_meeting_number,zoom_status`)
+      .not("zoom_meeting_number", "is", null)
+      .order("session_date", { ascending: false })
+      .order("starts_at", { ascending: false })
+      .limit(100),
+  ]);
+  const requests = (inbox ?? []) as AdminConsultationRequest[];
+  const scheduled = (booked ?? []) as AdminScheduledConsultation[];
   const newCount = requests.filter((item) => item.status === "new").length;
 
   return (
     <main className={styles.page}>
       <AdminSidebar active="consultations" adminName={profile.full_name || profile.email || "관리자"} styles={styles} />
       <section className={styles.main}>
-        <header className={styles.heading}><div><p>CONSULTATION INBOX</p><h1>상담 신청</h1><span>홈페이지에서 접수된 신청과 이메일 전송 상태를 확인합니다.</span></div><b>{newCount}건 신규</b></header>
-        <ConsultationRequestList requests={requests} />
+        <header className={styles.heading}><div><p>CONSULTATIONS</p><h1>상담 신청 · 일정</h1><span>접수된 신청을 확인하고, 바로 상담 일정을 확정합니다.</span></div><b>{newCount}건 신규 · 일정 {scheduled.length}건</b></header>
+        <ConsultationRequestList requests={requests} scheduled={scheduled} />
       </section>
     </main>
   );

@@ -2,6 +2,8 @@
 import Base from '../layouts/Base.astro';
 import T from '../components/T.astro';
 
+// Consultations run every evening between 17:00 and 20:00 KST.
+const slots = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'];
 const levels = [
   { value: 'Lower secondary', en: 'Lower secondary', ko: '중등 과정' },
   { value: 'IGCSE', en: 'IGCSE', ko: 'IGCSE' },
@@ -95,8 +97,13 @@ const stepLabels = [
                 <p class="field-hint"><T en="The list updates to tutors matching the curriculum selected above." ko="위에서 선택한 커리큘럼에 맞는 튜터만 표시됩니다." /></p>
               </div>
               <div class="form-field">
-                <label for="m-times"><T en="Preferred times" ko="희망 시간" /></label>
-                <input class="form-control" id="m-times" name="times" type="text" data-placeholder-en="Weekday evenings, and your time zone" data-placeholder-ko="평일 저녁, 거주 지역의 시간대" />
+                <span class="field-label"><T en="Times that suit you" ko="상담 가능한 시간" /></span>
+                <div class="slot-grid">
+                  {slots.map((slot) => (
+                    <label class="slot"><input type="checkbox" name="times" value={slot} /><span>{slot}</span></label>
+                  ))}
+                </div>
+                <p class="field-hint"><T en="Consultations run every evening between 17:00 and 20:00 KST. Choose every slot that works." ko="상담은 매일 저녁 17:00–20:00(한국 시간)에 진행됩니다. 가능한 시간을 모두 골라 주세요." /></p>
                 <p class="field-hint" data-clock></p>
               </div>
               <div class="form-field" style="margin-top:20px">
@@ -239,6 +246,29 @@ const stepLabels = [
     .choice-grid--3 { grid-template-columns: 1fr; }
     .progress-label { display: none; }
   }
+
+  /* Evening slots reuse the choice chip, sized for a short time label so a row
+     of them reads as one control rather than seven buttons. */
+  .slot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; }
+  .slot { position: relative; cursor: pointer; }
+  .slot input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+  .slot span {
+    display: block;
+    padding: 11px 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--white);
+    text-align: center;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .slot input:checked + span {
+    border-color: var(--violet);
+    background: var(--violet);
+    color: #fff;
+  }
+  .slot input:focus-visible + span { outline: 2px solid var(--violet); outline-offset: 2px; }
+
 </style>
 
 <script>

@@ -11,7 +11,6 @@ export type AdminSection =
   | "bookings"
   | "card-requests"
   | "sessions"
-  | "consultation-sessions"
   | "consultations"
   | "complaints"
   | "applications"
@@ -55,8 +54,7 @@ export default function AdminSidebar({
     {
       title: "상담·지원",
       links: [
-        { key: "consultations", href: "/admin/consultations", label: "상담 신청" },
-        { key: "consultation-sessions", href: "/admin/consultation-sessions", label: "보호자 상담 일정" },
+        { key: "consultations", href: "/admin/consultations", label: "상담 신청 · 일정" },
         { key: "complaints", href: "/admin/complaints", label: "컴플레인" },
       ],
     },

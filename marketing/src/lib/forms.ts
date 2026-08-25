@@ -40,7 +40,7 @@ export async function submitForm(form: HTMLFormElement, subject: string): Promis
   const curriculum = data.curriculum || data.level || data.subject || 'General enquiry';
   const detailLines = [
     data.goal && `Subject and goal: ${data.goal}`,
-    data.times && `Preferred times: ${data.times}`,
+
     data.preference && `Lesson preference: ${data.preference}`,
     data.context && `Context: ${data.context}`,
     data.note && `Additional note: ${data.note}`,
@@ -57,6 +57,7 @@ export async function submitForm(form: HTMLFormElement, subject: string): Promis
       phone: data.phone || '',
       curriculum,
       preferredTutor: data.preferredTutor || 'Manager consultation',
+      preferredTimes: data.times || '',
       subject: data.subject || firstLine(data.goal) || subject,
       goals,
       language: document.documentElement.dataset.lang === 'en' ? 'en' : 'ko',

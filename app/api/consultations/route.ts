@@ -15,6 +15,7 @@ type ConsultationBody = {
   phone?: unknown;
   curriculum?: unknown;
   preferredTutor?: unknown;
+  preferredTimes?: unknown;
   subject?: unknown;
   goals?: unknown;
   language?: unknown;
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
   const phone = cleanSingleLine(body.phone, 32) || null;
   const curriculum = cleanSingleLine(body.curriculum, 80);
   const preferredTutor = cleanSingleLine(body.preferredTutor, 80);
+  const preferredTimes = cleanSingleLine(body.preferredTimes, 200);
   const subject = cleanSingleLine(body.subject, 120);
   const goals = cleanText(body.goals, 3000);
   const language = body.language === "en" ? "en" : "ko";
@@ -77,6 +79,7 @@ export async function POST(request: NextRequest) {
       phone,
       curriculum,
       preferred_tutor: preferredTutor || null,
+      preferred_times: preferredTimes || null,
       subject,
       goals,
       language,

@@ -12,3 +12,22 @@
 @media(prefers-reduced-motion:reduce){.sidebar nav a,.page button,.page a{transition:none!important}}
 :global(html[data-theme="dark"]) .page{--paper:#111b22!important;--card:#17262e!important;--line:rgba(240,238,235,.16)!important;--blue:#d5e6ef!important;--sage:#24382e;--honey:#3b3423;background:var(--paper)!important;color:#f3f0ea!important}:global(html[data-theme="dark"]) .sidebar{background:var(--card)!important}:global(html[data-theme="dark"]) .brand b,:global(html[data-theme="dark"]) .heading h1,:global(html[data-theme="dark"]) .adminAccount b,:global(html[data-theme="dark"]) .sidebar>div b{color:#f3f0ea!important}:global(html[data-theme="dark"]) .sidebar nav a{color:#bdc5c4!important}:global(html[data-theme="dark"]) .sidebar nav .active{background:#d5e6ef!important;color:#14232b!important}
 @media(max-width:980px){.sidebar nav a{display:flex!important;min-height:44px!important}.sidebar nav a:not(.active){color:#777f7a!important}.sidebar nav a:not(.active) i{display:block!important}.sidebar nav a em{display:none}}@media(max-width:780px){.sidebar{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:12px!important}.sidebar nav{display:flex!important;min-width:0!important;margin:0!important;overflow-x:auto!important;scrollbar-width:none}.sidebar nav::-webkit-scrollbar{display:none}.sidebar nav a,.sidebar nav .active{display:flex!important;min-width:max-content!important;padding:0 11px!important}.sidebar nav a i{display:none!important}}
+
+.scheduleToggle{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important}
+.scheduleForm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.scheduleForm label{display:grid;gap:6px;font-size:.72rem;font-weight:700;color:#53636c}
+.scheduleForm input,.scheduleForm select,.scheduleForm textarea{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:.82rem}
+.scheduleWide{grid-column:1/-1}
+.scheduleForm button{grid-column:1/-1;padding:11px 18px;border:0;border-radius:9px;background:var(--violet,#163a51);color:#fff;font-weight:700;cursor:pointer}
+.scheduleForm button:disabled{opacity:.6;cursor:default}
+.scheduleHint{grid-column:1/-1;margin:0;font-size:.68rem;color:#7a808b}
+.scheduledSection{margin-top:26px;padding-top:20px;border-top:1px solid var(--line)}
+.scheduledSection h2{margin:0 0 12px;font-size:1rem}
+.scheduledCard{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:14px;padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:8px}
+.scheduledCard b{display:block;font-size:.92rem}
+.scheduledCard small{display:block;margin-top:3px;font-size:.7rem;color:#7a808b}
+.scheduledCard time{font-size:.76rem;font-variant-numeric:tabular-nums}
+.scheduledCard span{padding:3px 10px;border-radius:999px;font-size:.68rem;font-weight:800;background:rgba(22,58,81,.08);color:#163a51}
+.scheduledCard span[data-zoom="cancelled"]{background:rgba(179,69,42,.12);color:#b3452a}
+.scheduledCard span[data-zoom="ended"]{background:rgba(79,124,82,.12);color:#4f7c52}
+@media(max-width:760px){.scheduleForm{grid-template-columns:1fr}.scheduledCard{grid-template-columns:1fr}}

@@ -6,6 +6,7 @@ import {
   getDefaultZoomHostEmail,
   ZoomApiError,
 } from "../../../../utils/zoom/server";
+import { sendConsultationScheduledEmail } from "../../../../utils/email/consultation-scheduled";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
   }
 
+  // Two ways in: schedule an existing inbound request in place, or book one
+  // against an existing parent account. The first works for people who have no
+  // account yet, which is why the contact details live on the request row.
+  const requestId = Number(body.requestId);
   const parentId = cleanText(body.parentId, 80);
   const sessionDate = cleanText(body.sessionDate, 10);
   const startsAt = cleanText(body.startsAt, 5);
@@ -52,7 +57,7 @@ export async function POST(request: NextRequest) {
   const notes = nullableText(body.notes, 1000);
 
   if (
-    !parentId
+    (!parentId && !Number.isInteger(requestId))
     || !/^\d{4}-\d{2}-\d{2}$/.test(sessionDate)
     || !/^\d{2}:\d{2}$/.test(startsAt)
     || !Number.isInteger(durationMinutes)
@@ -78,16 +83,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: parent } = await auth.supabase
-    .from("profiles")
-    .select("id,role,full_name,email")
-    .eq("id", parentId)
-    .single();
-  if (!parent || parent.role !== "parent") {
-    return NextResponse.json(
-      { error: "선택한 계정이 보호자 계정인지 확인해 주세요." },
-      { status: 400 },
-    );
+  // Whoever the consultation is for: an inbound request carries its own name
+  // and email, an account carries the profile's.
+  let contactName = "보호자";
+  let contactEmail: string | null = null;
+  let contactUserId: string | null = null;
+
+  if (Number.isInteger(requestId)) {
+    const { data: inbound } = await auth.supabase
+      .from("consultation_requests")
+      .select("id,user_id,name,email,zoom_meeting_number")
+      .eq("id", requestId)
+      .single();
+    if (!inbound) {
+      return NextResponse.json({ error: "상담 신청을 찾지 못했습니다." }, { status: 404 });
+    }
+    if (inbound.zoom_meeting_number) {
+      return NextResponse.json({ error: "이미 일정이 잡힌 신청입니다." }, { status: 409 });
+    }
+    contactName = inbound.name || contactName;
+    contactEmail = inbound.email;
+    contactUserId = inbound.user_id;
+  } else {
+    const { data: parent } = await auth.supabase
+      .from("profiles")
+      .select("id,role,full_name,email")
+      .eq("id", parentId)
+      .single();
+    if (!parent || parent.role !== "parent") {
+      return NextResponse.json(
+        { error: "선택한 계정이 보호자 계정인지 확인해 주세요." },
+        { status: 400 },
+      );
+    }
+    contactName = parent.full_name?.trim() || contactName;
+    contactEmail = parent.email;
+    contactUserId = parent.id;
   }
 
   const hostEmail = getDefaultZoomHostEmail();
@@ -111,32 +142,45 @@ export async function POST(request: NextRequest) {
   }
 
   const meetingNumber = String(meeting.id);
-  const { data, error } = await auth.supabase
-    .from("consultation_requests")
-    .insert({
-      user_id: parentId,
-      name: parent.full_name?.trim() || "보호자",
-      email: parent.email || null,
-      subject: topic,
-      session_date: sessionDate,
-      starts_at: `${startsAt}:00`,
-      duration_minutes: durationMinutes,
-      meeting_title: title,
-      notes,
-      status: "contacted",
-      source: "website",
-      language: "ko",
-      zoom_meeting_number: meetingNumber,
-      zoom_meeting_uuid: meeting.uuid,
-      zoom_passcode: meeting.password || null,
-      zoom_join_url: meeting.join_url || null,
-      zoom_host_email: hostEmail,
-      zoom_status: "scheduled",
-      zoom_created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .select(consultationSelect)
-    .single();
+  const zoomFields = {
+    subject: topic,
+    session_date: sessionDate,
+    starts_at: `${startsAt}:00`,
+    duration_minutes: durationMinutes,
+    meeting_title: title,
+    notes,
+    status: "contacted",
+    zoom_meeting_number: meetingNumber,
+    zoom_meeting_uuid: meeting.uuid,
+    zoom_passcode: meeting.password || null,
+    zoom_join_url: meeting.join_url || null,
+    zoom_host_email: hostEmail,
+    zoom_status: "scheduled",
+    zoom_created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  // Scheduling an inbound request converts that row rather than adding a
+  // second one, so the inquiry leaves the inbox as the consultation appears.
+  const { data, error } = Number.isInteger(requestId)
+    ? await auth.supabase
+        .from("consultation_requests")
+        .update(zoomFields)
+        .eq("id", requestId)
+        .select(consultationSelect)
+        .single()
+    : await auth.supabase
+        .from("consultation_requests")
+        .insert({
+          ...zoomFields,
+          user_id: contactUserId,
+          name: contactName,
+          email: contactEmail,
+          source: "website",
+          language: "ko",
+        })
+        .select(consultationSelect)
+        .single();
 
   if (error || !data) {
     try {
@@ -145,6 +189,32 @@ export async function POST(request: NextRequest) {
       // The database error is primary; Zoom cleanup is best-effort.
     }
     return NextResponse.json({ error: "상담 일정을 저장하지 못했습니다." }, { status: 500 });
+  }
+
+  // The person may have no account yet, so the confirmation goes by email and
+  // the row is claimed for them if they sign up with the same address later.
+  if (contactEmail) {
+    try {
+      await sendConsultationScheduledEmail({
+        consultationId: Number(data.id),
+        name: contactName,
+        email: contactEmail,
+        title,
+        topic,
+        sessionDate,
+        startsAt,
+        durationMinutes,
+        joinUrl: meeting.join_url || null,
+        hasAccount: Boolean(contactUserId),
+        portalUrl: `${request.nextUrl.origin}/portal`,
+        signupUrl: `${request.nextUrl.origin}/login`,
+      });
+    } catch (sendError) {
+      await auth.supabase
+        .from("consultation_requests")
+        .update({ notification_error: String(sendError).slice(0, 500) })
+        .eq("id", data.id);
+    }
   }
 
   return NextResponse.json(toClientConsultation(data), {
