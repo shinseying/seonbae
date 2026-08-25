@@ -172,7 +172,7 @@ export default function TutorProfileForm({
       <fieldset className={styles.block}>
         <legend>{l("가능 시간", "Availability")}</legend>
         <p className={styles.hint}>
-          {l("24시간 형식으로 입력하세요. 여러 구간은 쉼표로 구분합니다. 예: 18:00-21:00, 22:00-23:00", "Use 24-hour times. Separate several windows with commas, e.g. 18:00-21:00, 22:00-23:00")}
+          {l("24시간 형식으로 입력하세요. 여러 구간은 쉼표로 구분합니다. 자정까지는 24:00으로 적습니다. 예: 18:00-21:00, 22:00-24:00", "Use 24-hour times. Separate several windows with commas, and write 24:00 for midnight, e.g. 18:00-21:00, 22:00-24:00")}
         </p>
         {DAYS.map((day) => (
           <label className={styles.dayRow} key={day.key}>

@@ -101,6 +101,10 @@ export default function AdminTutorEditor({
 }) {
   const [tutors, setTutors] = useState(initialTutors);
   const [links, setLinks] = useState(accounts);
+  // The availability inputs are free text, but the model behind them is an
+  // array. Round-tripping through split/join ate the comma the moment it was
+  // typed, so the typed text is held here and only parsed into the array.
+  const [dayText, setDayText] = useState<Record<string, string>>({});
   const [assigning, setAssigning] = useState(false);
   const [draft, setDraft] = useState<AdminTutor | null>(null);
   const [selectedId, setSelectedId] = useState(initialTutors[0]?.registry_id ?? "");
@@ -143,7 +147,14 @@ export default function AdminTutorEditor({
   function removeScore(index: number) {
     updateSelected("subject_scores", (selected?.subject_scores ?? []).filter((_, i) => i !== index));
   }
+  // Keyed by selection so switching cards falls back to that card's stored value.
+  function dayValue(day: string) {
+    const key = `${selectedId}|${day}`;
+    if (key in dayText) return dayText[key];
+    return ((selected?.availability ?? {})[day] ?? []).join(", ");
+  }
   function updateDay(day: string, value: string) {
+    setDayText((current) => ({ ...current, [`${selectedId}|${day}`]: value }));
     const ranges = value.split(",").map((range) => range.trim()).filter(Boolean);
     updateSelected("availability", { ...(selected?.availability ?? {}), [day]: ranges });
   }
@@ -170,6 +181,7 @@ export default function AdminTutorEditor({
       setSaving(false);
       return;
     }
+    setDayText({});
     if (isDraft) {
       setTutors((current) => [...current, result].sort(byDisplayOrder));
       setDraft(null);
@@ -352,12 +364,12 @@ export default function AdminTutorEditor({
 
                 <div className={styles.full}>
                   <span className={styles.groupLabel}>가능 시간</span>
-                  <p className={styles.groupHint}>24시간 형식으로 입력하세요. 여러 구간은 쉼표로 구분합니다. 예: 18:00-21:00, 22:00-23:00</p>
+                  <p className={styles.groupHint}>24시간 형식으로 입력하세요. 여러 구간은 쉼표로 구분합니다. 자정까지는 24:00으로 적습니다. 예: 18:00-21:00, 22:00-24:00</p>
                   {DAY_FIELDS.map((day) => (
                     <div className={styles.dayRow} key={day.key}>
                       <span>{day.label}</span>
                       <input
-                        value={((selected.availability ?? {})[day.key] ?? []).join(", ")}
+                        value={dayValue(day.key)}
                         placeholder="18:00-21:00"
                         onChange={(event) => updateDay(day.key, event.target.value)}
                       />
