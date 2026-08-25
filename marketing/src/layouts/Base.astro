@@ -37,10 +37,16 @@ const still = Astro.url.searchParams.has('still');
     <!-- One icon everywhere. These are the real Seonbae mark baked onto white
          (see scripts/generate-brand-assets.mjs); the transparent /logo.png used
          to be served here, which is why search results showed a different mark. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Chrome reads the manifest, not the <link rel=icon> list, when it builds
+         a home-screen or new-tab shortcut tile. Without it the tile falls back
+         to whatever icon the local favicon cache happens to hold. -->
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#163a51" />
     <link rel="canonical" href={canonical} />
     <link rel="stylesheet" href="/cookie-consent.css" />
     <title>{title}</title>

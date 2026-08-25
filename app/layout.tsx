@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import CookieConsent from "./CookieConsent";
 import "./globals.css";
@@ -16,12 +16,16 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "any" },
       { url: "/favicon.png", sizes: "64x64", type: "image/png" },
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
+  // Chrome reads the manifest, not the icon list, when it builds a home-screen
+  // or new-tab shortcut tile, so it has to be declared on the Next routes too.
+  manifest: "/site.webmanifest",
   openGraph: {
     type: "website",
     siteName: "Seonbae",
@@ -37,6 +41,10 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     images: ["/og-image.png"],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#163a51",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

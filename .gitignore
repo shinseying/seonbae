@@ -19,8 +19,10 @@ marketing/dist/
 /public/favicon.svg
 /public/icon-192.png
 /public/icon-512.png
+/public/icon-maskable-512.png
 /public/apple-touch-icon.png
 /public/og-image.png
+/public/site.webmanifest
 /public/hero.jpg
 /public/logo.png
 /public/logo-light.png

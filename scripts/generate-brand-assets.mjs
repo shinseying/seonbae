@@ -195,6 +195,9 @@ const targets = [
   ['favicon.png', 64, 64, 0.84],
   ['icon-192.png', 192, 192, 0.82],
   ['icon-512.png', 512, 512, 0.82],
+  // Maskable: Android/Chrome crop this to a circle or squircle, so the mark has
+  // to sit inside the inner 80% safe zone rather than fill the canvas.
+  ['icon-maskable-512.png', 512, 512, 0.58],
   ['apple-touch-icon.png', 180, 180, 0.72],
   ['og-image.png', 1200, 630, 0.52],
 ];
