@@ -3,6 +3,7 @@ import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import { registryRowFromApplication } from "../../../../utils/tutors/from-application";
 import { sendTutorAccountCreatedEmail } from "../../../../utils/email/tutor-account";
+import { normalizePhone } from "../../../../utils/auth/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,12 @@ export async function POST(request: NextRequest) {
     if (fullName.length < 2 || !email.includes("@")) {
       return NextResponse.json({ error: "이름과 이메일 주소를 확인해 주세요." }, { status: 400 });
     }
+    // profiles.phone is constrained to E.164 or null. Catch a bad number here so
+    // the admin gets told what is wrong, rather than hitting the check
+    // constraint further down and seeing a generic save failure.
+    if (phone && !normalizePhone(phone)) {
+      return NextResponse.json({ error: "전화번호 형식을 확인해 주세요. 예: 01012345678" }, { status: 400 });
+    }
     application = { id: null, full_name: fullName, email, phone };
   }
 
@@ -104,7 +111,9 @@ export async function POST(request: NextRequest) {
     .from("profiles")
     .update({
       full_name: application.full_name,
-      phone: application.phone,
+      // Normalised on the way in: an empty field has to be null, and an
+      // application row may still carry a legacy "" or a raw 010 number.
+      phone: normalizePhone(application.phone ?? ""),
       role: "tutor",
       account_status: "approved",
       account_reviewed_at: new Date().toISOString(),
