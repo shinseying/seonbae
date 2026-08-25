@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import type { PortalChatThread } from "./ChatPanel";
 import type { PortalHeaderUser } from "./PortalHeader";
 import { useSeonbaeLocale } from "../../utils/i18n/client";
+import ComplaintForm from "./ComplaintForm";
 import styles from "./portal.module.css";
 
 export type PortalSession = {
@@ -191,7 +192,7 @@ export default function PortalDashboard({
               </span>
             </div>
             <nav>
-              <Link href="/portal/family">{l("학생 연결", "Link student")}</Link>
+              <Link href="/portal/classroom">{l("내 교실", "My classroom")}</Link>
               <Link href="/portal/reports">{l("수업 리포트", "Reports")}</Link>
               <Link href="/portal/billing">{l("결제 내역", "Billing")}</Link>
             </nav>
@@ -387,6 +388,8 @@ export default function PortalDashboard({
             locale={locale}
           />
         )}
+
+        <ComplaintForm />
       </section>
     </main>
   );

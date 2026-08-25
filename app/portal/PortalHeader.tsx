@@ -47,7 +47,6 @@ export default function PortalHeader({
   } else {
     items.push(
       { href: "/portal/classroom", label: l("내 교실", "My classroom"), active: pathname.startsWith("/portal/classroom") },
-      { href: "/portal/family", label: l("학생 연결", "Students"), active: pathname.startsWith("/portal/family") },
       { href: "/portal/reports", label: l("수업 리포트", "Reports"), active: pathname.startsWith("/portal/reports") },
       { href: "/portal/billing", label: l("결제", "Billing"), active: pathname.startsWith("/portal/billing") },
     );

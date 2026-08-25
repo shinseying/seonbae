@@ -26,7 +26,7 @@ export default function OtpLinkConfirmation({
     }
 
     let active = true;
-    fetch(mode === "billing" ? "/api/billing-access/complete" : "/api/parent-link/complete", {
+    fetch("/api/billing-access/complete", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
@@ -39,7 +39,7 @@ export default function OtpLinkConfirmation({
         setStatus(mode === "billing" ? "결제 내역 잠금이 해제되었습니다." : "학생 계정 연결이 승인되었습니다.");
         window.history.replaceState(null, "", window.location.pathname);
         window.setTimeout(() => {
-          router.replace(mode === "billing" ? "/portal/billing" : "/portal/family?linked=1");
+          router.replace("/portal/billing");
           router.refresh();
         }, 700);
       })
@@ -64,7 +64,7 @@ export default function OtpLinkConfirmation({
             ? "요청한 브라우저에서 새 인증번호나 승인 링크를 받아 주세요."
             : "잠시 후 보호자 포털로 이동합니다."}
         </p>
-        {failed && <Link href={mode === "billing" ? "/portal/billing" : "/portal/family"}>포털로 돌아가기</Link>}
+        {failed && <Link href="/portal/billing">포털로 돌아가기</Link>}
       </section>
     </main>
   );

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "../../utils/supabase/server";
+import { classroomStudentIds } from "../../utils/classrooms/students";
 import PortalDashboard, {
   type PortalConsultation,
   type PortalSession,
@@ -32,11 +33,7 @@ export default async function PortalPage() {
   const studentNames = new Map<string, string>();
 
   if (isParent) {
-    const { data: links } = await supabase
-      .from("parent_student_links")
-      .select("student_id")
-      .eq("parent_id", user.id);
-    studentIds = (links ?? []).map((link) => link.student_id);
+    studentIds = await classroomStudentIds(user.id);
 
     if (studentIds.length) {
       const { data: students } = await supabase

@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { lessonAmountKrw } from "../../../utils/billing/rate-lookup";
 import { createClient } from "../../../utils/supabase/server";
+import { classroomStudentIds } from "../../../utils/classrooms/students";
 import {
   BILLING_ACCESS_COOKIE,
   readBillingAccess,
@@ -37,11 +38,7 @@ export default async function BillingPage() {
 
   let items: BillingLineItem[] = [];
   if (access) {
-    const { data: links } = await supabase
-      .from("parent_student_links")
-      .select("student_id")
-      .eq("parent_id", user.id);
-    const studentIds = (links ?? []).map((link) => link.student_id);
+    const studentIds = await classroomStudentIds(user.id);
     const studentNames = new Map<string, string>();
     if (studentIds.length) {
       const { data: students } = await supabase

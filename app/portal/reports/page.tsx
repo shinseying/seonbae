@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "../../../utils/supabase/server";
+import { classroomStudentIds } from "../../../utils/classrooms/students";
 import ReportsContent, { type PortalReport } from "./ReportsContent";
 import styles from "../parent.module.css";
 
@@ -20,11 +21,7 @@ export default async function ReportsPage() {
   if (profile?.account_status !== "approved") redirect("/portal/pending");
   if (profile?.role !== "parent") redirect("/portal");
 
-  const { data: links } = await supabase
-    .from("parent_student_links")
-    .select("student_id")
-    .eq("parent_id", user.id);
-  const studentIds = (links ?? []).map((link) => link.student_id);
+  const studentIds = await classroomStudentIds(user.id);
   const studentNames = new Map<string, string>();
   if (studentIds.length) {
     const { data: students } = await supabase
