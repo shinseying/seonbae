@@ -37,3 +37,10 @@
 .subjectScores span{font-weight:800;color:var(--violet,#163a51)}
 .subjectScores a{color:var(--red);font-weight:700;text-decoration:none;white-space:nowrap}
 .subjectScores em{color:#9aa3af;font-style:normal;white-space:nowrap}
+
+/* The credential queue used to sit beside the account queue. With one list left
+   the grid is a single column, and the delete action is pushed away from the
+   approve/reject pair so it is not hit by accident. */
+.reviewGrid{grid-template-columns:1fr}
+.actions .deleteButton{margin-right:auto;border-color:transparent;background:transparent;color:#8a8279;font-weight:700}
+.actions .deleteButton:hover{border-color:var(--red);color:var(--red)}

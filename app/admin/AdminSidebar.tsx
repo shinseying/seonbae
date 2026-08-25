@@ -63,7 +63,7 @@ export default function AdminSidebar({
     {
       title: "계정",
       links: [
-        { key: "applications", href: "/admin/applications", label: "가입 심사 · 자격 검증" },
+        { key: "applications", href: "/admin/applications", label: "가입 심사" },
         { key: "completed-applications", href: "/admin/applications/completed", label: "완료된 가입 신청" },
       ],
     },
