@@ -10,6 +10,7 @@ export type AdminSection =
   | "tutor-accounts"
   | "bookings"
   | "card-requests"
+  | "classroom-slots"
   | "sessions"
   | "consultations"
   | "complaints"
@@ -42,6 +43,7 @@ export default function AdminSidebar({
         { key: "tutors", href: "/admin", label: "튜터 명부" },
         { key: "tutor-accounts", href: "/admin/tutor-accounts", label: "튜터 계정 생성" },
         { key: "card-requests", href: "/admin/card-requests", label: "카드 변경 요청" },
+        { key: "classroom-slots", href: "/admin/classroom-slots", label: "추가 교실 요청" },
       ],
     },
     {

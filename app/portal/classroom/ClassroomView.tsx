@@ -32,6 +32,17 @@ export type Classroom = {
   members: Array<{ id: number; name: string; role: string }>;
 };
 
+export type MatchRequest = {
+  id: number;
+  name: string;
+  email: string;
+  subject: string | null;
+  preferredDay: string | null;
+  preferredTime: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
 export type JoinRequest = {
   id: number;
   classroomId: number;
@@ -44,10 +55,16 @@ export default function ClassroomView({
   role,
   classrooms,
   pendingRequests,
+  matchRequests = [],
+  classroomLimit = 3,
+  slotRequestPending = false,
 }: {
   role: "student" | "parent" | "tutor";
   classrooms: Classroom[];
   pendingRequests: JoinRequest[];
+  matchRequests?: MatchRequest[];
+  classroomLimit?: number;
+  slotRequestPending?: boolean;
 }) {
   const { text: l } = usePortalText();
   const router = useRouter();
@@ -99,6 +116,50 @@ export default function ClassroomView({
     }
   }
 
+  const atLimit = classrooms.length >= classroomLimit;
+
+  async function post(url: string, payload: unknown, method = "POST") {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        setMessage(result?.error || l("처리하지 못했습니다.", "Could not process."));
+        return false;
+      }
+      router.refresh();
+      return true;
+    } catch {
+      setMessage(l("네트워크를 확인해 주세요.", "Check your connection."));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createRoom(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const ok = await post("/api/tutor/classrooms", { title: form.get("title") });
+    if (ok) setMessage(l("교실을 만들었습니다.", "Classroom created."));
+  }
+
+  async function requestSlot(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const ok = await post("/api/tutor/classrooms", { reason: form.get("reason") }, "PUT");
+    if (ok) setMessage(l("관리자에게 요청을 보냈습니다.", "Request sent to the admin."));
+  }
+
+  async function decideMatch(id: number, decision: "accepted" | "declined", classroomId?: number) {
+    await post("/api/tutor/bookings", { id, decision, classroomId }, "PATCH");
+  }
+
   const open = classrooms.find((room) => room.id === openId) ?? null;
 
   return (
@@ -138,6 +199,89 @@ export default function ClassroomView({
         </section>
       )}
 
+      {role === "tutor" && matchRequests.length > 0 && (
+        <section className={styles.requests}>
+          <h2>{l("매칭 요청", "Match requests")}</h2>
+          {matchRequests.map((request) => (
+            <article key={request.id} className={styles.matchRow}>
+              <div>
+                <b>{request.name}</b>
+                <small>
+                  {request.email}
+                  {request.subject ? ` · ${request.subject}` : ""}
+                  {request.preferredDay ? ` · ${request.preferredDay} ${request.preferredTime || ""}` : ""}
+                </small>
+                {request.note && <p className={styles.matchNote}>{request.note}</p>}
+              </div>
+              <div className={styles.requestActions}>
+                <select
+                  defaultValue={classrooms[0]?.id ?? ""}
+                  id={`match-room-${request.id}`}
+                  aria-label={l("배정할 교실", "Classroom")}
+                >
+                  {classrooms.map((room) => (
+                    <option value={room.id} key={room.id}>{room.title}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={busy || classrooms.length === 0}
+                  onClick={() => {
+                    const select = document.getElementById(`match-room-${request.id}`) as HTMLSelectElement | null;
+                    decideMatch(request.id, "accepted", Number(select?.value));
+                  }}
+                >
+                  {l("수락", "Accept")}
+                </button>
+                <button type="button" className={styles.ghost} disabled={busy} onClick={() => decideMatch(request.id, "declined")}>
+                  {l("거절", "Decline")}
+                </button>
+              </div>
+            </article>
+          ))}
+          {classrooms.length === 0 && (
+            <p className={styles.matchNote}>
+              {l("수락하려면 교실을 먼저 만들어 주세요.", "Create a classroom before accepting.")}
+            </p>
+          )}
+        </section>
+      )}
+
+      {role === "tutor" && (
+        <section className={styles.requests}>
+          <h2>{l("교실 만들기", "Create a classroom")}</h2>
+          <p className={styles.matchNote}>
+            {l(
+              `교실 ${classrooms.length}/${classroomLimit}개 · 학생이 배정되지 않아도 미리 만들 수 있습니다.`,
+              `${classrooms.length} of ${classroomLimit} classrooms · a room can exist before anyone is matched into it.`,
+            )}
+          </p>
+          {atLimit ? (
+            slotRequestPending ? (
+              <p className={styles.matchNote}>
+                {l("관리자가 추가 교실 요청을 검토하고 있습니다.", "The admin is reviewing your request for more rooms.")}
+              </p>
+            ) : (
+              <form className={styles.joinForm} onSubmit={requestSlot}>
+                <label className={styles.wideField}>
+                  <span>{l("추가 교실이 필요한 이유", "Why you need another room")}</span>
+                  <input name="reason" required maxLength={200} />
+                </label>
+                <button type="submit" disabled={busy}>{l("관리자에게 요청", "Ask the admin")}</button>
+              </form>
+            )
+          ) : (
+            <form className={styles.joinForm} onSubmit={createRoom}>
+              <label className={styles.wideField}>
+                <span>{l("교실 이름", "Classroom name")}</span>
+                <input name="title" required maxLength={80} placeholder={l("예: IB 수학 HL", "e.g. IB Math HL")} />
+              </label>
+              <button type="submit" disabled={busy}>{l("교실 만들기", "Create")}</button>
+            </form>
+          )}
+        </section>
+      )}
+
       {role !== "tutor" && (
         <form className={styles.joinForm} onSubmit={join}>
           <div>
@@ -153,7 +297,7 @@ export default function ClassroomView({
       {classrooms.length === 0 ? (
         <div className={styles.empty}>
           {role === "tutor"
-            ? l("아직 담당 교실이 없습니다. 수업이 배정되면 교실이 만들어집니다.", "No classrooms yet. One is created when a lesson is scheduled.")
+            ? l("아직 교실이 없습니다. 위에서 교실을 만들어 주세요.", "No classrooms yet. Create one above.")
             : l("아직 참여 중인 교실이 없습니다.", "You have not joined a classroom yet.")}
         </div>
       ) : (

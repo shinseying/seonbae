@@ -50,3 +50,8 @@
 .feedback{grid-column:1/-1;margin:6px 0 0;padding:10px 12px;border-radius:9px;background:rgba(0,0,0,.03);font-size:.8rem;line-height:1.55;white-space:pre-wrap}
 .empty{padding:40px;text-align:center;color:#7a808b;font-size:.86rem;background:#fffdf7;border:1px solid var(--line,#e5ddcd);border-radius:16px}
 @media(max-width:860px){.layout{grid-template-columns:1fr}.joinForm{grid-template-columns:1fr}}
+
+.matchRow{align-items:flex-start!important}
+.matchNote{margin:6px 0 0;font-size:.78rem;color:#7a808b;line-height:1.5}
+.requestActions select{padding:8px 10px;border:1px solid var(--line,#e5ddcd);border-radius:8px;background:#fff;font:inherit;font-size:.78rem;max-width:170px}
+.wideField{grid-column:1/-1}
