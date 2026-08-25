@@ -1,4 +1,5 @@
 import "server-only";
+import { detailTable, emailShell, noteBlock } from "./layout";
 
 type ConsultationEmail = {
   requestId: number;
@@ -50,23 +51,20 @@ export async function sendConsultationRequestEmail(input: ConsultationEmail) {
 }
 
 function consultationHtml(input: ConsultationEmail) {
-  return `
-    <div style="font-family:Arial,sans-serif;color:#17223a;line-height:1.6;max-width:680px">
-      <p style="font-size:12px;letter-spacing:.12em;color:#c7443b;font-weight:700">SEONBAE CONSULTATION</p>
-      <h1 style="font-size:24px">새 상담 신청이 접수되었습니다.</h1>
-      <table style="border-collapse:collapse;width:100%;margin:20px 0">
-        ${row("신청 번호", String(input.requestId))}
-        ${row("성함", input.name)}
-        ${row("이메일", input.email)}
-        ${row("전화번호", input.phone || "미입력")}
-        ${row("커리큘럼", input.curriculum)}
-        ${row("희망 튜터", input.preferredTutor || "팀 추천")}
-        ${row("과목", input.subject)}
-      </table>
-      <h2 style="font-size:16px">목표와 현재 상황</h2>
-      <div style="white-space:pre-wrap;background:#f4f1eb;border-radius:10px;padding:16px">${escapeHtml(input.goals)}</div>
-      <p style="font-size:12px;color:#6e7788">이 메일에 답장하면 신청자 이메일로 전송됩니다. Admin Console에서도 신청을 확인할 수 있습니다.</p>
-    </div>`;
+  return emailShell({
+    eyebrow: "Seonbae consultation",
+    heading: "새 상담 신청이 접수되었습니다.",
+    body: detailTable([
+      ["신청 번호", String(input.requestId)],
+      ["성함", input.name],
+      ["이메일", input.email],
+      ["전화번호", input.phone || "미입력"],
+      ["커리큐럼", input.curriculum],
+      ["희망 튜터", input.preferredTutor || "팀 추천"],
+      ["과목", input.subject],
+    ]) + noteBlock("목표와 현재 상황", input.goals),
+    footnote: "이 메일에 답장하면 신청자 이메일로 전송됩니다. 관리자 포털에서도 신청을 확인할 수 있습니다.",
+  });
 }
 
 function consultationText(input: ConsultationEmail) {
@@ -76,25 +74,11 @@ function consultationText(input: ConsultationEmail) {
     `성함: ${input.name}`,
     `이메일: ${input.email}`,
     `전화번호: ${input.phone || "미입력"}`,
-    `커리큘럼: ${input.curriculum}`,
+    `커리큐럼: ${input.curriculum}`,
     `희망 튜터: ${input.preferredTutor || "팀 추천"}`,
     `과목: ${input.subject}`,
     "",
     "목표와 현재 상황",
     input.goals,
   ].join("\n");
-}
-
-function row(label: string, value: string) {
-  return `<tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">${escapeHtml(label)}</th><td style="padding:8px;border-bottom:1px solid #ddd">${escapeHtml(value)}</td></tr>`;
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
-  })[character] || character);
 }

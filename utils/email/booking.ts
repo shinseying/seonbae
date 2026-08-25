@@ -1,4 +1,5 @@
 import "server-only";
+import { actionButton, detailTable, emailShell, noteBlock } from "./layout";
 
 type BookingEmail = {
   bookingId: number;
@@ -56,24 +57,21 @@ export async function sendBookingEmail(input: BookingEmail) {
 }
 
 function html(input: BookingEmail, slot: string) {
-  const row = (label: string, value: string) =>
-    `<tr><td style="padding:10px 14px;color:#53636c">${escapeHtml(label)}</td><td style="padding:10px 14px;font-weight:700">${escapeHtml(value)}</td></tr>`;
+  const rows: Array<[string, string]> = [
+    ["이름", input.name],
+    ["이메일", input.email],
+  ];
+  if (input.phone) rows.push(["연락처", input.phone]);
+  if (input.subject) rows.push(["과목", input.subject]);
+  rows.push(["희망 시간", slot]);
 
-  return `
-    <div style="font-family:Arial,sans-serif;color:#201e19;line-height:1.6;max-width:620px;background:#fbf7ef;padding:28px">
-      <p style="font-size:12px;letter-spacing:.12em;color:#c1663a;font-weight:700">SEONBAE MATCH REQUEST</p>
-      <h1 style="font-size:23px;color:#163a51">${escapeHtml(input.tutorName)} 선배님, 매칭 요청이 도착했습니다.</h1>
-      <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:9px;margin:18px 0">
-        ${row("이름", input.name)}
-        ${row("이메일", input.email)}
-        ${input.phone ? row("연락처", input.phone) : ""}
-        ${input.subject ? row("과목", input.subject) : ""}
-        ${row("희망 시간", slot)}
-      </table>
-      ${input.note ? `<p style="padding:14px 16px;background:#f4efe5;border-radius:8px;white-space:pre-wrap">${escapeHtml(input.note)}</p>` : ""}
-      <p><a href="${escapeHtml(input.portalUrl)}" style="display:inline-block;background:#163a51;color:#fff;text-decoration:none;padding:12px 18px;border-radius:9px;font-weight:700">튜터 포털에서 보기</a></p>
-    </div>
-  `;
+  return emailShell({
+    eyebrow: "Seonbae match request",
+    heading: `${input.tutorName} 선배님, 매칭 요청이 도착했습니다.`,
+    body: detailTable(rows)
+      + (input.note ? noteBlock("전하고 싶은 내용", input.note) : "")
+      + actionButton(input.portalUrl, "튜터 포털에서 보기"),
+  });
 }
 
 function plain(input: BookingEmail, slot: string) {
@@ -87,13 +85,4 @@ function plain(input: BookingEmail, slot: string) {
     input.note ? `메모: ${input.note}` : "",
     `튜터 포털: ${input.portalUrl}`,
   ].filter(Boolean).join("\n");
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
