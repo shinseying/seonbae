@@ -21,7 +21,8 @@ export default async function HomeworkPage() {
     .single();
   if (profile?.role === "admin") redirect("/admin");
   if (profile?.account_status !== "approved") redirect("/portal/pending");
-  if (profile?.role === "tutor") redirect("/portal/tutor/homework");
+  // A tutor sets homework inside the classroom now, not on a tab of its own.
+  if (profile?.role === "tutor") redirect("/portal/classroom");
 
   const isParent = profile?.role === "parent";
   let studentIds = [user.id];

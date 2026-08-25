@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import { zoomJoinUrl } from "../../../../utils/zoom/join-url";
+import ClassroomTools from "./ClassroomTools";
 import styles from "../classroom.module.css";
 
 export const dynamic = "force-dynamic";
@@ -102,6 +103,17 @@ export default async function ClassroomDetailPage({
             <div><small>비밀번호</small><b>{room.join_password}</b></div>
             <p>보호자에게 전달하면 이 교실에 참여를 요청할 수 있습니다.</p>
           </div>
+        )}
+
+        {isTutor && (
+          <ClassroomTools
+            studentId={room.student_id}
+            assignments={(homework ?? []).map((item) => ({
+              id: item.id,
+              title: item.title,
+              feedback: item.feedback,
+            }))}
+          />
         )}
 
         <section className={styles.block}>

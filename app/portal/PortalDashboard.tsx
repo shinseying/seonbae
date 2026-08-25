@@ -185,14 +185,16 @@ export default function PortalDashboard({
               <strong>
                 {linkedStudentCount > 0
                   ? l(`${linkedStudentCount}명의 학생 계정이 연결되어 있습니다.`, `${linkedStudentCount} student account${linkedStudentCount === 1 ? " is" : "s are"} linked.`)
-                  : l("학생 계정을 먼저 연결해 주세요.", "Link a student account first.")}
+                  : l("교실 ID와 비밀번호로 교실에 참여해 주세요.", "Join a classroom with its ID and password.")}
               </strong>
               <span>
-                {l("OTP 확인 후 학생 일정, 수업 리포트, 결제 내역을 함께 관리할 수 있습니다.", "After OTP verification, manage student schedules, reports, and billing together.")}
+                {l("교실에 참여하면 학생 일정, 수업 리포트, 결제 내역을 함께 관리할 수 있습니다.", "Join a classroom to follow lesson schedules, reports, and billing together.")}
               </span>
             </div>
             <nav>
               <Link href="/portal/classroom">{l("내 교실", "My classroom")}</Link>
+              {/* The roster is on the public site, so this leaves the portal. */}
+              <Link href="/tutors">{l("튜터 찾기", "Find a tutor")}</Link>
               <Link href="/portal/reports">{l("수업 리포트", "Reports")}</Link>
               <Link href="/portal/billing">{l("결제 내역", "Billing")}</Link>
             </nav>
