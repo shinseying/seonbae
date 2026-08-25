@@ -13,6 +13,10 @@ type BookingEmail = {
   preferredTime?: string | null;
   note?: string | null;
   portalUrl: string;
+  // The same booking is mailed twice: once to the admin when it arrives, once
+  // to the tutor when the admin forwards it. Resend rejects a reused
+  // idempotency key whose payload changed, so the purpose is part of the key.
+  purpose: "admin" | "tutor";
 };
 
 const DAY_LABELS: Record<string, string> = {
@@ -36,7 +40,7 @@ export async function sendBookingEmail(input: BookingEmail) {
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "Idempotency-Key": `seonbae-booking-${input.bookingId}`,
+      "Idempotency-Key": `seonbae-booking-${input.purpose}-${input.bookingId}`,
     },
     body: JSON.stringify({
       from,

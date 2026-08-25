@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
         preferredTime,
         note,
         portalUrl: `${request.nextUrl.origin}/admin/bookings`,
+        purpose: "admin",
       });
       await admin
         .from("booking_requests")

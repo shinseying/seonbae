@@ -62,9 +62,16 @@ export async function POST(request: NextRequest) {
       preferredTime: booking.preferred_time,
       note: booking.note,
       portalUrl: `${request.nextUrl.origin}/portal/tutor`,
+      purpose: "tutor",
     });
   } catch (sendError) {
-    return error(`튜터에게 전달하지 못했습니다. ${String(sendError).slice(0, 200)}`, 502);
+    // The provider's own wording is not useful to an admin; the detail goes to
+    // the row so it can still be diagnosed.
+    await admin
+      .from("booking_requests")
+      .update({ notification_error: String(sendError).slice(0, 500) })
+      .eq("id", booking.id);
+    return error("튜터에게 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.", 502);
   }
 
   const forwardedAt = new Date().toISOString();
