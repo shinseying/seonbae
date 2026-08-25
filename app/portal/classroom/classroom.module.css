@@ -55,3 +55,7 @@
 .matchNote{margin:6px 0 0;font-size:.78rem;color:#7a808b;line-height:1.5}
 .requestActions select{padding:8px 10px;border:1px solid var(--line,#e5ddcd);border-radius:8px;background:#fff;font:inherit;font-size:.78rem;max-width:170px}
 .wideField{grid-column:1/-1}
+
+.openRoom{display:inline-block;margin-top:10px;font-size:.8rem;font-weight:700;color:#163a51;text-decoration:none}
+.openRoom:hover{text-decoration:underline}
+.backLink{display:inline-block;margin-bottom:10px;font-size:.8rem;font-weight:700;color:#7a808b;text-decoration:none}

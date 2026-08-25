@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "../../../utils/supabase/server";
 import { requireSignedTutorContract } from "../../../utils/contracts/tutor-signature";
 import type { PortalChatThread } from "../ChatPanel";
-import type { PortalBooking } from "../BookingsPanel";
+import type { ClassroomOption, PortalBooking } from "../BookingsPanel";
+import { createAdminClient } from "../../../utils/supabase/admin";
 import TutorPortalDashboard, {
   type TutorPortalSession,
 } from "./TutorPortalDashboard";
@@ -70,6 +71,18 @@ export default async function TutorPortalPage() {
     createdAt: row.created_at,
   }));
 
+  // Rooms the tutor can drop an accepted match into.
+  const { data: roomRows } = await createAdminClient()
+    .from("classrooms")
+    .select("id,title,student_id")
+    .eq("tutor_registry_id", profile.tutor_registry_id)
+    .order("created_at", { ascending: true });
+  const classroomOptions: ClassroomOption[] = (roomRows ?? []).map((row) => ({
+    id: row.id,
+    title: row.title || `교실 ${row.id}`,
+    hasSeat: Boolean(row.student_id),
+  }));
+
   const studentIds = Array.from(
     new Set([
       ...(sessionRows ?? []).map((row) => row.user_id),
@@ -131,6 +144,7 @@ export default async function TutorPortalPage() {
       sessions={sessions}
       chatThreads={chatThreads}
       bookings={bookings}
+      classrooms={classroomOptions}
     />
   );
 }

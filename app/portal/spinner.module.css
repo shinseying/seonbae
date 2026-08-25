@@ -1,0 +1,15 @@
+.inline{display:inline-flex;align-items:center;gap:8px;vertical-align:middle}
+.block{display:flex;align-items:center;justify-content:center;gap:10px;padding:34px;width:100%}
+.ring{
+  width:16px;height:16px;flex:none;border-radius:50%;
+  border:2px solid rgba(22,58,81,.22);border-top-color:#163a51;
+  animation:spin .7s linear infinite;
+}
+.block .ring{width:22px;height:22px;border-width:3px}
+.label{font-size:.8rem;color:#7a808b}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){
+  /* No spin for anyone who asked for less motion; the ring still marks the wait. */
+  .ring{animation:none;border-top-color:rgba(22,58,81,.22);opacity:.7}
+}

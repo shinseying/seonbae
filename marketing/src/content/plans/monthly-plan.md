@@ -1,17 +1,17 @@
 ---
-name: Monthly plan
-tagline: A set number of hours each month with the same tutor, on a schedule you keep.
+name: Long Term Plan
+tagline: For long-term lessons of a month or more, paid once per month.
 priceFrom: 60000
-billingMonthly: Billed on the same date each month, in advance
-billingLesson: Billed on the same date each month, in advance
+billingMonthly: Payment once per month
+billingLesson: Payment once per month
 features:
-  - Everything in By the hour
-  - A set number of hours every month
-  - The same tutor for every lesson
-  - A learning plan built around your goals
-  - Priority scheduling and matching
-  - Monthly progress summary for parents
-ctaLabel: Start a monthly plan
+  - For long-term lessons (1 or more months)
+  - Payment once per month
+  - Set lesson schedules
+  - Tutor rematch available
+  - A roadmap for your goals
+  - A detailed lesson feedback
+ctaLabel: Start a long term plan
 ctaHref: /get-matched
 accent: mint
 order: 1

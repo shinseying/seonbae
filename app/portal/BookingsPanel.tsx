@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePortalText } from "./PortalLocale";
+import Spinner from "./Spinner";
 import styles from "./bookings.module.css";
 
 export type PortalBooking = {
@@ -18,7 +19,12 @@ export type PortalBooking = {
   unread: boolean;
   createdAt: string;
   forwardedAt?: string | null;
+  decidedAt?: string | null;
 };
+
+// Rooms the tutor can put an accepted match into. A room whose seat is taken
+// cannot host another student, which is what `hasSeat` marks.
+export type ClassroomOption = { id: number; title: string; hasSeat: boolean };
 
 const DAY_KO: Record<string, string> = {
   mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일",
@@ -32,9 +38,13 @@ const DAY_EN: Record<string, string> = {
 export default function BookingsPanel({
   bookings,
   showTutor = false,
+  tutorActions = false,
+  classrooms = [],
 }: {
   bookings: PortalBooking[];
   showTutor?: boolean;
+  tutorActions?: boolean;
+  classrooms?: ClassroomOption[];
 }) {
   const { locale, text: l } = usePortalText();
   const [items, setItems] = useState(bookings);
@@ -57,6 +67,38 @@ export default function BookingsPanel({
       }
     } finally {
       setForwardingId(null);
+    }
+  }
+
+  const [decidingId, setDecidingId] = useState<number | null>(null);
+  const openRooms = classrooms.filter((room) => !room.hasSeat);
+
+  async function decide(id: number, decision: "accepted" | "declined", classroomId?: number) {
+    // Accepting needs somewhere to put them, so say so plainly rather than
+    // failing on the server.
+    if (decision === "accepted" && !classroomId) {
+      window.alert(
+        classrooms.length === 0
+          ? l("먼저 교실을 만들어 주세요. 내 교실에서 만들 수 있습니다.", "Create a classroom first. You can make one in My classroom.")
+          : l("비어 있는 교실이 없습니다. 내 교실에서 새 교실을 만들어 주세요.", "No classroom has a free seat. Create one in My classroom."),
+      );
+      return;
+    }
+    setDecidingId(id);
+    try {
+      const response = await fetch("/api/tutor/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, decision, classroomId }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        window.alert(result?.error || l("처리하지 못했습니다.", "Could not process."));
+        return;
+      }
+      setItems((rows) => rows.filter((row) => row.id !== id));
+    } finally {
+      setDecidingId(null);
     }
   }
 
@@ -110,6 +152,39 @@ export default function BookingsPanel({
                 <span>{formatDate(item.createdAt, locale)}</span>
               </div>
               {item.note && <p className={styles.note}>{item.note}</p>}
+              {tutorActions && (
+                <div className={styles.tutorActions}>
+                  <select
+                    id={`match-room-${item.id}`}
+                    defaultValue={openRooms[0]?.id ?? ""}
+                    disabled={openRooms.length === 0}
+                    aria-label={l("배정할 교실", "Classroom")}
+                  >
+                    {openRooms.length
+                      ? openRooms.map((room) => <option value={room.id} key={room.id}>{room.title}</option>)
+                      : <option value="">{l("빈 교실 없음", "No free classroom")}</option>}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={decidingId === item.id}
+                    onClick={() => {
+                      const select = document.getElementById(`match-room-${item.id}`) as HTMLSelectElement | null;
+                      const value = Number(select?.value);
+                      decide(item.id, "accepted", Number.isInteger(value) && value > 0 ? value : undefined);
+                    }}
+                  >
+                    {decidingId === item.id ? <Spinner label={l("처리 중", "Working")} /> : l("수락", "Accept")}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.declineButton}
+                    disabled={decidingId === item.id}
+                    onClick={() => decide(item.id, "declined")}
+                  >
+                    {l("거절", "Decline")}
+                  </button>
+                </div>
+              )}
               {showTutor && (
                 item.forwardedAt ? (
                   <span className={styles.forwarded}>{l("튜터에게 전달됨", "Forwarded to tutor")}</span>
@@ -120,7 +195,7 @@ export default function BookingsPanel({
                     onClick={() => forward(item.id)}
                     disabled={forwardingId === item.id}
                   >
-                    {forwardingId === item.id ? l("전달 중…", "Forwarding…") : l("튜터에게 전달", "Forward to tutor")}
+                    {forwardingId === item.id ? <Spinner label={l("전달 중", "Forwarding")} /> : l("튜터에게 전달", "Forward to tutor")}
                   </button>
                 )
               )}

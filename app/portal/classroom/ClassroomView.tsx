@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Spinner from "../Spinner";
 import { usePortalText } from "../PortalLocale";
 import styles from "./classroom.module.css";
 
@@ -290,7 +292,7 @@ export default function ClassroomView({
           </div>
           <label><span>{l("교실 ID", "Classroom ID")}</span><input name="code" required maxLength={24} placeholder="C-ABC123" /></label>
           <label><span>{l("비밀번호", "Password")}</span><input name="password" required maxLength={32} /></label>
-          <button type="submit" disabled={busy}>{busy ? l("보내는 중…", "Sending…") : l("참여 요청", "Request access")}</button>
+          <button type="submit" disabled={busy}>{busy ? <Spinner label={l("보내는 중", "Sending")} /> : l("참여 요청", "Request access")}</button>
         </form>
       )}
 
@@ -320,7 +322,15 @@ export default function ClassroomView({
             <div className={styles.room}>
               <header>
                 <h2>{open.title}</h2>
-                <p>{l("학생", "Student")} {open.studentName} · {l("튜터", "Tutor")} {open.tutorName}</p>
+                <p>
+                  {open.studentName
+                    ? `${l("학생", "Student")} ${open.studentName} · `
+                    : `${l("학생 배정 전", "No student yet")} · `}
+                  {l("튜터", "Tutor")} {open.tutorName}
+                </p>
+                <Link className={styles.openRoom} href={`/portal/classroom/${open.id}`}>
+                  {l("교실 열기", "Open classroom")} →
+                </Link>
               </header>
 
               {open.joinCode && (

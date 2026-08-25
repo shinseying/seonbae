@@ -25,3 +25,9 @@
 .forwardButton{margin-top:8px;padding:8px 16px;border:none;border-radius:7px;background:#163a51;color:#fffdf7;font-weight:700;cursor:pointer}
 .forwardButton:disabled{opacity:.55;cursor:default}
 .forwarded{margin-top:8px;display:inline-block;font-size:.82rem;font-weight:700;color:#2f7a4d}
+
+.tutorActions{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.tutorActions select{padding:9px 11px;border:1px solid var(--line,#e5ddcd);border-radius:8px;background:#fff;font:inherit;font-size:.8rem;max-width:200px}
+.tutorActions button{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border:0;border-radius:8px;background:#163a51;color:#fff;font-weight:700;font-size:.8rem;cursor:pointer}
+.tutorActions button:disabled{opacity:.6;cursor:default}
+.declineButton{background:transparent!important;color:#b3452a!important;border:1px solid rgba(179,69,42,.4)!important}

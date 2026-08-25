@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { PortalChatThread } from "../ChatPanel";
-import BookingsPanel, { type PortalBooking } from "../BookingsPanel";
+import BookingsPanel, { type ClassroomOption, type PortalBooking } from "../BookingsPanel";
 import ComplaintForm from "../ComplaintForm";
 import styles from "../portal.module.css";
 import { useSeonbaeLocale } from "../../../utils/i18n/client";
@@ -29,12 +29,14 @@ export default function TutorPortalDashboard({
   sessions,
   chatThreads,
   bookings,
+  classrooms,
 }: {
   currentUserId: string;
   tutor: { name: string; email: string; registryId: string };
   sessions: TutorPortalSession[];
   chatThreads: PortalChatThread[];
   bookings: PortalBooking[];
+  classrooms: ClassroomOption[];
 }) {
   const locale = useSeonbaeLocale();
   const l = (ko: string, en: string) => locale === "ko" ? ko : en;
@@ -167,7 +169,7 @@ export default function TutorPortalDashboard({
           </div>
         </section>
 
-        <BookingsPanel bookings={bookings} />
+        <BookingsPanel bookings={bookings} tutorActions classrooms={classrooms} />
 
         <ComplaintForm />
       </section>
