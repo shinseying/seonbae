@@ -325,38 +325,36 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 
   /* ======= HERO ======= */
   /* The photo fills the section; the copy sits over the cream half of it. */
-  /* The photograph is 1.333:1 and the section is 1.5:1, close enough that
-     object-fit keeps nearly the whole room: the full width always, and ~89% of
-     the height up to 1466px wide. Sitting the crop 30% down favours the top, so
-     the ceiling and the tall walls stay in frame; when a very wide viewport
-     pushes the section into its height cap, it is the desk that goes rather
-     than the ceiling. */
+  /* Zoomed out as far as cover allows: the section is 1.42:1 against the
+     photograph's 1.333:1, so up to 1633px wide roughly 94% of the height
+     survives — ceiling, the full run of wall and windows, and the desk. The
+     crop sits 35% down so the ceiling is the last thing to go when a very wide
+     viewport runs into the height cap. */
   .hero {
     position: relative;
     display: flex;
     align-items: center;
     overflow: hidden;
-    aspect-ratio: 150 / 100;
+    aspect-ratio: 142 / 100;
     min-height: 560px;
-    max-height: 1100px;
+    max-height: 1150px;
     background: var(--hero);
     padding-block: clamp(48px, 6vw, 92px);
   }
   .hero__bg { position: absolute; inset: 0; z-index: 0; background: var(--hero); }
-  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; display: block; }
-  /* Cream held over the copy, then cleared so the room reads as a photograph
-     rather than a tinted backdrop. */
+  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
+  /* The fade is confined to the left fifth. Past 20% the photograph is left
+     alone — no veil over the room. */
   .hero__bg::after {
     content: '';
     position: absolute; inset: 0;
     background:
       linear-gradient(94deg,
         var(--hero) 0%,
-        rgba(254, 250, 239, 0.72) 16%,
-        rgba(254, 250, 239, 0.4) 34%,
-        rgba(254, 250, 239, 0.12) 50%,
-        rgba(254, 250, 239, 0) 64%),
-      linear-gradient(to bottom, rgba(254, 250, 239, 0.26), rgba(254, 250, 239, 0) 20%);
+        rgba(254, 250, 239, 0.82) 9%,
+        rgba(254, 250, 239, 0.36) 15%,
+        rgba(254, 250, 239, 0) 20%),
+      linear-gradient(to bottom, rgba(254, 250, 239, 0.16), rgba(254, 250, 239, 0) 12%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
@@ -366,7 +364,10 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
     font-family: var(--serif); font-optical-sizing: auto; font-weight: 700;
     font-size: clamp(2.5rem, 5vw, 4.2rem); line-height: 1.04; letter-spacing: -0.02em; margin-top: 18px; color: var(--ink);
   }
-  .hero__copy { color: var(--muted); font-size: clamp(1.04rem, 1.25vw, 1.18rem); line-height: 1.6; margin-top: 22px; max-width: 34rem; }
+  /* --muted is a mid grey, which only clears 2:1 against the room now that the
+     fade stops at 20%. This darker warm grey reads at 5.1:1 while still sitting
+     below the headline. */
+  .hero__copy { color: #35322c; font-size: clamp(1.04rem, 1.25vw, 1.18rem); line-height: 1.6; margin-top: 22px; max-width: 34rem; }
   .hero__cta { margin-top: 32px; }
 
   .hero__chip {
