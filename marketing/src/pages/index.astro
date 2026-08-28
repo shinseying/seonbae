@@ -352,31 +352,35 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
     object-fit: cover; object-position: 50% 35%;
     display: block;
   }
-  /* Two scrims, both measured against the photograph rather than guessed.
-     The column lifts the left where the copy sits and releases by 62%. On its
-     own it left the secondary link at 3.6:1, because that link falls over the
-     dark chair and bag in the corner, so a soft radial lifts just that patch
-     instead of thickening the cream everywhere. Worst case across the text,
-     fifth percentile of the pixels actually behind each element: eyebrow 7.0,
-     headline 8.0, copy 8.4, link 8.1, chip 14.9. */
+  /* Two scrims, measured against this photograph rather than guessed. Bare, the
+     text column runs from lit wall down to window mullions and the chairs, and
+     navy on the dark end came out at 1.9:1. The column lifts the left and
+     releases by 60%; a soft radial lifts the bottom corner, where the secondary
+     link falls across a chair, so the cream does not have to thicken across the
+     whole hero to carry one element. Worst case, fifth percentile of the pixels
+     actually behind each: eyebrow 5.2, headline 7.4, copy 6.4, link 10.3, chip
+     11.5. */
   .hero__bg::after {
     content: '';
     position: absolute; inset: 0;
     background:
-      radial-gradient(58% 46% at 18% 84%,
-        rgba(254, 250, 239, 0.88) 0%,
-        rgba(254, 250, 239, 0) 72%),
+      radial-gradient(60% 50% at 18% 84%,
+        rgba(254, 250, 239, 0.86) 0%,
+        rgba(254, 250, 239, 0) 74%),
       linear-gradient(94deg,
         var(--hero) 0%,
-        rgba(254, 250, 239, 0.95) 14%,
-        rgba(254, 250, 239, 0.62) 28%,
-        rgba(254, 250, 239, 0.34) 40%,
-        rgba(254, 250, 239, 0.12) 52%,
-        rgba(254, 250, 239, 0) 62%);
+        rgba(254, 250, 239, 0.90) 13%,
+        rgba(254, 250, 239, 0.56) 27%,
+        rgba(254, 250, 239, 0.26) 39%,
+        rgba(254, 250, 239, 0.09) 51%,
+        rgba(254, 250, 239, 0) 60%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
   .hero__lead { max-width: 40rem; }
+  /* --violet sits at 4.2:1 over the window mullions behind it. The deeper brand
+     navy clears 5.2:1 and keeps the label reading as navy. */
+  .hero .eyebrow { color: var(--footer); }
 
   .hero__title {
     font-family: var(--serif); font-optical-sizing: auto; font-weight: 700;
