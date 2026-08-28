@@ -325,24 +325,28 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 
   /* ======= HERO ======= */
   /* The photo fills the section; the copy sits over the cream half of it. */
-  /* The photo is pre-framed to 1.757:1 (see marketing/media/hero-original.jpg
-     for the uncropped source), and the section carries the same ratio. Because
-     the box and the image agree, object-fit never re-crops: zooming the page
-     scales the picture the way it scales the type, instead of reframing it and
-     sliding the subject around. */
+  /* The height is a fixed pixel value and the photo is 2.4:1, wider than the
+     section ever is. object-fit therefore scales the image by height, which
+     pins the vertical framing: no zoom level changes how much of the room is
+     visible top to bottom. Only the width varies, and anchoring right means
+     that width appears on the left, so zooming out reveals more of the room
+     behind the wash and zooming in closes it back up.
+
+     The student sits 77% across the photo with barely any frame to her right,
+     so she cannot be the literal centre of the section without a gap opening
+     beside her. Anchoring right is the closest thing: she holds a fixed
+     distance from the right edge at every width. */
   .hero {
     position: relative;
     display: flex;
     align-items: center;
     overflow: hidden;
-    aspect-ratio: 1757 / 1000;
-    min-height: 560px;
-    max-height: 900px;
+    height: 720px;
     background: var(--hero);
     padding-block: clamp(48px, 6vw, 92px);
   }
   .hero__bg { position: absolute; inset: 0; z-index: 0; background: var(--hero); }
-  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; display: block; }
+  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 100% 100%; display: block; }
   /* Cream on the left fading out to the right, so the headline holds contrast
      and the subject on the right stays readable as a photograph. */
   .hero__bg::after {
@@ -381,7 +385,7 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
   /* Narrow screens cannot spare a cream half, so the wash covers the frame and
      the photo drops back to a texture behind the copy. */
   @media (max-width: 900px) {
-    .hero { aspect-ratio: auto; min-height: 0; max-height: none; }
+    .hero { height: auto; min-height: 0; }
     .hero__bg img { object-position: 62% center; }
     .hero__bg::after {
       background:
