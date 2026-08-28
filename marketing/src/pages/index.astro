@@ -337,6 +337,11 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
     display: flex;
     align-items: center;
     overflow: hidden;
+    /* width has to be stated. With only aspect-ratio and max-height set, the
+       clamped height feeds back through the ratio and shrinks the section
+       itself, so past 1796px the whole hero pulled away from the right edge
+       and left a strip of cream beside it. */
+    width: 100%;
     aspect-ratio: 171 / 100;
     min-height: 520px;
     max-height: 1050px;
