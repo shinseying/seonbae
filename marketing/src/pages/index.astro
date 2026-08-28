@@ -325,27 +325,25 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 
   /* ======= HERO ======= */
   /* The photo fills the section; the copy sits over the cream half of it. */
-  /* The photograph is 1.333:1 and the section is 1.62:1, so object-fit scales
-     it by width: the full width of the room is always on screen and nothing is
-     hidden at the sides. The section's ratio is fixed rather than tied to the
-     viewport height, so the crop is identical at every width and zoom level —
-     the picture scales the way the type does instead of reframing.
-
-     55% down the remaining travel keeps the ceiling strip at the top and the
-     desk running along the bottom, which is the framing the reference holds. */
+  /* The photograph is 1.333:1 and the section is 1.5:1, close enough that
+     object-fit keeps nearly the whole room: the full width always, and ~89% of
+     the height up to 1466px wide. Sitting the crop 30% down favours the top, so
+     the ceiling and the tall walls stay in frame; when a very wide viewport
+     pushes the section into its height cap, it is the desk that goes rather
+     than the ceiling. */
   .hero {
     position: relative;
     display: flex;
     align-items: center;
     overflow: hidden;
-    aspect-ratio: 162 / 100;
+    aspect-ratio: 150 / 100;
     min-height: 560px;
-    max-height: 900px;
+    max-height: 1100px;
     background: var(--hero);
     padding-block: clamp(48px, 6vw, 92px);
   }
   .hero__bg { position: absolute; inset: 0; z-index: 0; background: var(--hero); }
-  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; display: block; }
+  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; display: block; }
   /* Cream held over the copy, then cleared so the room reads as a photograph
      rather than a tinted backdrop. */
   .hero__bg::after {
@@ -354,12 +352,11 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
     background:
       linear-gradient(94deg,
         var(--hero) 0%,
-        var(--hero) 8%,
-        rgba(254, 250, 239, 0.88) 24%,
-        rgba(254, 250, 239, 0.54) 42%,
-        rgba(254, 250, 239, 0.18) 58%,
-        rgba(254, 250, 239, 0) 72%),
-      linear-gradient(to bottom, rgba(254, 250, 239, 0.4), rgba(254, 250, 239, 0) 24%);
+        rgba(254, 250, 239, 0.72) 16%,
+        rgba(254, 250, 239, 0.4) 34%,
+        rgba(254, 250, 239, 0.12) 50%,
+        rgba(254, 250, 239, 0) 64%),
+      linear-gradient(to bottom, rgba(254, 250, 239, 0.26), rgba(254, 250, 239, 0) 20%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
