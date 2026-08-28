@@ -360,11 +360,11 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
      whole hero to carry one element.
 
      The headline's longest line ends at 52% — that is where "someone" finishes.
-     The ramp holds high across the whole of it and still carries 0.34 at that
-     point, so the veil is visibly under the last word rather than technically
-     present: 0.16 measured fine but read as nothing on screen. It gives out at
-     66%. Worst case, fifth percentile of the pixels actually behind each:
-     eyebrow 8.1, headline 11.0, copy 8.8, link 11.9, chip 12.8. */
+     The ramp holds across the whole of it and carries 0.50 there, so the veil
+     is plainly under the last word; the wall behind is bright enough that a
+     thinner value read as nothing at all. It gives out at 66%. Worst case,
+     fifth percentile of the pixels actually behind each: eyebrow 9.4, headline
+     12.6, copy 9.9, link 13.2, chip 13.9. */
   .hero__bg::after {
     content: '';
     position: absolute; inset: 0;
@@ -374,11 +374,11 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
         rgba(254, 250, 239, 0) 74%),
       linear-gradient(94deg,
         var(--hero) 0%,
-        rgba(254, 250, 239, 0.88) 16%,
-        rgba(254, 250, 239, 0.72) 30%,
-        rgba(254, 250, 239, 0.52) 42%,
-        rgba(254, 250, 239, 0.34) 52%,
-        rgba(254, 250, 239, 0.14) 58%,
+        rgba(254, 250, 239, 0.94) 16%,
+        rgba(254, 250, 239, 0.84) 30%,
+        rgba(254, 250, 239, 0.68) 42%,
+        rgba(254, 250, 239, 0.50) 52%,
+        rgba(254, 250, 239, 0.24) 58%,
         rgba(254, 250, 239, 0) 66%);
   }
 
