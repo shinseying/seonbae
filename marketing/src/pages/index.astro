@@ -325,17 +325,24 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 
   /* ======= HERO ======= */
   /* The photo fills the section; the copy sits over the cream half of it. */
+  /* The photo is pre-framed to 1.757:1 (see marketing/media/hero-original.jpg
+     for the uncropped source), and the section carries the same ratio. Because
+     the box and the image agree, object-fit never re-crops: zooming the page
+     scales the picture the way it scales the type, instead of reframing it and
+     sliding the subject around. */
   .hero {
     position: relative;
     display: flex;
     align-items: center;
     overflow: hidden;
-    min-height: clamp(520px, 74vh, 760px);
+    aspect-ratio: 1757 / 1000;
+    min-height: 560px;
+    max-height: 900px;
     background: var(--hero);
     padding-block: clamp(48px, 6vw, 92px);
   }
   .hero__bg { position: absolute; inset: 0; z-index: 0; background: var(--hero); }
-  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 72% 62%; display: block; }
+  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; display: block; }
   /* Cream on the left fading out to the right, so the headline holds contrast
      and the subject on the right stays readable as a photograph. */
   .hero__bg::after {
@@ -344,11 +351,11 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
     background:
       linear-gradient(94deg,
         var(--hero) 0%,
-        var(--hero) 24%,
-        rgba(254, 250, 239, 0.9) 40%,
-        rgba(254, 250, 239, 0.42) 60%,
-        rgba(254, 250, 239, 0) 80%),
-      linear-gradient(to bottom, rgba(254, 250, 239, 0.5), rgba(254, 250, 239, 0) 26%);
+        rgba(254, 250, 239, 0.84) 18%,
+        rgba(254, 250, 239, 0.46) 38%,
+        rgba(254, 250, 239, 0.14) 56%,
+        rgba(254, 250, 239, 0) 70%),
+      linear-gradient(to bottom, rgba(254, 250, 239, 0.34), rgba(254, 250, 239, 0) 22%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
@@ -374,8 +381,8 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
   /* Narrow screens cannot spare a cream half, so the wash covers the frame and
      the photo drops back to a texture behind the copy. */
   @media (max-width: 900px) {
-    .hero { min-height: 0; }
-    .hero__bg img { object-position: 68% 58%; }
+    .hero { aspect-ratio: auto; min-height: 0; max-height: none; }
+    .hero__bg img { object-position: 62% center; }
     .hero__bg::after {
       background:
         linear-gradient(to bottom, rgba(254, 250, 239, 0.94), rgba(254, 250, 239, 0.82) 55%, rgba(254, 250, 239, 0.9)),
