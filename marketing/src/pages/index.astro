@@ -325,22 +325,21 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 
   /* ======= HERO ======= */
   /* The photograph is shown whole. It is sized by height and pinned to the
-     right, so at 1.333:1 it occupies the right 70% of the section and nothing
+     right, so at 1.333:1 it occupies the right 78% of the section and nothing
      is cropped — every bit of ceiling, wall, window and desk is on screen.
 
-     The section's ratio keeps the two in step: 1.9:1 is roughly 1.333 / 0.70,
-     so the photo lands on that 70% at every width and zoom. The cream holds
-     solid a little past the photo's left edge and then hands over quickly, the
-     same relationship to that edge the narrower crop had: five percent of
-     overlap, then a thirteen percent feather. */
+     The section's ratio keeps the two in step: 1.71:1 is roughly 1.333 / 0.78,
+     so the photo lands on that 78% at every width and zoom. The cream holds
+     solid just past the photo's left edge and hands over in eleven percent, so
+     the room opens up early and the block stays out of its way. */
   .hero {
     position: relative;
     display: flex;
     align-items: center;
     overflow: hidden;
-    aspect-ratio: 190 / 100;
+    aspect-ratio: 171 / 100;
     min-height: 520px;
-    max-height: 980px;
+    max-height: 1050px;
     background: var(--hero);
     padding-block: clamp(48px, 6vw, 92px);
   }
@@ -355,8 +354,8 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
     position: absolute; inset: 0;
     background: linear-gradient(90deg,
       var(--hero) 0%,
-      var(--hero) 35%,
-      rgba(254, 250, 239, 0) 48%);
+      var(--hero) 26%,
+      rgba(254, 250, 239, 0) 37%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
