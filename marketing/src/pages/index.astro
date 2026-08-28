@@ -357,9 +357,13 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
      navy on the dark end came out at 1.9:1. The column lifts the left and
      releases by 60%; a soft radial lifts the bottom corner, where the secondary
      link falls across a chair, so the cream does not have to thicken across the
-     whole hero to carry one element. Worst case, fifth percentile of the pixels
-     actually behind each: eyebrow 5.2, headline 7.4, copy 6.4, link 10.3, chip
-     11.5. */
+     whole hero to carry one element.
+
+     The column carries out to 62%. The headline's longest line ends at 52% —
+     that is where "someone" finishes — so the cream still has 0.16 under it
+     there and only gives out past the type rather than a few percent short of
+     it. Worst case, fifth percentile of the pixels actually behind each:
+     eyebrow 6.2, headline 9.2, copy 7.1, link 11.1, chip 12.1. */
   .hero__bg::after {
     content: '';
     position: absolute; inset: 0;
@@ -370,10 +374,11 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
       linear-gradient(94deg,
         var(--hero) 0%,
         rgba(254, 250, 239, 0.90) 13%,
-        rgba(254, 250, 239, 0.56) 27%,
-        rgba(254, 250, 239, 0.26) 39%,
-        rgba(254, 250, 239, 0.09) 51%,
-        rgba(254, 250, 239, 0) 60%);
+        rgba(254, 250, 239, 0.62) 27%,
+        rgba(254, 250, 239, 0.40) 38%,
+        rgba(254, 250, 239, 0.26) 46%,
+        rgba(254, 250, 239, 0.16) 52%,
+        rgba(254, 250, 239, 0) 62%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
