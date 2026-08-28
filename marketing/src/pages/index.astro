@@ -325,41 +325,41 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 
   /* ======= HERO ======= */
   /* The photo fills the section; the copy sits over the cream half of it. */
-  /* The height is a fixed pixel value and the photo is 2.4:1, wider than the
-     section ever is. object-fit therefore scales the image by height, which
-     pins the vertical framing: no zoom level changes how much of the room is
-     visible top to bottom. Only the width varies, and anchoring right means
-     that width appears on the left, so zooming out reveals more of the room
-     behind the wash and zooming in closes it back up.
+  /* The photograph is 1.333:1 and the section is 1.62:1, so object-fit scales
+     it by width: the full width of the room is always on screen and nothing is
+     hidden at the sides. The section's ratio is fixed rather than tied to the
+     viewport height, so the crop is identical at every width and zoom level —
+     the picture scales the way the type does instead of reframing.
 
-     The student sits 77% across the photo with barely any frame to her right,
-     so she cannot be the literal centre of the section without a gap opening
-     beside her. Anchoring right is the closest thing: she holds a fixed
-     distance from the right edge at every width. */
+     55% down the remaining travel keeps the ceiling strip at the top and the
+     desk running along the bottom, which is the framing the reference holds. */
   .hero {
     position: relative;
     display: flex;
     align-items: center;
     overflow: hidden;
-    height: 720px;
+    aspect-ratio: 162 / 100;
+    min-height: 560px;
+    max-height: 900px;
     background: var(--hero);
     padding-block: clamp(48px, 6vw, 92px);
   }
   .hero__bg { position: absolute; inset: 0; z-index: 0; background: var(--hero); }
-  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 100% 100%; display: block; }
-  /* Cream on the left fading out to the right, so the headline holds contrast
-     and the subject on the right stays readable as a photograph. */
+  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; display: block; }
+  /* Cream held over the copy, then cleared so the room reads as a photograph
+     rather than a tinted backdrop. */
   .hero__bg::after {
     content: '';
     position: absolute; inset: 0;
     background:
       linear-gradient(94deg,
         var(--hero) 0%,
-        rgba(254, 250, 239, 0.84) 18%,
-        rgba(254, 250, 239, 0.46) 38%,
-        rgba(254, 250, 239, 0.14) 56%,
-        rgba(254, 250, 239, 0) 70%),
-      linear-gradient(to bottom, rgba(254, 250, 239, 0.34), rgba(254, 250, 239, 0) 22%);
+        var(--hero) 8%,
+        rgba(254, 250, 239, 0.88) 24%,
+        rgba(254, 250, 239, 0.54) 42%,
+        rgba(254, 250, 239, 0.18) 58%,
+        rgba(254, 250, 239, 0) 72%),
+      linear-gradient(to bottom, rgba(254, 250, 239, 0.4), rgba(254, 250, 239, 0) 24%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
@@ -385,7 +385,7 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
   /* Narrow screens cannot spare a cream half, so the wash covers the frame and
      the photo drops back to a texture behind the copy. */
   @media (max-width: 900px) {
-    .hero { height: auto; min-height: 0; }
+    .hero { aspect-ratio: auto; min-height: 0; max-height: none; }
     .hero__bg img { object-position: 62% center; }
     .hero__bg::after {
       background:
