@@ -329,9 +329,10 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
      is cropped — every bit of ceiling, wall, window and desk is on screen.
 
      The section's ratio keeps the two in step: 1.9:1 is roughly 1.333 / 0.70,
-     so the photo lands on that 70% at every width and zoom. The cream is solid
-     for the first fifth and then hands over across the next fifth, so the
-     transition itself is the 20% band rather than a hard edge. */
+     so the photo lands on that 70% at every width and zoom. The cream holds
+     solid a little past the photo's left edge and then hands over quickly, the
+     same relationship to that edge the narrower crop had: five percent of
+     overlap, then a thirteen percent feather. */
   .hero {
     position: relative;
     display: flex;
@@ -354,8 +355,8 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
     position: absolute; inset: 0;
     background: linear-gradient(90deg,
       var(--hero) 0%,
-      var(--hero) 20%,
-      rgba(254, 250, 239, 0) 40%);
+      var(--hero) 35%,
+      rgba(254, 250, 239, 0) 48%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
