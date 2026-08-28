@@ -12,7 +12,17 @@
 import { readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import sharp from 'sharp';
+
+// Shrinking images is a nicety. If sharp will not load — a platform without a
+// prebuilt binary, a partial install — the site should still deploy with the
+// originals rather than the whole build failing on a cosmetic step.
+let sharp;
+try {
+  ({ default: sharp } = await import('sharp'));
+} catch (error) {
+  console.warn(`images: skipping optimisation (${error.message})`);
+  process.exit(0);
+}
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dist = resolve(root, 'marketing', 'dist');
@@ -64,6 +74,7 @@ let before = 0;
 let after = 0;
 
 for (const path of await collect(dist, /\.(jpe?g|png)$/i)) {
+  try {
   const name = path.split(sep).pop();
   if (GENERATED_ICONS.has(name)) continue;
 
@@ -100,6 +111,9 @@ for (const path of await collect(dist, /\.(jpe?g|png)$/i)) {
   before += original;
   after += buffer.length;
   console.log(`${kb(original).padStart(8)} -> ${kb(buffer.length).padStart(8)}  ${relative(dist, target)}`);
+  } catch (error) {
+    console.warn(`images: left ${relative(dist, path)} alone (${error.message})`);
+  }
 }
 
 // Renaming a file is only safe if everything pointing at it moves too. The
