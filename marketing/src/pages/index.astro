@@ -359,11 +359,12 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
      link falls across a chair, so the cream does not have to thicken across the
      whole hero to carry one element.
 
-     The column carries out to 62%. The headline's longest line ends at 52% —
-     that is where "someone" finishes — so the cream still has 0.16 under it
-     there and only gives out past the type rather than a few percent short of
-     it. Worst case, fifth percentile of the pixels actually behind each:
-     eyebrow 6.2, headline 9.2, copy 7.1, link 11.1, chip 12.1. */
+     The headline's longest line ends at 52% — that is where "someone" finishes.
+     The ramp holds high across the whole of it and still carries 0.34 at that
+     point, so the veil is visibly under the last word rather than technically
+     present: 0.16 measured fine but read as nothing on screen. It gives out at
+     66%. Worst case, fifth percentile of the pixels actually behind each:
+     eyebrow 8.1, headline 11.0, copy 8.8, link 11.9, chip 12.8. */
   .hero__bg::after {
     content: '';
     position: absolute; inset: 0;
@@ -373,12 +374,12 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
         rgba(254, 250, 239, 0) 74%),
       linear-gradient(94deg,
         var(--hero) 0%,
-        rgba(254, 250, 239, 0.90) 13%,
-        rgba(254, 250, 239, 0.62) 27%,
-        rgba(254, 250, 239, 0.40) 38%,
-        rgba(254, 250, 239, 0.26) 46%,
-        rgba(254, 250, 239, 0.16) 52%,
-        rgba(254, 250, 239, 0) 62%);
+        rgba(254, 250, 239, 0.88) 16%,
+        rgba(254, 250, 239, 0.72) 30%,
+        rgba(254, 250, 239, 0.52) 42%,
+        rgba(254, 250, 239, 0.34) 52%,
+        rgba(254, 250, 239, 0.14) 58%,
+        rgba(254, 250, 239, 0) 66%);
   }
 
   .hero__inner { position: relative; z-index: 1; }
