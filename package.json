@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "pnpm run build:marketing && next build",
-    "build:marketing": "astro build --root marketing && node scripts/sync-marketing.mjs",
+    "build:marketing": "astro build --root marketing && node scripts/optimize-images.mjs && node scripts/sync-marketing.mjs",
     "start": "next start"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
     "@types/node": "20.17.6",
     "@types/react": "18.3.24",
     "astro": "^5.6.1",
+    "sharp": "^0.35.4",
     "typescript": "5.8.2"
   }
 }
