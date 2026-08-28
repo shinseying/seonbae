@@ -53,16 +53,13 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 <Base title="Seonbae | Verified tutors from Korea's top universities" active="/">
   <!-- ============================ HERO ============================ -->
   <section class="hero">
-    <!-- Ground shapes, muted rather than removed: enough to stop the page
-         reading as a blank sheet, quiet enough not to shout. -->
-    <span class="hero__blob hero__blob--a" aria-hidden="true"></span>
-    <span class="hero__blob hero__blob--b" aria-hidden="true"></span>
-    <span class="hero__blob hero__blob--c" aria-hidden="true"></span>
-    <span class="hero__blob hero__blob--d" aria-hidden="true"></span>
-    <span class="hero__blob hero__blob--e" aria-hidden="true"></span>
-    <span class="hero__arc" aria-hidden="true"></span>
-    <span class="hero__dots" aria-hidden="true"></span>
-    <div class="container hero__grid">
+    <!-- The photo is the hero ground. A cream wash runs across it from the left
+         so the headline keeps its contrast while the subject stays visible on
+         the right. -->
+    <div class="hero__bg" aria-hidden="true">
+      {heroFile && <img src={`/${heroFile}`} alt="" fetchpriority="high" decoding="async" />}
+    </div>
+    <div class="container hero__inner">
       <div class="hero__lead reveal is-in">
         <span class="eyebrow"><T en={home.hero.eyebrow.en} ko={home.hero.eyebrow.ko} /></span>
         <h1 class="hero__title"><T en={home.hero.titleA.en} ko={home.hero.titleA.ko} /></h1>
@@ -75,19 +72,6 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
           <a href="/how-it-works" class="textlink"><span><T en={home.hero.ctaSecondary.en} ko={home.hero.ctaSecondary.ko} /></span>
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
-        </div>
-      </div>
-
-      <div class="hero__media reveal is-in" data-delay="90ms">
-        <div class="hero__photo">
-          {heroFile ? (
-            <img src={`/${heroFile}`} alt="A laptop, notes and coffee on a study desk in a university library" />
-          ) : (
-            <div class="hero__photo-ph">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8a2 2 0 012-2h1.5L9 4h6l1.5 2H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z" /><circle cx="12" cy="12" r="3.5" /></svg>
-              <span><T en="Your photo here" ko="사진이 들어갈 자리" /></span>
-            </div>
-          )}
         </div>
         <div class="hero__chip">
           <span class="hero__chip-ic" aria-hidden="true"><Icon name="verify" size={18} /></span>
@@ -340,83 +324,65 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
   .sec-head .dhead { margin-top: 12px; }
 
   /* ======= HERO ======= */
+  /* The photo fills the section; the copy sits over the cream half of it. */
   .hero {
     position: relative;
+    display: flex;
+    align-items: center;
     overflow: hidden;
+    min-height: clamp(520px, 74vh, 760px);
     background: var(--hero);
-    padding-block: clamp(34px, 5vw, 72px) clamp(48px, 6vw, 88px);
+    padding-block: clamp(48px, 6vw, 92px);
   }
-  .hero__grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.08fr 0.92fr; gap: clamp(32px, 5vw, 72px); align-items: center; }
+  .hero__bg { position: absolute; inset: 0; z-index: 0; background: var(--hero); }
+  .hero__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 72% center; display: block; }
+  /* Cream on the left fading out to the right, so the headline holds contrast
+     and the subject on the right stays readable as a photograph. */
+  .hero__bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(94deg,
+        var(--hero) 0%,
+        var(--hero) 24%,
+        rgba(254, 250, 239, 0.9) 40%,
+        rgba(254, 250, 239, 0.42) 60%,
+        rgba(254, 250, 239, 0) 80%),
+      linear-gradient(to bottom, rgba(254, 250, 239, 0.5), rgba(254, 250, 239, 0) 26%);
+  }
 
-  .hero__blob, .hero__arc, .hero__dots { position: absolute; z-index: 0; pointer-events: none; }
-  .hero__blob { mix-blend-mode: multiply; aspect-ratio: 1; }
-  /* Placed around the two columns rather than under them: one mass top right
-     behind the photo, one low left under the buttons, and three small marks
-     spaced so none of them touch. */
-  .hero__blob--a {
-    width: clamp(300px, 33vw, 480px);
-    background: var(--p1);
-    border-radius: 46% 54% 62% 38% / 44% 43% 57% 56%;
-    top: -30%; right: -4%;
-  }
-  .hero__blob--b {
-    width: clamp(150px, 17vw, 240px);
-    background: var(--p2);
-    border-radius: 58% 42% 45% 55% / 55% 54% 46% 45%;
-    bottom: -26%; right: 30%;
-  }
-  .hero__blob--c {
-    width: clamp(120px, 14vw, 200px);
-    background: var(--p4);
-    border-radius: 52% 48% 46% 54% / 50% 52% 48% 50%;
-    top: 6%; left: -7%;
-  }
-  .hero__blob--d {
-    width: clamp(80px, 9vw, 130px);
-    background: var(--p6);
-    border-radius: 62% 38% 42% 58% / 40% 62% 38% 60%;
-    top: 30%; right: 38%;
-  }
-  .hero__blob--e {
-    width: clamp(110px, 13vw, 180px);
-    background: var(--p3);
-    border-radius: 44% 56% 60% 40% / 58% 42% 58% 42%;
-    bottom: -14%; left: 12%;
-  }
-  .hero__arc {
-    width: clamp(220px, 26vw, 360px); aspect-ratio: 1;
-    border: 1.5px solid var(--line);
-    border-radius: 50%;
-    right: 6%; bottom: -16%;
-    opacity: 0.7;
-  }
-  .hero__dots {
-    width: 150px; height: 96px; left: 44%; bottom: 6%;
-    background-image: radial-gradient(var(--violet) 1.5px, transparent 1.6px);
-    background-size: 17px 17px; opacity: 0.12;
-  }
-  @media (max-width: 900px) {
-    .hero__blob--b, .hero__blob--c, .hero__blob--d, .hero__blob--e, .hero__arc, .hero__dots { display: none; }
-    .hero__blob--a { top: auto; bottom: -12%; right: -24%; }
-  }
+  .hero__inner { position: relative; z-index: 1; }
+  .hero__lead { max-width: 40rem; }
 
   .hero__title {
     font-family: var(--serif); font-optical-sizing: auto; font-weight: 700;
     font-size: clamp(2.5rem, 5vw, 4.2rem); line-height: 1.04; letter-spacing: -0.02em; margin-top: 18px; color: var(--ink);
   }
-  .hero__copy { color: var(--muted); font-size: clamp(1.04rem, 1.25vw, 1.18rem); line-height: 1.6; margin-top: 22px; max-width: 36rem; }
+  .hero__copy { color: var(--muted); font-size: clamp(1.04rem, 1.25vw, 1.18rem); line-height: 1.6; margin-top: 22px; max-width: 34rem; }
   .hero__cta { margin-top: 32px; }
 
-  .hero__media { position: relative; }
-  .hero__photo { position: relative; aspect-ratio: 4 / 5; border-radius: var(--r-xl); overflow: hidden; box-shadow: var(--shadow-lift); background: linear-gradient(155deg, var(--yellow-soft), var(--sage)); }
-  .hero__photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .hero__photo-ph { position: absolute; inset: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border: 1.5px dashed rgba(22,58,81,0.24); border-radius: calc(var(--r-xl) - 6px); color: var(--violet); }
-  .hero__photo-ph svg { width: 48px; height: 48px; opacity: 0.5; }
-  .hero__photo-ph span { font-size: 0.88rem; font-weight: 600; opacity: 0.72; }
-  .hero__chip { position: absolute; left: -18px; bottom: 46px; display: flex; align-items: center; gap: 11px; background: var(--white); border: 1px solid var(--line-soft); border-radius: var(--r-md); padding: 12px 16px; box-shadow: var(--shadow-md); font-size: 0.78rem; color: var(--muted); line-height: 1.25; }
+  .hero__chip {
+    display: inline-flex; align-items: center; gap: 11px;
+    margin-top: clamp(38px, 5.5vw, 68px);
+    background: var(--white); border: 1px solid var(--line-soft); border-radius: var(--r-md);
+    padding: 12px 16px; box-shadow: var(--shadow-md);
+    font-size: 0.78rem; color: var(--muted); line-height: 1.25;
+  }
   .hero__chip strong { color: var(--ink); font-size: 0.86rem; }
   .hero__chip-ic { width: 34px; height: 34px; border-radius: 50%; background: var(--violet-soft); color: var(--violet); display: inline-flex; align-items: center; justify-content: center; flex: none; }
-  @media (max-width: 900px) { .hero__grid { grid-template-columns: 1fr; } .hero__media { max-width: 420px; } }
+
+  /* Narrow screens cannot spare a cream half, so the wash covers the frame and
+     the photo drops back to a texture behind the copy. */
+  @media (max-width: 900px) {
+    .hero { min-height: 0; }
+    .hero__bg img { object-position: 68% center; }
+    .hero__bg::after {
+      background:
+        linear-gradient(to bottom, rgba(254, 250, 239, 0.94), rgba(254, 250, 239, 0.82) 55%, rgba(254, 250, 239, 0.9)),
+        linear-gradient(94deg, var(--hero) 0%, rgba(254, 250, 239, 0.6) 55%, rgba(254, 250, 239, 0.35) 100%);
+    }
+    .hero__lead { max-width: none; }
+  }
 
   /* ======= STAT BAND ======= */
   .statband { background: var(--footer); color: var(--on-dark); }
