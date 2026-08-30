@@ -1,10 +1,13 @@
 ---
+import { getCollection } from 'astro:content';
+
 import Base from '../layouts/Base.astro';
 import PageHero from '../components/PageHero.astro';
 import Eyebrow from '../components/Eyebrow.astro';
 import Button from '../components/Button.astro';
 import MediaPanel from '../components/MediaPanel.astro';
 import Icon from '../components/Icon.astro';
+import PricingCard from '../components/PricingCard.astro';
 import T from '../components/T.astro';
 
 import fs from 'node:fs';
@@ -16,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 const lessonPhoto = ['jpg', 'jpeg', 'png', 'webp', 'avif']
   .map((extension) => `images/lesson-whiteboard.${extension}`)
   .find((name) => fs.existsSync(fileURLToPath(new URL(`../../public/${name}`, import.meta.url))));
+
+const plans = (await getCollection('plans')).sort((a, b) => a.data.order - b.data.order);
 
 const steps = [
   { n: '01', title: 'Tell us your goals', titleKo: '목표를 알려주세요', copy: 'Share the subject, the level, and what you are working toward. A test score, a predicted grade, or simply steadier confidence.', copyKo: '과목과 학년, 이루고 싶은 목표를 알려주세요. 시험 점수나 예상 등급, 또는 꾸준한 자신감도 좋습니다.' },
@@ -189,6 +194,28 @@ const portalItems = [
     </div>
   </section>
 
+
+  <!-- The same two ways to book as the pricing page, verbatim. It sits here so
+       the page names its price and then ends on the conversion panel, and the
+       cream band separates the two white sections that used to run together.
+       On pricing the rate card is directly above this note; here it is not, so
+       the word points at the card on that page instead. -->
+  <section class="section bg-cream">
+    <div class="container">
+      <div class="plans-head reveal">
+        <div>
+          <Eyebrow label="Two ways to book" labelKo="두 가지 이용 방식" />
+          <h2 class="h2"><T en="Same tutors. Same rate. Your choice of rhythm." ko="같은 선배, 같은 요금. 원하는 리듬으로." /></h2>
+        </div>
+        <p class="plans-head__note"><T en="Both are billed monthly, and both use the subject rate" ko="두 방식 모두" /> <a href="/pricing#all-rates"><T en="above" ko="위" /></a><T en=". The only difference is whether your hours are set in advance." ko=" 과목 요금을 기준으로 매월 결제합니다. 수업 시간을 미리 정하는지만 다릅니다." /></p>
+      </div>
+      <div class="plans">
+        {plans.map((plan) => (
+          <div class="reveal"><PricingCard entry={plan} /></div>
+        ))}
+      </div>
+    </div>
+  </section>
 
 </Base>
 

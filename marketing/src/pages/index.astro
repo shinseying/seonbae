@@ -8,15 +8,6 @@ import { home, ui } from '../i18n/home';
 import { subjectCount } from '../data/rates';
 import { leadership, TUTOR_CARD_PHOTO } from '../data/people';
 
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
-
-// Drop a file named hero.* into marketing/public and the hero uses it. Any of
-// these extensions works, so the photo does not have to be re-encoded to JPEG.
-const heroFile = ['jpg', 'jpeg', 'png', 'webp', 'avif']
-  .map((extension) => `hero.${extension}`)
-  .find((name) => fs.existsSync(fileURLToPath(new URL(`../../public/${name}`, import.meta.url))));
-
 // The preview shows tutors, not the founding team, so it does not track the
 // leadership list one to one. Ian holds the first slot; the other two entries
 // are founders who also teach.
@@ -53,11 +44,22 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 <Base title="Seonbae | Verified tutors from Korea's top universities" active="/">
   <!-- ============================ HERO ============================ -->
   <section class="hero">
-    <!-- The photo is the hero ground. A cream wash runs across it from the left
-         so the headline keeps its contrast while the subject stays visible on
-         the right. -->
+    <!-- Three photographs crossfading on one 24s clock. The two warm rooms take
+         a light wash with dark type, the cafeteria takes a navy wash with light
+         type, and the wash and the ink turn over together with the picture.
+         Bottom layer first: the one that fades last sits on top. -->
     <div class="hero__bg" aria-hidden="true">
-      {heroFile && <img src={`/${heroFile}`} alt="" fetchpriority="high" decoding="async" />}
+      <img class="hero__shot hero__shot--c" src="/hero-2.jpg"
+           srcset="/hero-2-sm.jpg 1400w, /hero-2.jpg 2400w, /hero-2-lg.jpg 3200w" sizes="100vw"
+           alt="" decoding="async" />
+      <img class="hero__shot hero__shot--b" src="/hero-3.jpg"
+           srcset="/hero-3-sm.jpg 1400w, /hero-3.jpg 2400w, /hero-3-lg.jpg 3200w" sizes="100vw"
+           alt="" decoding="async" />
+      <img class="hero__shot hero__shot--a" src="/hero-1.jpg"
+           srcset="/hero-1-sm.jpg 1400w, /hero-1.jpg 2400w, /hero-1-lg.jpg 3200w" sizes="100vw"
+           alt="" decoding="async" fetchpriority="high" />
+      <span class="hero__wash hero__wash--warm"></span>
+      <span class="hero__wash hero__wash--dark"></span>
     </div>
     <div class="container hero__inner">
       <div class="hero__lead reveal is-in">
@@ -324,104 +326,212 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
   .sec-head .dhead { margin-top: 12px; }
 
   /* ======= HERO ======= */
-  /* The section holds one shape. aspect-ratio fixes it, width: 100% stops the
-     height cap feeding back into the width, and the photo covers the frame, so
-     there is never a strip of cream beside the picture and the crop is the same
-     at every width and zoom step from 1280px to 1815px.
+  /* Sized to land on the fold rather than a screen and a bit: 34px of navy
+     utility strip (33px plus its rule) and 86px of header sit above it. Both
+     are declared heights, not measured guesses, so if either moves this number
+     has to move with it or the hero stops landing on the fold.
 
-     Covering means cropping: a 1.333:1 photograph cannot both fill a frame this
-     wide and be shown whole. 1.65:1 keeps 81% of its height — ceiling, the run
-     of wall and windows, and the desk — and sitting the crop 35% down means the
-     ceiling is the last thing to go if a very wide viewport reaches the height
-     cap. The cream on the left is only an overlay now, never a gap. */
+     Height is the only lever on how much of each photograph shows. With
+     object-fit: cover and a box wider in ratio than the photograph, the scale
+     factor is box width over photograph width, so a full-bleed hero is already
+     showing the picture at the smallest scale it can. A taller hero reveals
+     more top and bottom, it does not make anything smaller. */
   .hero {
     position: relative;
     display: flex;
     align-items: center;
     overflow: hidden;
     width: 100%;
-    aspect-ratio: 165 / 100;
-    min-height: 520px;
-    max-height: 1100px;
+    min-height: clamp(560px, calc(100vh - 120px), 880px);
     background: var(--hero);
-    padding-block: clamp(48px, 6vw, 92px);
+    padding-block: clamp(46px, 6vw, 90px);
   }
-  .hero__bg { position: absolute; inset: 0; z-index: 0; background: var(--hero); }
-  .hero__bg img {
-    width: 100%; height: 100%;
-    object-fit: cover; object-position: 50% 35%;
-    display: block;
-  }
-  /* Two scrims, measured against this photograph rather than guessed. Bare, the
-     text column runs from lit wall down to window mullions and the chairs, and
-     navy on the dark end came out at 1.9:1. The column lifts the left and
-     releases by 60%; a soft radial lifts the bottom corner, where the secondary
-     link falls across a chair, so the cream does not have to thicken across the
-     whole hero to carry one element.
+  .hero__bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: var(--hero); }
 
-     The headline's longest line ends at 52% — that is where "someone" finishes.
-     The ramp holds across the whole of it and carries 0.60 there, so the veil
-     is plainly under the last word; the wall behind is bright enough that a
-     thinner value read as nothing at all. It gives out at 66%, and the room
-     still shows through — ceiling, blinds, railing and chairs all read. Worst
-     case, fifth percentile of the pixels actually behind each: eyebrow 10.5,
-     headline 13.1, copy 10.4, link 14.4, chip 14.9. */
-  .hero__bg::after {
-    content: '';
+  /* ----- The three photographs ----- */
+  .hero__shot {
     position: absolute; inset: 0;
-    background:
-      radial-gradient(60% 50% at 18% 84%,
-        rgba(254, 250, 239, 0.86) 0%,
-        rgba(254, 250, 239, 0) 74%),
-      linear-gradient(94deg,
-        var(--hero) 0%,
-        rgba(254, 250, 239, 0.96) 16%,
-        rgba(254, 250, 239, 0.90) 30%,
-        rgba(254, 250, 239, 0.78) 42%,
-        rgba(254, 250, 239, 0.60) 52%,
-        rgba(254, 250, 239, 0.32) 58%,
-        rgba(254, 250, 239, 0) 66%);
+    width: 100%; height: 100%;
+    display: block; object-fit: cover; object-position: 60% 62%;
+    animation: heroDrift 44s ease-in-out infinite alternate;
+  }
+  .hero__shot--c { z-index: 0; }
+  .hero__shot--b {
+    z-index: 1;
+    animation: heroDrift 44s ease-in-out infinite alternate,
+               heroShotB 24s linear infinite;
+  }
+  .hero__shot--a {
+    z-index: 2;
+    animation: heroDrift 44s ease-in-out infinite alternate,
+               heroShotA 24s linear infinite;
   }
 
+  /* 24 seconds, three phases. The two warm rooms sit next to each other so only
+     two of the three swaps also have to turn the type over. Study room to
+     reading room stays a slow 1.25s dissolve; the two that cross into and out
+     of the navy run 0.36s, because a slow dissolve between opposite treatments
+     spends its whole length half beige and half navy, and no ink reads there.
+
+     The bottom layer never fades. Each layer above it rises to full while the
+     layer over it is still opaque, so a swap is always one picture thinning
+     over another and the layer below never leaks through the middle. B jumps
+     rather than fades at the wrap, hidden under an A that is already opaque. */
+  @keyframes heroShotA {
+    0%, 30%      { opacity: 1; }
+    35.2%, 97%   { opacity: 0; }
+    98.5%, 100%  { opacity: 1; }
+  }
+  @keyframes heroShotB {
+    0%, 64%      { opacity: 1; }
+    65.5%, 98.9% { opacity: 0; }
+    99%, 100%    { opacity: 1; }
+  }
+  @keyframes heroDrift {
+    from { transform: scale(1); }
+    to   { transform: scale(1.035); }
+  }
+
+  /* ----- The two washes ----- */
+  /* One diagonal each, nothing along the top, nothing along the bottom, so each
+     photograph keeps its own edges. Both reach true transparency: the pair they
+     replace never dropped below 0.82 across the frame and read as a film laid
+     over the picture rather than as light. */
+  .hero__wash {
+    position: absolute; inset: 0; z-index: 3;
+    animation-duration: 24s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+
+  /* The two warm rooms do not want the same beige. The study room is bright and
+     cool and takes an almost white one; the reading room is wood and lamp light
+     and takes the sand. One layer, one colour that moves between them across
+     the slow dissolve that separates the two pictures anyway. */
+  .hero__wash--warm {
+    background: linear-gradient(101deg,
+      color-mix(in srgb, var(--wash-warm, #f7eede) 95%, transparent) 0%,
+      color-mix(in srgb, var(--wash-warm, #f7eede) 91%, transparent) 20%,
+      color-mix(in srgb, var(--wash-warm, #f7eede) 76%, transparent) 36%,
+      color-mix(in srgb, var(--wash-warm, #f7eede) 48%, transparent) 52%,
+      color-mix(in srgb, var(--wash-warm, #f7eede) 20%, transparent) 68%,
+      color-mix(in srgb, var(--wash-warm, #f7eede) 5%, transparent)  78%,
+      transparent 88%);
+    animation: heroWarm 24s linear infinite,
+               heroWashTint 24s linear infinite;
+  }
+  @keyframes heroWashTint {
+    0%, 30%    { --wash-warm: #fcf9f2; }
+    35.2%, 64% { --wash-warm: #f7eede; }
+    97%, 100%  { --wash-warm: #fcf9f2; }
+  }
+
+  /* Near black carrying the brand navy, not flat #000, which over a photograph
+     goes grey where it thins and reads as a layer rather than as shadow. */
+  .hero__wash--dark {
+    background: linear-gradient(101deg,
+      rgba(10, 26, 36, 0.88) 0%,
+      rgba(10, 26, 36, 0.83) 20%,
+      rgba(10, 26, 36, 0.68) 36%,
+      rgba(10, 26, 36, 0.44) 50%,
+      rgba(10, 26, 36, 0.20) 62%,
+      rgba(10, 26, 36, 0.06) 74%,
+      rgba(10, 26, 36, 0)    84%);
+    animation-name: heroDarkWash;
+  }
+
+  /* The warm one runs a little heavier than the navy. Dark letters on a
+     photograph need more cover than light ones do, and the reading room is dim,
+     so the beige has more work to do there. */
+  @keyframes heroWarm {
+    0%, 64%     { opacity: 1; }
+    65.5%, 97%  { opacity: 0; }
+    98.5%, 100% { opacity: 1; }
+  }
+  @keyframes heroDarkWash {
+    0%, 64%     { opacity: 0; }
+    65.5%, 97%  { opacity: 1; }
+    98.5%, 100% { opacity: 0; }
+  }
+
+  /* ----- Type ----- */
   .hero__inner { position: relative; z-index: 1; }
-  .hero__lead { max-width: 40rem; }
-  /* --violet sits at 4.2:1 over the window mullions behind it. The deeper brand
-     navy clears 5.2:1 and keeps the label reading as navy. */
-  .hero .eyebrow { color: var(--footer); }
+  .hero__lead {
+    max-width: 40rem;
+    color: var(--hero-ink, #201e19);
+    text-shadow: 0 1px 28px var(--hero-halo, rgba(247, 238, 222, 0.92));
+    animation: heroInk 24s linear infinite;
+  }
+  .hero__lead .eyebrow,
+  .hero__lead .textlink { color: var(--hero-ink, #201e19); }
 
   .hero__title {
     font-family: var(--serif); font-optical-sizing: auto; font-weight: 700;
-    font-size: clamp(2.5rem, 5vw, 4.2rem); line-height: 1.04; letter-spacing: -0.02em; margin-top: 18px; color: var(--ink);
+    font-size: clamp(2.5rem, 5vw, 4.2rem); line-height: 1.04; letter-spacing: -0.02em; margin-top: 18px;
+    color: var(--hero-ink, #201e19);
   }
-  /* Past the 40% hand-over the copy sits on the room itself, where --muted only
-     clears 2:1. This darker warm grey reads at 5.1:1 and still sits below the
-     headline. */
-  .hero__copy { color: #35322c; font-size: clamp(1.04rem, 1.25vw, 1.18rem); line-height: 1.6; margin-top: 22px; max-width: 34rem; }
+  .hero__copy {
+    color: var(--hero-ink, #201e19); opacity: 0.86;
+    font-size: clamp(1.04rem, 1.25vw, 1.18rem); line-height: 1.6; margin-top: 22px; max-width: 30rem;
+  }
   .hero__cta { margin-top: 32px; }
 
+  /* The ink flips rather than fades, at the midpoint of the wash crossing.
+     Interpolating it puts grey letters on a grey wash for the length of the
+     swap, which is the one arrangement where nothing is readable at all.
+     Flipping means the type is always dark on a wash that is at least half
+     warm, or light on a wash that is at least half navy. The flip lands inside
+     25 milliseconds, under two frames.
+
+     The fallbacks in each var() mean a browser without @property support gets
+     the dark type and the warm halo and never switches, which is wrong on one
+     photograph out of three rather than broken. */
+  @keyframes heroInk {
+    0%, 64.7%    { --hero-ink: #201e19; --hero-halo: rgba(247, 238, 222, 0.92); }
+    64.8%, 97.6% { --hero-ink: #ffffff; --hero-halo: rgba(8, 20, 28, 0.58); }
+    97.7%, 100%  { --hero-ink: #201e19; --hero-halo: rgba(247, 238, 222, 0.92); }
+  }
+
+  /* The chip is its own white card, so it keeps its own ink and needs no halo
+     behind the letters. */
   .hero__chip {
     display: inline-flex; align-items: center; gap: 11px;
     margin-top: clamp(38px, 5.5vw, 68px);
     background: var(--white); border: 1px solid var(--line-soft); border-radius: var(--r-md);
     padding: 12px 16px; box-shadow: var(--shadow-md);
     font-size: 0.78rem; color: var(--muted); line-height: 1.25;
+    text-shadow: none;
   }
   .hero__chip strong { color: var(--ink); font-size: 0.86rem; }
   .hero__chip-ic { width: 34px; height: 34px; border-radius: 50%; background: var(--violet-soft); color: var(--violet); display: inline-flex; align-items: center; justify-content: center; flex: none; }
 
-  /* Narrow screens cannot spare a cream half, so the wash covers the frame and
-     the photo drops back to a texture behind the copy. */
-  /* Too narrow to stand a photo beside the copy: the picture covers the frame
-     and the cream lifts to a veil so the type still reads over it. */
+  /* Too narrow to stand a photo beside the copy: both washes turn and fall from
+     the top so the type still reads over the picture. The mobile warm wash uses
+     the same --wash-warm property, so it inherits the colour change without a
+     second set of keyframes. */
   @media (max-width: 900px) {
-    .hero { aspect-ratio: auto; min-height: 0; max-height: none; }
-    .hero__bg img { object-position: 62% center; }
-    .hero__bg::after {
-      background:
-        linear-gradient(to bottom, rgba(254, 250, 239, 0.94), rgba(254, 250, 239, 0.82) 55%, rgba(254, 250, 239, 0.9)),
-        linear-gradient(94deg, var(--hero) 0%, rgba(254, 250, 239, 0.6) 55%, rgba(254, 250, 239, 0.35) 100%);
+    .hero { min-height: 0; }
+    .hero__shot { object-position: 78% 64%; }
+    .hero__wash--warm {
+      background: linear-gradient(178deg,
+        rgba(247, 238, 222, 0.95) 0%, rgba(247, 238, 222, 0.92) 34%,
+        rgba(247, 238, 222, 0.80) 52%, rgba(247, 238, 222, 0.62) 70%,
+        rgba(247, 238, 222, 0.42) 86%, rgba(247, 238, 222, 0.24) 100%);
+    }
+    .hero__wash--dark {
+      background: linear-gradient(178deg,
+        rgba(10, 26, 36, 0.88) 0%, rgba(10, 26, 36, 0.82) 34%,
+        rgba(10, 26, 36, 0.66) 52%, rgba(10, 26, 36, 0.52) 70%,
+        rgba(10, 26, 36, 0.34) 86%, rgba(10, 26, 36, 0.18) 100%);
     }
     .hero__lead { max-width: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero__shot, .hero__shot--a, .hero__shot--b, .hero__wash, .hero__lead { animation: none; }
+    .hero__shot--a, .hero__shot--b { opacity: 1; }
+    .hero__wash--dark { opacity: 0; }
+    .hero__wash--warm { opacity: 1; }
   }
 
   /* ======= STAT BAND ======= */

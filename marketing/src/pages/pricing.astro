@@ -194,21 +194,8 @@ const faqs = [
   .mock-offer .h2 { margin-top: 12px; }
   .mock-offer .lead { margin-top: 16px; max-width: 52rem; }
 
-  /* ----- Plans ------------------------------------------------------------ */
-  .plans-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
-    align-items: end;
-    gap: 20px clamp(24px, 4vw, 56px);
-    margin-bottom: clamp(24px, 3.5vw, 40px);
-  }
-  .plans-head .h2 { margin-top: 12px; }
-  .plans-head__note { color: var(--muted); font-size: 0.98rem; line-height: 1.55; max-width: 40ch; }
-  /* Two equal cards: no featured tile stretched across an odd column split. */
-  .plans { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: stretch; }
-  @media (min-width: 860px) {
-    .plans { grid-template-columns: 1fr 1fr; }
-  }
+  /* The plans block styles itself from global.css, so the markup works on
+     how-it-works too. */
 
   /* ----- Ledger ----------------------------------------------------------- */
   .ledger {
@@ -252,7 +239,6 @@ const faqs = [
 
   @media (max-width: 900px) {
     .rates-head { grid-template-columns: 1fr; align-items: start; }
-    .plans-head { grid-template-columns: 1fr; align-items: start; }
     .ledger { grid-template-columns: 1fr; }
     .mock-offer { grid-template-columns: 1fr; align-items: start; }
   }

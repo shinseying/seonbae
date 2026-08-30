@@ -32,6 +32,15 @@
     U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* ----- Animatable custom properties --------------------------------------- */
+/* The hero turns its wash colour and its ink over on the same clock as the
+   photographs behind them. A plain custom property cannot be animated, so these
+   three are registered as colours. Registration is document wide, so it belongs
+   here rather than in a page's scoped block. */
+@property --wash-warm { syntax: '<color>'; inherits: true; initial-value: #f7eede; }
+@property --hero-ink  { syntax: '<color>'; inherits: true; initial-value: #201e19; }
+@property --hero-halo { syntax: '<color>'; inherits: true; initial-value: rgba(247, 238, 222, 0.92); }
+
 /* ----- Design tokens ----------------------------------------------------- */
 :root {
   /* Grounds — light, fresh, a touch of warmth */
@@ -494,6 +503,26 @@ h3 [data-l='ko'] { letter-spacing: -0.01em; }
 .pill--violet { background: var(--violet-soft); color: var(--violet); }
 .pill--outline { background: transparent; border: 1px solid var(--line); color: var(--muted); }
 .pill--light { background: rgba(255, 255, 255, 0.14); color: var(--on-dark); }
+
+/* ----- Plans (Two ways to book) ------------------------------------------ */
+/* The block renders on pricing and on how-it-works. Astro scopes a page's own
+   <style> with a per-component attribute, so a copy in each page is a rule
+   waiting to be forgotten, and when it is missing the cards render as one
+   stacked full-width column instead of two side by side. */
+.plans-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  align-items: end;
+  gap: 20px clamp(24px, 4vw, 56px);
+  margin-bottom: clamp(24px, 3.5vw, 40px);
+}
+.plans-head .h2 { margin-top: 12px; }
+.plans-head__note { color: var(--muted); font-size: 0.98rem; line-height: 1.55; max-width: 40ch; }
+.plans-head__note a { color: var(--violet); text-decoration: underline; text-underline-offset: 3px; }
+/* Two equal cards: no featured tile stretched across an odd column split. */
+.plans { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: stretch; }
+@media (min-width: 860px) { .plans { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) { .plans-head { grid-template-columns: 1fr; align-items: start; } }
 
 /* ----- Contour decoration ------------------------------------------------ */
 .contour {

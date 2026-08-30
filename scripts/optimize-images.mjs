@@ -47,8 +47,15 @@ const KEEP_EXTENSION = new Set([
 ]);
 
 // A header mark does not need 1344px, and a hero does not need 3577px.
+// The three hero photographs ship as a srcset, so each size has to survive at
+// the width it was exported and sharpened for. Capping them at the default
+// 1600 collapsed 1400/2400/3200 into 1400/1600/1600 and there was nothing left
+// for a 2x display to pick.
 const MAX_WIDTH = [
   [/^logo(-light)?\.png$/, 600],
+  [/^hero-\d-sm\.\w+$/, 1400],
+  [/^hero-\d-lg\.\w+$/, 3200],
+  [/^hero-\d\.\w+$/, 2400],
   [/^hero\.\w+$/, 2000],
 ];
 const DEFAULT_MAX_WIDTH = 1600;
