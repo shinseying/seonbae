@@ -46,7 +46,7 @@ export default function PrivacyPage() {
         <article className={styles.document}>
           <p className={styles.notice}>
             시행일: 2026년 7월 30일 · 처리자: 선배(Seonbae) · 문의:{" "}
-            <a href="mailto:admissions@seonbae.com">admissions@seonbae.com</a>
+            <a href="mailto:admissions@seonbaetutor.com">admissions@seonbaetutor.com</a>
           </p>
 
           <section id="purpose">
@@ -188,7 +188,7 @@ export default function PrivacyPage() {
             <h2>10. 개인정보 보호 담당 및 권리구제</h2>
             <p>
               개인정보 보호 담당부서: 선배 운영팀<br />
-              이메일: <a href="mailto:admissions@seonbae.com">admissions@seonbae.com</a>
+              이메일: <a href="mailto:admissions@seonbaetutor.com">admissions@seonbaetutor.com</a>
             </p>
             <p>
               개인정보 침해에 대한 상담이나 신고가 필요한 경우 개인정보침해신고센터
@@ -215,7 +215,7 @@ export default function PrivacyPage() {
                 data needed to create accounts, operate the learning portal,
                 support account recovery, arrange lessons, and answer
                 enquiries. Contact:{" "}
-                <a href="mailto:admissions@seonbae.com">admissions@seonbae.com</a>.
+                <a href="mailto:admissions@seonbaetutor.com">admissions@seonbaetutor.com</a>.
               </p>
               <h3>Data we process</h3>
               <p>

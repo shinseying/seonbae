@@ -110,7 +110,7 @@ function ContractLinkRecovery({ message }: { message: string }) {
           <span>
             {message}<br />페이지를 반복해서 이동하지 않아도 됩니다. 선배 팀이 계정 기록을 확인한 뒤 안내드리겠습니다.
           </span>
-          <a href="mailto:admissions@seonbae.com">admissions@seonbae.com</a>
+          <a href="mailto:admissions@seonbaetutor.com">admissions@seonbaetutor.com</a>
         </div>
       </section>
     </main>

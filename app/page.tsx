@@ -230,7 +230,7 @@ export default function Page() {
       ? `Name: ${data.get("name")}\nCurriculum: ${data.get("curriculum")}\nSubject: ${data.get("subject")}\nGoals and current level: ${data.get("message")}`
       : `성함: ${data.get("name")}\n커리큘럼: ${data.get("curriculum")}\n과목: ${data.get("subject")}\n목표와 현재 상황: ${data.get("message")}`;
     const subject = isEnglish ? "Consultation request" : "상담 신청";
-    window.location.href = `mailto:admissions@seonbae.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:admissions@seonbaetutor.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   const curriculumOptions = ["IB","AP","A-Level","IGCSE","SAT","ACT","TOEFL","IELTS","TOEIC",t.internationalGrades,t.other];
@@ -287,9 +287,9 @@ export default function Page() {
       <div className="motto"><span>Two birds, one stone.</span><p>{t.mottoBody}</p></div>
     </section>
 
-    <section className="consultation" id="consult"><div className="consultCopy"><div className="sectionKicker"><span>07</span><p>BEGIN HERE</p></div><h2>{isEnglish ? <>Consultation<br/>request.</> : <>상담<br/>신청.</>}</h2><p>{t.consultBody}</p><div className="directContact"><a href="https://pf.kakao.com/_seonbae"><span>{t.fastest}</span><b>{t.kakao}</b></a><a href="mailto:admissions@seonbae.com"><span>{t.details}</span><b>admissions@seonbae.com ↗</b></a></div></div><ConsultForm copy={t} onSubmit={submitConsultation} options={curriculumOptions} /></section>
+    <section className="consultation" id="consult"><div className="consultCopy"><div className="sectionKicker"><span>07</span><p>BEGIN HERE</p></div><h2>{isEnglish ? <>Consultation<br/>request.</> : <>상담<br/>신청.</>}</h2><p>{t.consultBody}</p><div className="directContact"><a href="https://pf.kakao.com/_seonbae"><span>{t.fastest}</span><b>{t.kakao}</b></a><a href="mailto:admissions@seonbaetutor.com"><span>{t.details}</span><b>admissions@seonbaetutor.com ↗</b></a></div></div><ConsultForm copy={t} onSubmit={submitConsultation} options={curriculumOptions} /></section>
 
-    <footer><div className="footerBrand"><a href={tabHref("home")}>선배</a><p>Two birds,<br/>one stone.</p></div><div className="footerGrid"><div><b>{t.site}</b><a href={tabHref("tutors")}>{t.nav.tutors}</a><a href={tabHref("verification")}>{t.nav.verification}</a><a href={tabHref("about")}>{t.nav.about}</a></div><div><b>{t.contact}</b><a href="mailto:admissions@seonbae.com">admissions@seonbae.com</a><a href="https://pf.kakao.com/_seonbae">KakaoTalk Channel ↗</a></div><div><b>{t.company}</b><a href={`${tabHref("about")}/founders`}>{t.team}</a><a href="/tutor-apply">{t.applyTutor}</a></div></div><div className="footerBottom"><span>© 2026 SEONBAE · SEOUL, REPUBLIC OF KOREA</span><span><a href="/privacy">{isEnglish?"Privacy Policy":"개인정보 처리방침"}</a> · <a href="/terms">{isEnglish?"Terms of Service":"이용약관"}</a></span></div></footer>
+    <footer><div className="footerBrand"><a href={tabHref("home")}>선배</a><p>Two birds,<br/>one stone.</p></div><div className="footerGrid"><div><b>{t.site}</b><a href={tabHref("tutors")}>{t.nav.tutors}</a><a href={tabHref("verification")}>{t.nav.verification}</a><a href={tabHref("about")}>{t.nav.about}</a></div><div><b>{t.contact}</b><a href="mailto:admissions@seonbaetutor.com">admissions@seonbaetutor.com</a><a href="https://pf.kakao.com/_seonbae">KakaoTalk Channel ↗</a></div><div><b>{t.company}</b><a href={`${tabHref("about")}/founders`}>{t.team}</a><a href="/tutor-apply">{t.applyTutor}</a></div></div><div className="footerBottom"><span>© 2026 SEONBAE · SEOUL, REPUBLIC OF KOREA</span><span><a href="/privacy">{isEnglish?"Privacy Policy":"개인정보 처리방침"}</a> · <a href="/terms">{isEnglish?"Terms of Service":"이용약관"}</a></span></div></footer>
     <ConsultForm compact copy={t} onSubmit={submitConsultation} options={curriculumOptions} />
   </main>;
 }

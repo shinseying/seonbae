@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../utils/supabase/server";
 import { resolvePortalDestination } from "../../../../utils/auth/portal-destination";
+import { cookies } from "next/headers";
+import {
+  ADMIN_ENTRY_COOKIE,
+  ADMIN_STEP_COOKIE,
+  decodeJwtClaims,
+  readAccessGate,
+  sessionBindingFromClaims,
+  USER_VERIFIED_COOKIE,
+} from "../../../../utils/auth/access-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +50,42 @@ export async function GET() {
     (role === "admin"
       ? "ssapgoadmin"
       : profile?.email || user.email || "사용자");
-  const destination = await resolvePortalDestination(user.id, profile);
+  const { data: { session } } = await supabase.auth.getSession();
+  const sessionId = sessionBindingFromClaims(decodeJwtClaims(session?.access_token));
+  const cookieStore = await cookies();
+  let destination: string;
+
+  if (!sessionId) {
+    destination = "/login";
+  } else if (role === "admin") {
+    const identity = { userId: user.id, sessionId };
+    const phraseVerified = await readAccessGate(
+      cookieStore.get(ADMIN_STEP_COOKIE)?.value,
+      "admin-step",
+      identity,
+    );
+    const entryVerified = phraseVerified
+      ? await readAccessGate(
+          cookieStore.get(ADMIN_ENTRY_COOKIE)?.value,
+          "admin-entry",
+          identity,
+        )
+      : null;
+    destination = !phraseVerified
+      ? "/admin-verify"
+      : entryVerified
+        ? "/admin"
+        : "/admin-shell";
+  } else {
+    const verified = await readAccessGate(
+      cookieStore.get(USER_VERIFIED_COOKIE)?.value,
+      "user-verified",
+      { userId: user.id, sessionId },
+    );
+    destination = verified
+      ? await resolvePortalDestination(user.id, profile)
+      : "/login/verify";
+  }
 
   return NextResponse.json(
     {
@@ -50,6 +94,8 @@ export async function GET() {
       displayName,
       email: profile?.email || user.email || null,
       destination,
+      secondStepRequired:
+        destination === "/login/verify" || destination === "/admin-verify",
     },
     {
       headers: {

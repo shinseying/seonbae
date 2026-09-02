@@ -1,9 +1,9 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "../../utils/supabase/client";
+import sidebarStyles from "./AdminSidebar.module.css";
 
 export type AdminSection =
   | "tutors"
@@ -27,9 +27,31 @@ export default function AdminSidebar({
   styles: Record<string, string>;
 }) {
   const router = useRouter();
+  const [eventCounts, setEventCounts] = useState<Partial<Record<AdminSection, number>>>({});
+
+  const refreshEventCounts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/event-counts", { cache: "no-store" });
+      if (!response.ok) return;
+      setEventCounts(await response.json());
+    } catch {
+      // Navigation remains usable when the indicator service is unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshEventCounts();
+    const interval = window.setInterval(refreshEventCounts, 45_000);
+    const onFocus = () => refreshEventCounts();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refreshEventCounts]);
 
   async function signOut() {
-    await createClient().auth.signOut();
+    await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
     router.refresh();
   }
@@ -82,7 +104,14 @@ export default function AdminSidebar({
             {group.links.map((link) => (
               <Link className={active === link.key ? styles.active : undefined} href={link.href} key={link.key}>
                 <i aria-hidden="true" />
-                {link.label}
+                <span className={sidebarStyles.linkLabel}>{link.label}</span>
+                {(eventCounts[link.key] ?? 0) > 0 && (
+                  <span
+                    className={`${sidebarStyles.alertDot} ${active === link.key ? sidebarStyles.activeDot : ""}`}
+                    aria-label={`${eventCounts[link.key]}건의 새 항목`}
+                    title={`${eventCounts[link.key]}건의 새 항목`}
+                  />
+                )}
               </Link>
             ))}
           </Fragment>
@@ -99,6 +128,7 @@ export default function AdminSidebar({
     </aside>
   );
 }
+
 
 function initials(value: string) {
   const clean = value.trim();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../utils/supabase/server";
+import { sendAdminEventEmail } from "../../../utils/email/admin-event";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +25,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "내용을 입력해 주세요." }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name,email,role")
+    .eq("id", user.id)
+    .single();
+
+  const { data: complaint, error } = await supabase
     .from("complaints")
-    .insert({ user_id: user.id, body: text });
-  if (error) {
+    .insert({ user_id: user.id, body: text })
+    .select("id")
+    .single();
+  if (error || !complaint) {
     return NextResponse.json({ error: "접수하지 못했습니다. 다시 시도해 주세요." }, { status: 500 });
+  }
+
+  try {
+    await sendAdminEventEmail({
+      eventKey: `complaint-${complaint.id}`,
+      eyebrow: "Seonbae support",
+      heading: "새 컴플레인이 접수되었습니다.",
+      subject: `[선배 관리자] 새 컴플레인 · ${profile?.full_name || profile?.email || "회원"}`,
+      rows: [
+        ["접수 번호", String(complaint.id)],
+        ["작성자", profile?.full_name || profile?.email || "회원"],
+        ["계정 유형", profile?.role || "회원"],
+      ],
+      note: { title: "내용", body: text },
+      portalPath: "/admin/complaints",
+      origin: request.nextUrl.origin,
+      replyTo: profile?.email || undefined,
+    });
+  } catch (mailError) {
+    console.error("Complaint admin email failed", {
+      message: mailError instanceof Error ? mailError.message : "Unknown error",
+    });
   }
 
   return NextResponse.json({ ok: true }, { status: 201 });

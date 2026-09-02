@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import { parseProfile } from "../../../../utils/tutors/profile-patch";
+import { sendAdminEventEmail } from "../../../../utils/email/admin-event";
 
 export const dynamic = "force-dynamic";
 
@@ -62,11 +63,32 @@ export async function POST(request: NextRequest) {
     updated_at: new Date().toISOString(),
   };
 
-  const { error: writeError } = open
-    ? await admin.from("tutor_profile_requests").update(row).eq("id", open.id)
-    : await admin.from("tutor_profile_requests").insert(row);
+  const updatedAt = row.updated_at;
+  const { data: saved, error: writeError } = open
+    ? await admin.from("tutor_profile_requests").update(row).eq("id", open.id).select("id").single()
+    : await admin.from("tutor_profile_requests").insert(row).select("id").single();
 
-  if (writeError) return error("변경 요청을 저장하지 못했습니다.", 500);
+  if (writeError || !saved) return error("변경 요청을 저장하지 못했습니다.", 500);
+  try {
+    await sendAdminEventEmail({
+      eventKey: `card-${saved.id}-${Date.parse(updatedAt)}`,
+      eyebrow: "Seonbae tutor card",
+      heading: open ? "튜터 카드 변경 요청이 수정되었습니다." : "새 튜터 카드 변경 요청이 도착했습니다.",
+      subject: `[선배 관리자] 카드 변경 요청 · ${profile.tutor_registry_id}`,
+      rows: [
+        ["튜터", profile.tutor_registry_id],
+        ["요청 번호", String(saved.id)],
+        ["변경 항목", Object.keys(payload).join(", ") || "프로필 정보"],
+      ],
+      ...(note ? { note: { title: "튜터 메모", body: note } } : {}),
+      portalPath: "/admin/card-requests",
+      origin: request.nextUrl.origin,
+    });
+  } catch (mailError) {
+    console.error("Tutor card admin email failed", {
+      message: mailError instanceof Error ? mailError.message : "Unknown error",
+    });
+  }
   return NextResponse.json({ ok: true, replaced: Boolean(open) });
 }
 

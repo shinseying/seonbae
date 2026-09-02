@@ -24,8 +24,8 @@ const DAY_LABELS: Record<string, string> = {
   fri: "금요일", sat: "토요일", sun: "일요일",
 };
 
-// Sent to the tutor when someone books an intro call. The admin sees the same
-// booking in their portal, so this is the tutor's copy only.
+// The admin receives the intake copy first; the tutor receives a second copy
+// only after the admin forwards the request.
 export async function sendBookingEmail(input: BookingEmail) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.ADMISSIONS_FROM_EMAIL;
@@ -71,22 +71,26 @@ function html(input: BookingEmail, slot: string) {
 
   return emailShell({
     eyebrow: "Seonbae match request",
-    heading: `${input.tutorName} 선배님, 매칭 요청이 도착했습니다.`,
+    heading: input.purpose === "admin"
+      ? `${input.tutorName}에게 보낸 새 매칭 요청입니다.`
+      : `${input.tutorName} 선배님, 매칭 요청이 도착했습니다.`,
     body: detailTable(rows)
       + (input.note ? noteBlock("전하고 싶은 내용", input.note) : "")
-      + actionButton(input.portalUrl, "튜터 포털에서 보기"),
+      + actionButton(input.portalUrl, input.purpose === "admin" ? "관리자 포털에서 보기" : "튜터 포털에서 보기"),
   });
 }
 
 function plain(input: BookingEmail, slot: string) {
   return [
-    `${input.tutorName} 선배님, 새 매칭 요청이 도착했습니다.`,
+    input.purpose === "admin"
+      ? `${input.tutorName}에게 보낸 새 매칭 요청입니다.`
+      : `${input.tutorName} 선배님, 새 매칭 요청이 도착했습니다.`,
     `이름: ${input.name}`,
     `이메일: ${input.email}`,
     input.phone ? `연락처: ${input.phone}` : "",
     input.subject ? `과목: ${input.subject}` : "",
     `희망 시간: ${slot}`,
     input.note ? `메모: ${input.note}` : "",
-    `튜터 포털: ${input.portalUrl}`,
+    `${input.purpose === "admin" ? "관리자" : "튜터"} 포털: ${input.portalUrl}`,
   ].filter(Boolean).join("\n");
 }

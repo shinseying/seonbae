@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "../../../../utils/supabase/server";
-import { resolvePortalDestination } from "../../../../utils/auth/portal-destination";
+import {
+  ADMIN_AUTH_EMAIL,
+  decodeJwtClaims,
+  sessionBindingFromClaims,
+} from "../../../../utils/auth/access-gate";
+import {
+  clearAccessGateCookies,
+  issueUserChallenge,
+} from "../../../../utils/auth/step-up-server";
 import {
   authRateLimitResponse,
   consumeAuthRateLimit,
@@ -10,7 +18,6 @@ import {
 export const dynamic = "force-dynamic";
 
 const adminLoginId = "ssapgoadmin";
-const adminAuthEmail = "ssapgoadmin@seonbae.internal";
 
 export async function POST(request: NextRequest) {
   const rateLimit = await consumeAuthRateLimit(request, "authenticate");
@@ -30,7 +37,7 @@ export async function POST(request: NextRequest) {
   const password = typeof body.password === "string" ? body.password : "";
   const remember = body.remember === true;
   const isAdminLogin = identifier === adminLoginId;
-  const email = isAdminLogin ? adminAuthEmail : identifier;
+  const email = isAdminLogin ? ADMIN_AUTH_EMAIL : identifier;
 
   if (!identifier || !password || (!isAdminLogin && !isEmail(email))) {
     return NextResponse.json(
@@ -63,6 +70,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (!isAdminLogin && profile?.role === "admin") {
+    await supabase.auth.signOut();
+    return NextResponse.json(
+      { error: "관리자 계정은 관리자 아이디로 로그인해 주세요." },
+      { status: 403 },
+    );
+  }
+
   const cookieStore = await cookies();
   const rememberOptions = {
     httpOnly: true,
@@ -71,11 +86,49 @@ export async function POST(request: NextRequest) {
     path: "/",
     ...(remember ? { maxAge: 400 * 24 * 60 * 60 } : {}),
   };
+  clearAccessGateCookies(cookieStore);
   cookieStore.set("seonbae-remember", remember ? "1" : "0", rememberOptions);
-  const destination = await resolvePortalDestination(data.user.id, profile);
+
+  if (profile?.role === "admin") {
+    return NextResponse.json({
+      destination: "/admin-verify",
+      secondStepRequired: true,
+    });
+  }
+
+  const claims = decodeJwtClaims(data.session?.access_token);
+  const sessionId = sessionBindingFromClaims(claims);
+  if (!sessionId || !data.user.email) {
+    await supabase.auth.signOut({ scope: "local" });
+    clearAccessGateCookies(cookieStore);
+    return NextResponse.json(
+      { error: "로그인 보안 세션을 만들지 못했습니다. 다시 시도해 주세요." },
+      { status: 500 },
+    );
+  }
+
+  try {
+    await issueUserChallenge({
+      userId: data.user.id,
+      email: data.user.email,
+      sessionId,
+      remember,
+    });
+  } catch (error) {
+    console.error("Login verification email failed", {
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    await supabase.auth.signOut({ scope: "local" });
+    clearAccessGateCookies(cookieStore);
+    return NextResponse.json(
+      { error: "로그인 인증 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요." },
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({
-    destination,
+    destination: "/login/verify",
+    secondStepRequired: true,
   });
 }
 

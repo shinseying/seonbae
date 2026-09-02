@@ -6,6 +6,7 @@ import {
   getDefaultZoomHostEmail,
   ZoomApiError,
 } from "../../../../utils/zoom/server";
+import { sendAdminEventEmail } from "../../../../utils/email/admin-event";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
   }
 
   const meetingNumber = String(meeting.id);
-  const { error } = await supabase.from("portal_sessions").insert({
+  const { data: savedSession, error } = await supabase.from("portal_sessions").insert({
     user_id: studentId,
     tutor_registry_id: registryId,
     session_date: sessionDate,
@@ -149,9 +150,9 @@ export async function POST(request: NextRequest) {
     zoom_status: "scheduled",
     zoom_created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  });
+  }).select("id").single();
 
-  if (error) {
+  if (error || !savedSession) {
     // The database is the source of truth, so an orphaned Zoom meeting is worse
     // than a failed cleanup. Best-effort either way.
     try {
@@ -160,6 +161,29 @@ export async function POST(request: NextRequest) {
       /* ignored */
     }
     return NextResponse.json({ error: "수업을 저장하지 못했습니다." }, { status: 500 });
+  }
+
+  try {
+    await sendAdminEventEmail({
+      eventKey: `tutor-session-${savedSession.id}`,
+      eyebrow: "Seonbae lessons",
+      heading: "튜터가 새 Zoom 수업을 만들었습니다.",
+      subject: `[선배 관리자] 새 Zoom 수업 · ${title}`,
+      rows: [
+        ["수업 번호", String(savedSession.id)],
+        ["튜터", registryId],
+        ["날짜", sessionDate],
+        ["시각", startsAt],
+        ["과목", subject],
+      ],
+      ...(notes ? { note: { title: "전달 사항", body: notes } } : {}),
+      portalPath: "/admin/sessions",
+      origin: request.nextUrl.origin,
+    });
+  } catch (mailError) {
+    console.error("Tutor session admin email failed", {
+      message: mailError instanceof Error ? mailError.message : "Unknown error",
+    });
   }
 
   return NextResponse.json({ ok: true, meetingNumber });

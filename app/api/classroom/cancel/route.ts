@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import { deleteZoomMeeting, ZoomApiError } from "../../../../utils/zoom/server";
+import { sendAdminEventEmail } from "../../../../utils/email/admin-event";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role,account_status,tutor_registry_id")
+    .select("full_name,email,role,account_status,tutor_registry_id")
     .eq("id", user.id)
     .single();
   if (!profile || profile.account_status !== "approved") {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   const { data: session } = await admin
     .from("portal_sessions")
-    .select("id,user_id,tutor_registry_id,zoom_status,zoom_meeting_number")
+    .select("id,user_id,tutor_registry_id,session_date,starts_at,title,zoom_status,zoom_meeting_number")
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) return error("수업을 찾지 못했습니다.", 404);
@@ -99,6 +100,29 @@ export async function POST(request: NextRequest) {
     })
     .eq("id", sessionId);
   if (writeError) return error("취소를 저장하지 못했습니다.", 500);
+
+  try {
+    await sendAdminEventEmail({
+      eventKey: `session-cancelled-${sessionId}-${Date.parse(now)}`,
+      eyebrow: "Seonbae lesson update",
+      heading: "수업이 취소되었습니다.",
+      subject: `[선배 관리자] 수업 취소 · ${session.title}`,
+      rows: [
+        ["수업 번호", String(sessionId)],
+        ["수업", session.title],
+        ["일정", `${session.session_date} ${String(session.starts_at).slice(0, 5)}`],
+        ["요청자", profile.full_name || profile.email || profile.role],
+      ],
+      note: { title: "취소 사유", body: reason },
+      portalPath: "/admin/sessions",
+      origin: request.nextUrl.origin,
+      replyTo: profile.email || undefined,
+    });
+  } catch (mailError) {
+    console.error("Cancellation admin email failed", {
+      message: mailError instanceof Error ? mailError.message : "Unknown error",
+    });
+  }
 
   return NextResponse.json({ ok: true, cancelledAt: now });
 }

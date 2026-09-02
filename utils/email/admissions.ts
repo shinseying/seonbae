@@ -31,7 +31,7 @@ export async function sendAdmissionsAccountReviewEmail(input: AccountReviewEmail
     },
     body: JSON.stringify({
       from,
-      to: ["admissions@seonbae.com"],
+      to: ["admissions@seonbaetutor.com"],
       reply_to: input.email,
       subject: `[선배 가입 심사] ${input.fullName} · ${roleLabels[input.role]}`,
       html: accountReviewHtml(input),

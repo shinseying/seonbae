@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../utils/supabase/admin";
 import { createClient } from "../../../utils/supabase/server";
 import { sendBookingEmail } from "../../../utils/email/booking";
+import { ADMIN_EVENT_INBOX } from "../../../utils/email/admin-event";
 
 export const dynamic = "force-dynamic";
 
@@ -87,13 +88,12 @@ export async function POST(request: NextRequest) {
   // A match notifies the admin first. The admin reviews it in the portal and
   // forwards it to the tutor from there (POST /api/admin/bookings), so the
   // tutor is not emailed when the request arrives. A send failure never loses the row.
-  const adminEmail = process.env.ADMISSIONS_FROM_EMAIL;
-  if (adminEmail) {
+  if (process.env.ADMISSIONS_FROM_EMAIL) {
     try {
       await sendBookingEmail({
         bookingId: booking.id,
         tutorName: `${tutor.name} 튜터`,
-        tutorEmail: adminEmail,
+        tutorEmail: ADMIN_EVENT_INBOX,
         name: requesterName,
         email: requesterEmail,
         phone: profile.phone ?? null,

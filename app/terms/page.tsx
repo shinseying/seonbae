@@ -42,7 +42,7 @@ export default function TermsPage() {
         <article className={styles.document}>
           <p className={styles.notice}>
             시행일: 2026년 7월 29일 · 서비스 제공자: 선배(Seonbae) · 문의:{" "}
-            <a href="mailto:admissions@seonbae.com">admissions@seonbae.com</a>
+            <a href="mailto:admissions@seonbaetutor.com">admissions@seonbaetutor.com</a>
           </p>
 
           <section id="scope">

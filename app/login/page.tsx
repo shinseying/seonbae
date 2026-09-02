@@ -147,6 +147,11 @@ export default function LoginPage() {
         "Google 계정 등록 여부를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.",
         "We could not verify that Google account. Please try again shortly.",
       ));
+    } else if (authError === "verification-email-unavailable") {
+      setMessage(l(
+        "로그인 인증 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        "We could not send the login verification email. Please try again shortly.",
+      ));
     }
   }, []);
 

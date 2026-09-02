@@ -58,7 +58,7 @@ export default async function PendingAccountPage() {
           <div><dt>상태</dt><dd className={rejected ? styles.rejected : styles.pending}>{rejected ? "보완 요청" : "검토 중"}</dd></div>
         </dl>
         {request?.review_note && <aside><b>심사팀 메모</b><p>{request.review_note}</p></aside>}
-        <small>문의: <a href="mailto:admissions@seonbae.com">admissions@seonbae.com</a></small>
+        <small>문의: <a href="mailto:admissions@seonbaetutor.com">admissions@seonbaetutor.com</a></small>
       </section>
     </main>
   );

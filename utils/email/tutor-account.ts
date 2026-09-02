@@ -54,7 +54,7 @@ function html(input: TutorAccountEmail) {
           `보안을 위해 ${input.changeByDays}일 이내에 비밀번호를 반드시 변경해 주세요. 포털 로그인 후 내 정보에서 바로 바꿀 수 있습니다.`,
         )
       + actionButton(input.loginUrl, "포털 로그인"),
-    footnote: "이 메일을 요청하지 않으셨다면 admissions@seonbae.com으로 알려주세요.",
+    footnote: "이 메일을 요청하지 않으셨다면 admissions@seonbaetutor.com으로 알려주세요.",
   });
 }
 

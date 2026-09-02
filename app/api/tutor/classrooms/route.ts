@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
+import { sendAdminEventEmail } from "../../../../utils/email/admin-event";
 
 export const dynamic = "force-dynamic";
 
@@ -85,10 +86,27 @@ export async function PUT(request: NextRequest) {
     status: "pending",
     updated_at: new Date().toISOString(),
   };
-  const { error: writeError } = open
-    ? await auth.admin.from("classroom_slot_requests").update(row).eq("id", open.id)
-    : await auth.admin.from("classroom_slot_requests").insert(row);
-  if (writeError) return error("요청을 저장하지 못했습니다.", 500);
+  const { data: saved, error: writeError } = open
+    ? await auth.admin.from("classroom_slot_requests").update(row).eq("id", open.id).select("id").single()
+    : await auth.admin.from("classroom_slot_requests").insert(row).select("id").single();
+  if (writeError || !saved) return error("요청을 저장하지 못했습니다.", 500);
+
+  try {
+    await sendAdminEventEmail({
+      eventKey: `classroom-slot-${saved.id}-${Date.parse(row.updated_at)}`,
+      eyebrow: "Seonbae classrooms",
+      heading: open ? "추가 교실 요청이 수정되었습니다." : "새 추가 교실 요청이 도착했습니다.",
+      subject: `[선배 관리자] 추가 교실 요청 · ${auth.registryId}`,
+      rows: [["튜터", auth.registryId], ["요청 번호", String(saved.id)]],
+      note: { title: "요청 사유", body: reason },
+      portalPath: "/admin/classroom-slots",
+      origin: request.nextUrl.origin,
+    });
+  } catch (mailError) {
+    console.error("Classroom slot admin email failed", {
+      message: mailError instanceof Error ? mailError.message : "Unknown error",
+    });
+  }
 
   return NextResponse.json({ ok: true, replaced: Boolean(open) });
 }

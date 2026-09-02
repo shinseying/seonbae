@@ -8,6 +8,14 @@ import {
 } from "../../../../utils/auth/google-login-attempt";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { TUTOR_CONTRACT_VERSION } from "../../../../utils/contracts/tutor-contract";
+import {
+  decodeJwtClaims,
+  sessionBindingFromClaims,
+} from "../../../../utils/auth/access-gate";
+import {
+  clearAccessGateCookies,
+  issueUserChallenge,
+} from "../../../../utils/auth/step-up-server";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +54,20 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const destination = destinationForGoogleProfile(googleCheck.profile);
+      const [{ data: sessionData }, { data: userData }] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.auth.getUser(),
+      ]);
+      const session = sessionData.session;
+      const user = userData.user;
+      const sessionId = sessionBindingFromClaims(decodeJwtClaims(session?.access_token));
+      if (!user?.email || !sessionId) {
+        await supabase.auth.signOut({ scope: "local" });
+        return NextResponse.redirect(
+          new URL("/login?error=verification-email-unavailable", request.nextUrl.origin),
+        );
+      }
+      clearAccessGateCookies(cookieStore);
       cookieStore.set("seonbae-remember", "1", {
         httpOnly: true,
         sameSite: "lax",
@@ -54,8 +75,30 @@ export async function GET(request: NextRequest) {
         path: "/",
         maxAge: 400 * 24 * 60 * 60,
       });
+
+      if (googleCheck.profile.role === "admin") {
+        return NextResponse.redirect(new URL("/admin-verify", request.nextUrl.origin));
+      }
+
+      try {
+        await issueUserChallenge({
+          userId: user.id,
+          email: user.email,
+          sessionId,
+          remember: true,
+        });
+      } catch (error) {
+        console.error("Google login verification email failed", {
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+        await supabase.auth.signOut({ scope: "local" });
+        clearAccessGateCookies(cookieStore);
+        return NextResponse.redirect(
+          new URL("/login?error=verification-email-unavailable", request.nextUrl.origin),
+        );
+      }
       return NextResponse.redirect(
-        new URL(next === "/portal" ? destination : next, request.nextUrl.origin),
+        new URL("/login/verify", request.nextUrl.origin),
       );
     }
 
@@ -147,19 +190,6 @@ async function checkExistingGoogleAccount(
     await supabase.auth.signOut({ scope: "local" });
     return { allowed: false as const, error: "google-check-unavailable" };
   }
-}
-
-function destinationForGoogleProfile(profile: {
-  role: string | null;
-  accountStatus: string | null;
-  contractSigned: boolean;
-}) {
-  if (profile.role === "admin") return "/admin";
-  if (profile.role === "tutor" && profile.accountStatus === "pending") {
-    return profile.contractSigned ? "/portal/pending" : "/portal/tutor/contract";
-  }
-  if (profile.accountStatus !== "approved") return "/portal/pending";
-  return profile.role === "tutor" ? "/portal/tutor" : "/portal";
 }
 
 function emailOtpType(value: string | null): EmailOtpType | null {
