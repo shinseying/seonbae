@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../utils/supabase/server";
-import { parseProfile } from "../../../../utils/tutors/profile-patch";
+import {
+  buildTutorRow,
+  cleanText,
+  isValidRegistryId,
+  normalizeRegistryId,
+  TUTOR_FIELDS,
+} from "../../../../utils/tutors/admin-card";
 
 export const dynamic = "force-dynamic";
-
-const tutorFields =
-  "registry_id,name,exam,score,category,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -36,7 +39,7 @@ export async function GET() {
 
   const { data, error } = await auth.supabase
     .from("tutors")
-    .select(tutorFields)
+    .select(TUTOR_FIELDS)
     .order("display_order", { ascending: true })
     .order("registry_id", { ascending: true });
 
@@ -47,49 +50,6 @@ export async function GET() {
   return NextResponse.json(data ?? [], {
     headers: { "Cache-Control": "no-store, max-age=0" },
   });
-}
-
-const ALLOWED_CATEGORIES = new Set(["ib", "ap", "alevel", "sat", "english"]);
-
-// Create and edit write the same columns, so both go through here. Returns a
-// message string when a value is malformed.
-function buildTutorRow(body: Record<string, unknown>) {
-  const category = cleanText(body.category, 20);
-  if (!ALLOWED_CATEGORIES.has(category)) return "분류 값이 올바르지 않습니다.";
-
-  const displayOrder = Number(body.display_order);
-  if (!Number.isInteger(displayOrder) || displayOrder < 0 || displayOrder > 9999) {
-    return "표시 순서는 0~9999 사이의 정수여야 합니다.";
-  }
-
-  const zoomHostEmail = cleanText(body.zoom_host_email, 254).toLowerCase();
-  if (zoomHostEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(zoomHostEmail)) {
-    return "Zoom 호스트 이메일 형식을 확인해 주세요.";
-  }
-
-  // Same profile fields the tutor edits themselves, so an admin can correct a
-  // card without asking.
-  const profilePatch = parseProfile(body);
-  if (typeof profilePatch === "string") return profilePatch;
-
-  const row = {
-    ...profilePatch,
-    name: cleanText(body.name, 80),
-    exam: cleanText(body.exam, 80),
-    score: cleanText(body.score, 80),
-    category,
-    university: nullableText(body.university, 120),
-    university_en: nullableText(body.university_en, 160),
-    photo_url: safeAssetUrl(body.photo_url),
-    banner_url: safeAssetUrl(body.banner_url),
-    zoom_host_email: zoomHostEmail || null,
-    display_order: displayOrder,
-    active: body.active === true,
-    updated_at: new Date().toISOString(),
-  };
-
-  if (!row.name || !row.exam || !row.score) return "이름, 시험, 성적을 모두 입력해 주세요.";
-  return row;
 }
 
 export async function PATCH(request: NextRequest) {
@@ -117,7 +77,7 @@ export async function PATCH(request: NextRequest) {
     .from("tutors")
     .update(updates)
     .eq("registry_id", registryId)
-    .select(tutorFields)
+    .select(TUTOR_FIELDS)
     .single();
 
   if (error) {
@@ -143,8 +103,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
   }
 
-  const registryId = cleanText(body.registry_id, 24).toUpperCase();
-  if (!/^[A-Z][A-Z0-9-]{1,23}$/.test(registryId)) {
+  const registryId = normalizeRegistryId(body.registry_id);
+  if (!isValidRegistryId(registryId)) {
     return NextResponse.json(
       { error: "명부 번호는 영문 대문자로 시작하고 영문·숫자·하이픈만 쓸 수 있습니다. 예: P-004" },
       { status: 400 },
@@ -167,7 +127,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("tutors")
     .insert({ ...insert, registry_id: registryId })
-    .select(tutorFields)
+    .select(TUTOR_FIELDS)
     .single();
 
   if (error) {
@@ -178,28 +138,6 @@ export async function POST(request: NextRequest) {
     status: 201,
     headers: { "Cache-Control": "no-store, max-age=0" },
   });
-}
-
-function cleanText(value: unknown, maxLength: number) {
-  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
-}
-
-function nullableText(value: unknown, maxLength: number) {
-  const text = cleanText(value, maxLength);
-  return text || null;
-}
-
-function safeAssetUrl(value: unknown) {
-  const text = cleanText(value, 500);
-  if (!text) return null;
-  if (text.startsWith("/")) return text;
-
-  try {
-    const url = new URL(text);
-    return url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
 }
 
 // Removing a tutor deletes the public card. The row is only safe to delete

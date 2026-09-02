@@ -3,6 +3,11 @@
 import { useState } from "react";
 import AdminSidebar from "./AdminSidebar";
 import TutorCard from "../portal/TutorCard";
+import {
+  parseTutorSpreadsheet,
+  type TutorImportError,
+  type TutorImportRow,
+} from "../../utils/tutors/excel-import";
 import styles from "./admin.module.css";
 
 export type AdminTutor = {
@@ -54,6 +59,12 @@ const bannerOptions = [
 // A card being created lives outside the saved list until it is written, so
 // editing its registry number does not break the selection.
 const DRAFT_KEY = "__draft__";
+
+type ImportPreview = {
+  fileName: string;
+  rows: TutorImportRow[];
+  errors: TutorImportError[];
+};
 
 function emptyTutor(registryId: string, displayOrder: number): AdminTutor {
   return {
@@ -111,6 +122,10 @@ export default function AdminTutorEditor({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
+  const [readingWorkbook, setReadingWorkbook] = useState(false);
+  const [importingWorkbook, setImportingWorkbook] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importMessage, setImportMessage] = useState("");
   const isDraft = selectedId === DRAFT_KEY;
   const selected = isDraft ? draft : tutors.find((tutor) => tutor.registry_id === selectedId) ?? null;
   const linkedAccount = selected && !isDraft
@@ -157,6 +172,82 @@ export default function AdminTutorEditor({
     setDayText((current) => ({ ...current, [`${selectedId}|${day}`]: value }));
     const ranges = value.split(",").map((range) => range.trim()).filter(Boolean);
     updateSelected("availability", { ...(selected?.availability ?? {}), [day]: ranges });
+  }
+
+  async function readWorkbook(file: File | undefined) {
+    if (!file) return;
+    setImportMessage("");
+    setImportPreview(null);
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      setImportMessage(".xlsx 형식만 지원합니다. 예전 .xls 파일은 Excel에서 .xlsx로 다시 저장해 주세요.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImportMessage("파일은 5MB 이하로 준비해 주세요.");
+      return;
+    }
+
+    setReadingWorkbook(true);
+    try {
+      const { readSheet } = await import("read-excel-file/browser");
+      const sheet = await readSheet(file);
+      const parsed = parseTutorSpreadsheet(sheet as unknown[][], {
+        existingRegistryIds: tutors.map((tutor) => tutor.registry_id),
+        maxDisplayOrder: tutors.reduce((max, tutor) => Math.max(max, tutor.display_order), 0),
+      });
+      setImportPreview({ fileName: file.name, ...parsed });
+      setImportMessage(parsed.errors.length
+        ? "표시된 항목을 엑셀에서 고친 뒤 파일을 다시 선택해 주세요."
+        : `${parsed.rows.length}명의 카드가 준비되었습니다. 아래 미리보기를 확인해 주세요.`);
+    } catch (error) {
+      console.error("[tutor workbook]", error);
+      setImportMessage("엑셀 파일을 읽지 못했습니다. 잠겨 있거나 손상되지 않았는지 확인해 주세요.");
+    } finally {
+      setReadingWorkbook(false);
+    }
+  }
+
+  async function importCards() {
+    if (!importPreview || importPreview.errors.length || !importPreview.rows.length) return;
+    const currentIds = new Set(tutors.map((tutor) => tutor.registry_id));
+    const updateCount = importPreview.rows.filter((row) => currentIds.has(row.registry_id)).length;
+    const createCount = importPreview.rows.length - updateCount;
+    const summary = [createCount && `새 카드 ${createCount}개`, updateCount && `기존 카드 수정 ${updateCount}개`]
+      .filter(Boolean)
+      .join(", ");
+    if (!window.confirm(`${summary}를 Supabase에 저장할까요?`)) return;
+
+    setImportingWorkbook(true);
+    setImportMessage("");
+    try {
+      const response = await fetch("/api/admin/tutors/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: importPreview.rows }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        setImportMessage(result?.error || "튜터 카드를 저장하지 못했습니다.");
+        return;
+      }
+
+      const imported = Array.isArray(result?.tutors) ? result.tutors as AdminTutor[] : [];
+      setTutors((current) => {
+        const merged = new Map(current.map((tutor) => [tutor.registry_id, tutor]));
+        imported.forEach((tutor) => merged.set(tutor.registry_id, tutor));
+        return [...merged.values()].sort(byDisplayOrder);
+      });
+      if (imported[0]) setSelectedId(imported[0].registry_id);
+      setDraft(null);
+      setDayText({});
+      setImportPreview(null);
+      setImportMessage(`${summary}를 저장했습니다. 공개 여부가 TRUE인 카드는 사이트 명부에도 바로 표시됩니다.`);
+    } catch (error) {
+      console.error("[tutor card import]", error);
+      setImportMessage("네트워크 연결을 확인한 뒤 다시 시도해 주세요.");
+    } finally {
+      setImportingWorkbook(false);
+    }
   }
 
   async function saveTutor() {
@@ -268,6 +359,93 @@ export default function AdminTutorEditor({
           <div><p>SUPABASE · LIVE DIRECTORY</p><h1>튜터 명부 관리</h1><span>저장한 정보는 Supabase를 거쳐 공개 웹사이트에 반영됩니다.</span></div>
           <div className={styles.connection}><i /> 데이터베이스 연결됨</div>
         </header>
+
+        <section className={styles.importPanel} aria-labelledby="tutor-import-heading">
+          <div className={styles.importHeader}>
+            <div>
+              <p>EXCEL · BULK CARD BUILDER</p>
+              <h2 id="tutor-import-heading">지원자 엑셀로 카드 만들기</h2>
+              <span>양식에 정보를 채우면 카드 내용을 자동으로 검사하고, 저장 전 새 카드와 수정될 카드를 미리 보여줍니다.</span>
+            </div>
+            <div className={styles.importButtons}>
+              <a href="/seonbae-tutor-card-import-template.xlsx" download>엑셀 양식 다운로드</a>
+              <label className={styles.fileButton} aria-disabled={readingWorkbook || importingWorkbook}>
+                {readingWorkbook ? "파일 읽는 중…" : "엑셀 파일 선택"}
+                <input
+                  type="file"
+                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  disabled={readingWorkbook || importingWorkbook}
+                  onChange={(event) => {
+                    void readWorkbook(event.target.files?.[0]);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+
+          {readingWorkbook && (
+            <div className={styles.importSkeleton} aria-label="엑셀 파일을 확인하는 중" aria-live="polite">
+              <i /><i /><i />
+            </div>
+          )}
+
+          {importPreview && !readingWorkbook && (
+            <div className={styles.importPreview}>
+              <div className={styles.importPreviewHeading}>
+                <div><strong>{importPreview.fileName}</strong><span>{importPreview.rows.length}명 인식 · 오류 {importPreview.errors.length}건</span></div>
+                <button type="button" onClick={() => { setImportPreview(null); setImportMessage(""); }} disabled={importingWorkbook}>닫기</button>
+              </div>
+
+              {importPreview.errors.length ? (
+                <ul className={styles.importErrors}>
+                  {importPreview.errors.slice(0, 12).map((error, index) => (
+                    <li key={`${error.row}-${error.field}-${index}`}>
+                      <b>{error.row}행{error.field ? ` · ${error.field}` : ""}</b>
+                      <span>{error.message}</span>
+                    </li>
+                  ))}
+                  {importPreview.errors.length > 12 && <li><span>그 외 {importPreview.errors.length - 12}건의 오류가 있습니다.</span></li>}
+                </ul>
+              ) : (
+                <div className={styles.importTableWrap}>
+                  <table>
+                    <thead><tr><th>처리</th><th>명부 번호</th><th>튜터</th><th>학교</th><th>시험 · 성적</th><th>공개</th></tr></thead>
+                    <tbody>
+                      {importPreview.rows.map((row) => {
+                        const updating = tutors.some((tutor) => tutor.registry_id === row.registry_id);
+                        return (
+                          <tr key={row.registry_id}>
+                            <td><span className={updating ? styles.updateBadge : styles.createBadge}>{updating ? "수정" : "신규"}</span></td>
+                            <td><b>{row.registry_id}</b><small>엑셀 {row.sourceRow}행</small></td>
+                            <td>{row.name}</td>
+                            <td>{row.university || "—"}</td>
+                            <td>{row.exam}<small>{row.score}</small></td>
+                            <td>{row.active ? "공개" : "비공개"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {!importPreview.errors.length && (
+                <div className={styles.importConfirm}>
+                  <p>기존 명부 번호는 해당 카드 전체를 수정하며 엑셀의 빈칸도 반영됩니다. 비어 있는 명부 번호와 표시 순서는 자동으로 채웠습니다.</p>
+                  <button type="button" onClick={importCards} disabled={importingWorkbook}>
+                    {importingWorkbook ? "카드 저장 중…" : `${importPreview.rows.length}명 카드 생성·반영`}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {importMessage && <p className={styles.importMessage} role="status">{importMessage}</p>}
+          {!importPreview && !readingWorkbook && !importMessage && (
+            <p className={styles.importPrivacy}>원본 엑셀은 이 브라우저에서만 읽습니다. 확인 후 카드에 필요한 값만 서버로 전송됩니다.</p>
+          )}
+        </section>
 
         <div className={styles.workspace}>
           <aside className={styles.tutorList}>

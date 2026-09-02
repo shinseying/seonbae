@@ -58,6 +58,9 @@ dev-server*.log
 # Tests
 coverage/
 
+# Locally generated user-facing artifacts
+/outputs/
+
 # Editors and operating systems
 .DS_Store
 Thumbs.db

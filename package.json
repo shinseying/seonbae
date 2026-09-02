@@ -7,7 +7,8 @@
     "build:marketing": "astro build --root marketing && node scripts/optimize-images.mjs && node scripts/sync-marketing.mjs",
     "start": "next start",
     "test:portal-routing": "node --experimental-strip-types --test tests/portal-state.test.ts",
-    "test:security": "node --experimental-strip-types --test tests/access-gate.test.ts"
+    "test:security": "node --experimental-strip-types --test tests/access-gate.test.ts",
+    "test:tutor-import": "node --experimental-strip-types --test tests/tutor-import.test.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -16,7 +17,8 @@
     "jszip": "^3.10.1",
     "next": "^15.3.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "read-excel-file": "9.3.10"
   },
   "devDependencies": {
     "@types/node": "20.17.6",
