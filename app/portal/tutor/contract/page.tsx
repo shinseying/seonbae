@@ -3,7 +3,12 @@ import { getTutorContractHash } from "../../../../utils/contracts/hash";
 import { TUTOR_CONTRACT_VERSION } from "../../../../utils/contracts/tutor-contract";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
+import {
+  ensureTutorApplicationRecord,
+  TutorApplicationLinkError,
+} from "../../../../utils/tutors/application-link";
 import TutorContractClient, { type SignedContractReceipt } from "./TutorContractClient";
+import styles from "./contract.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +19,7 @@ export default async function TutorContractPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name,email,phone,role,account_status")
+    .select("full_name,email,phone,role,account_status,account_reviewed_at")
     .eq("id", user.id)
     .single();
 
@@ -27,29 +32,36 @@ export default async function TutorContractPage() {
   }
 
   const admin = createAdminClient();
-  const [{ data: application }, { data: signed }] = await Promise.all([
-    admin
-      .from("account_creation_requests")
-      .select("id,status,created_at")
-      .eq("user_id", user.id)
-      .eq("requested_role", "tutor")
-      .maybeSingle(),
-    admin
-      .from("tutor_contract_signatures")
-      .select("id,contract_version,contract_hash,signer_name,signer_birth_date,signer_phone,signer_affiliation,signer_email,signature_path,signature_sha256,signed_at")
-      .eq("tutor_id", user.id)
-      .eq("contract_version", TUTOR_CONTRACT_VERSION)
-      .maybeSingle(),
-  ]);
+  const { data: signed } = await admin
+    .from("tutor_contract_signatures")
+    .select("id,contract_version,contract_hash,signer_name,signer_birth_date,signer_phone,signer_affiliation,signer_email,signature_path,signature_sha256,signed_at")
+    .eq("tutor_id", user.id)
+    .eq("contract_version", TUTOR_CONTRACT_VERSION)
+    .maybeSingle();
 
   // An approved tutor who has signed is done here. A pending one keeps seeing
   // their signed receipt while admissions reviews the account.
   if (signed && profile.account_status === "approved") {
     redirect("/portal/tutor");
   }
-  // A signature references the application row, so without one there is
-  // nothing to sign. A rejected application waits on admissions instead.
-  if (!application || application.status === "rejected") {
+
+  let application;
+  try {
+    application = (await ensureTutorApplicationRecord(admin, user.id, profile)).application;
+  } catch (error) {
+    const message = error instanceof TutorApplicationLinkError
+      ? error.message
+      : "계약 연결 정보를 복구하지 못했습니다.";
+    return <ContractLinkRecovery message={message} />;
+  }
+
+  // A rejected pending account still belongs in admissions. An approved
+  // account with a contradictory rejected record stays on a stable recovery
+  // screen instead of entering a redirect cycle.
+  if (application.status === "rejected") {
+    if (profile.account_status === "approved") {
+      return <ContractLinkRecovery message="승인 계정과 지원 기록의 상태가 달라 관리자 확인이 필요합니다." />;
+    }
     redirect("/portal/pending");
   }
 
@@ -85,5 +97,22 @@ export default async function TutorContractPage() {
       }}
       receipt={receipt}
     />
+  );
+}
+
+function ContractLinkRecovery({ message }: { message: string }) {
+  return (
+    <main className={styles.page}>
+      <section className={styles.document}>
+        <div className={styles.documentHeading}>
+          <p>ACCOUNT LINK RECOVERY</p>
+          <h2>계약 연결 정보를 확인하고 있습니다.</h2>
+          <span>
+            {message}<br />페이지를 반복해서 이동하지 않아도 됩니다. 선배 팀이 계정 기록을 확인한 뒤 안내드리겠습니다.
+          </span>
+          <a href="mailto:admissions@seonbae.com">admissions@seonbae.com</a>
+        </div>
+      </section>
+    </main>
   );
 }

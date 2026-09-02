@@ -41,7 +41,7 @@ export async function GET() {
     (role === "admin"
       ? "ssapgoadmin"
       : profile?.email || user.email || "사용자");
-  const destination = await resolvePortalDestination(supabase, user.id, profile);
+  const destination = await resolvePortalDestination(user.id, profile);
 
   return NextResponse.json(
     {

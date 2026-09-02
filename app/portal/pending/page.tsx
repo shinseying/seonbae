@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../utils/supabase/server";
-import { TUTOR_CONTRACT_VERSION } from "../../../utils/contracts/tutor-contract";
+import { resolvePortalDestination } from "../../../utils/auth/portal-destination";
 import PendingLogoutButton from "./PendingLogoutButton";
 import styles from "./pending.module.css";
 
@@ -18,10 +18,8 @@ export default async function PendingAccountPage() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role === "admin") redirect("/admin");
-  if (profile?.account_status === "approved") {
-    redirect(profile.role === "tutor" ? "/portal/tutor" : "/portal");
-  }
+  const destination = await resolvePortalDestination(user.id, profile);
+  if (destination !== "/portal/pending") redirect(destination);
 
   const { data: request } = await supabase
     .from("account_creation_requests")
@@ -31,16 +29,6 @@ export default async function PendingAccountPage() {
 
   const role = request?.requested_role || profile?.role || "student";
   const rejected = profile?.account_status === "rejected" || request?.status === "rejected";
-
-  if (role === "tutor" && profile?.account_status === "pending" && request?.status === "pending") {
-    const { data: signature } = await supabase
-      .from("tutor_contract_signatures")
-      .select("id")
-      .eq("tutor_id", user.id)
-      .eq("contract_version", TUTOR_CONTRACT_VERSION)
-      .maybeSingle();
-    if (!signature) redirect("/portal/tutor/contract");
-  }
 
   return (
     <main className={styles.page}>

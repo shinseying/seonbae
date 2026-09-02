@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../utils/supabase/server";
 import { getPasswordPolicyError } from "../../../../utils/auth/password";
+import { resolvePortalDestination } from "../../../../utils/auth/portal-destination";
 import {
   authRateLimitResponse,
   consumeAuthRateLimit,
@@ -55,16 +56,11 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role,account_status")
     .eq("id", user.id)
     .single();
 
   return NextResponse.json({
-    destination:
-      profile?.role === "admin"
-        ? "/admin"
-        : profile?.role === "tutor"
-          ? "/portal/tutor"
-          : "/portal",
+    destination: await resolvePortalDestination(user.id, profile),
   });
 }

@@ -11,6 +11,10 @@ import {
   TUTOR_CONTRACT_VERSION,
 } from "../../../utils/contracts/tutor-contract";
 import { registryRowFromApplication } from "../../../utils/tutors/from-application";
+import {
+  ensureTutorApplicationRecord,
+  TutorApplicationLinkError,
+} from "../../../utils/tutors/application-link";
 import { createAdminClient } from "../../../utils/supabase/admin";
 import { createClient } from "../../../utils/supabase/server";
 
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name,email,phone,role,account_status,tutor_registry_id")
+    .select("full_name,email,phone,role,account_status,tutor_registry_id,account_reviewed_at")
     .eq("id", user.id)
     .single();
 
@@ -89,27 +93,25 @@ export async function POST(request: NextRequest) {
     return jsonError("계약 저장 시스템이 설정되지 않았습니다.", 503);
   }
 
-  const [{ data: application }, { data: existing }] = await Promise.all([
-    admin
-      .from("account_creation_requests")
-      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,subject_scores,languages,lesson_format,created_at")
-      .eq("user_id", user.id)
-      .eq("requested_role", "tutor")
-      .maybeSingle(),
-    admin
-      .from("tutor_contract_signatures")
-      .select("id,signed_at")
-      .eq("tutor_id", user.id)
-      .eq("contract_version", TUTOR_CONTRACT_VERSION)
-      .maybeSingle(),
-  ]);
+  let application;
+  try {
+    application = (await ensureTutorApplicationRecord(admin, user.id, profile)).application;
+  } catch (error) {
+    const message = error instanceof TutorApplicationLinkError
+      ? error.message
+      : "튜터 지원 기록을 확인하지 못했습니다.";
+    return jsonError(message, 409);
+  }
+  const { data: existing } = await admin
+    .from("tutor_contract_signatures")
+    .select("id,signed_at")
+    .eq("tutor_id", user.id)
+    .eq("contract_version", TUTOR_CONTRACT_VERSION)
+    .maybeSingle();
 
   // A signature row references the application, so one has to exist. Only the
   // decision matters here: an approved tutor signs on the same page as a
   // pending one, and a rejected application cannot sign at all.
-  if (!application) {
-    return jsonError("튜터 지원 기록을 확인하지 못했습니다.", 403);
-  }
   if (application.status === "rejected") {
     return jsonError("보완 요청된 지원서입니다. 입학팀 안내를 확인해 주세요.", 403);
   }

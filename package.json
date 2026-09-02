@@ -5,7 +5,8 @@
     "dev": "next dev",
     "build": "pnpm run build:marketing && next build",
     "build:marketing": "astro build --root marketing && node scripts/optimize-images.mjs && node scripts/sync-marketing.mjs",
-    "start": "next start"
+    "start": "next start",
+    "test:portal-routing": "node --experimental-strip-types --test tests/portal-state.test.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

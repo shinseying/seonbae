@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     ...(remember ? { maxAge: 400 * 24 * 60 * 60 } : {}),
   };
   cookieStore.set("seonbae-remember", remember ? "1" : "0", rememberOptions);
-  const destination = await resolvePortalDestination(supabase, data.user.id, profile);
+  const destination = await resolvePortalDestination(data.user.id, profile);
 
   return NextResponse.json({
     destination,

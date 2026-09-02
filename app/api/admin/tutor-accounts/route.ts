@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import { registryRowFromApplication } from "../../../../utils/tutors/from-application";
+import { ensureTutorApplicationRecord } from "../../../../utils/tutors/application-link";
 import { sendTutorAccountCreatedEmail } from "../../../../utils/email/tutor-account";
 import { normalizePhone } from "../../../../utils/auth/phone";
 
@@ -107,17 +108,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const reviewedAt = new Date().toISOString();
+  const normalizedPhone = normalizePhone(application.phone ?? "");
   const { error: profileError } = await admin
     .from("profiles")
     .update({
       full_name: application.full_name,
       // Normalised on the way in: an empty field has to be null, and an
       // application row may still carry a legacy "" or a raw 010 number.
-      phone: normalizePhone(application.phone ?? ""),
+      phone: normalizedPhone,
       role: "tutor",
       account_status: "approved",
-      account_reviewed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      account_reviewed_at: reviewedAt,
+      updated_at: reviewedAt,
     })
     .eq("id", created.user.id);
 
@@ -152,16 +155,39 @@ export async function POST(request: NextRequest) {
   }
 
   if (application.id !== null) {
-    await admin
+    const { error: applicationLinkError } = await admin
       .from("account_creation_requests")
       .update({
         user_id: created.user.id,
         status: "approved",
         reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        reviewed_at: reviewedAt,
+        updated_at: reviewedAt,
       })
       .eq("id", application.id);
+    if (applicationLinkError) {
+      await admin.from("tutors").delete().eq("registry_id", registryId);
+      await admin.auth.admin.deleteUser(created.user.id);
+      return NextResponse.json({ error: "지원서를 계정에 연결하지 못했습니다." }, { status: 500 });
+    }
+  } else {
+    // Even a manually provisioned tutor needs an application-shaped audit row:
+    // the electronic contract has a non-null foreign key to it. This also links
+    // a single older, unprovisioned application with the same email.
+    try {
+      await ensureTutorApplicationRecord(admin, created.user.id, {
+        full_name: application.full_name,
+        email: application.email,
+        phone: normalizedPhone,
+        role: "tutor",
+        account_status: "approved",
+        account_reviewed_at: reviewedAt,
+      });
+    } catch {
+      await admin.from("tutors").delete().eq("registry_id", registryId);
+      await admin.auth.admin.deleteUser(created.user.id);
+      return NextResponse.json({ error: "계약용 가입 기록을 준비하지 못했습니다." }, { status: 500 });
+    }
   }
 
   try {
