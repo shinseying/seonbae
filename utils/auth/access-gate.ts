@@ -3,6 +3,7 @@ export const USER_VERIFIED_COOKIE = "seonbae-user-verified";
 export const ADMIN_STEP_COOKIE = "seonbae-admin-step";
 export const ADMIN_ENTRY_COOKIE = "seonbae-admin-entry";
 export const ADMIN_AUTH_EMAIL = "ssapgoadmin@seonbae.internal";
+export const INVALID_LOGIN_MESSAGE = "입력한 로그인 정보가 일치하지 않습니다.";
 
 export type AccessGateKind =
   | "user-challenge"
@@ -19,6 +20,13 @@ export type AccessGatePayload = {
   attempts?: number;
   remember?: boolean;
 };
+
+export function loginMethodMatchesRole(
+  isAdminLogin: boolean,
+  role: string | null | undefined,
+) {
+  return isAdminLogin ? role === "admin" : role !== "admin";
+}
 
 const ADMIN_PHRASE_SHA256 =
   "948db6f592edafc28bd69788a618f07b0e1fb53f972cfcc1a8f6ea00ab5006ea";

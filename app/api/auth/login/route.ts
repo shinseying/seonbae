@@ -4,6 +4,8 @@ import { createClient } from "../../../../utils/supabase/server";
 import {
   ADMIN_AUTH_EMAIL,
   decodeJwtClaims,
+  INVALID_LOGIN_MESSAGE,
+  loginMethodMatchesRole,
   sessionBindingFromClaims,
 } from "../../../../utils/auth/access-gate";
 import {
@@ -40,20 +42,14 @@ export async function POST(request: NextRequest) {
   const email = isAdminLogin ? ADMIN_AUTH_EMAIL : identifier;
 
   if (!identifier || !password || (!isAdminLogin && !isEmail(email))) {
-    return NextResponse.json(
-      { error: "아이디 또는 비밀번호를 다시 확인해 주세요." },
-      { status: 400 },
-    );
+    return invalidCredentials();
   }
 
   const supabase = await createClient({ remember });
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.user) {
-    return NextResponse.json(
-      { error: "아이디 또는 비밀번호를 다시 확인해 주세요." },
-      { status: 401 },
-    );
+    return invalidCredentials();
   }
 
   const { data: profile } = await supabase
@@ -62,20 +58,11 @@ export async function POST(request: NextRequest) {
     .eq("id", data.user.id)
     .single();
 
-  if (isAdminLogin && profile?.role !== "admin") {
-    await supabase.auth.signOut();
-    return NextResponse.json(
-      { error: "관리자 권한을 확인하지 못했습니다." },
-      { status: 403 },
-    );
-  }
-
-  if (!isAdminLogin && profile?.role === "admin") {
-    await supabase.auth.signOut();
-    return NextResponse.json(
-      { error: "관리자 계정은 관리자 아이디로 로그인해 주세요." },
-      { status: 403 },
-    );
+  if (!loginMethodMatchesRole(isAdminLogin, profile?.role)) {
+    // Only discard the session created by this request. A mistaken login must
+    // never revoke the administrator's sessions on other browsers or devices.
+    await supabase.auth.signOut({ scope: "local" });
+    return invalidCredentials();
   }
 
   const cookieStore = await cookies();
@@ -134,4 +121,14 @@ export async function POST(request: NextRequest) {
 
 function isEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function invalidCredentials() {
+  return NextResponse.json(
+    { error: INVALID_LOGIN_MESSAGE },
+    {
+      status: 401,
+      headers: { "Cache-Control": "private, no-store, max-age=0" },
+    },
+  );
 }

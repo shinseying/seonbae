@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   isAdminPhraseValid,
+  INVALID_LOGIN_MESSAGE,
+  loginMethodMatchesRole,
   readAccessGate,
   sessionBindingFromClaims,
   signAccessGate,
@@ -57,4 +59,12 @@ test("an incorrect admin phrase is rejected", async () => {
 test("session binding prefers the Supabase session id", () => {
   assert.equal(sessionBindingFromClaims({ sub: "user", iat: 10, session_id: "sid" }), "sid");
   assert.equal(sessionBindingFromClaims({ sub: "user", iat: 10 }), "user:10");
+});
+
+test("password login does not disclose administrator accounts", () => {
+  assert.equal(loginMethodMatchesRole(true, "admin"), true);
+  assert.equal(loginMethodMatchesRole(true, "student"), false);
+  assert.equal(loginMethodMatchesRole(false, "student"), true);
+  assert.equal(loginMethodMatchesRole(false, "admin"), false);
+  assert.doesNotMatch(INVALID_LOGIN_MESSAGE, /관리자|admin|아이디/i);
 });

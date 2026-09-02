@@ -235,7 +235,13 @@ export default function LoginPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        setMessage(localizeApiMessage(result.error, "입력한 정보를 다시 확인해 주세요.", "Check the information you entered and try again."));
+        const fallbackKo = action === "signin"
+          ? "이메일 또는 비밀번호가 일치하지 않습니다."
+          : "입력한 정보를 다시 확인해 주세요.";
+        const fallbackEn = action === "signin"
+          ? "The email or password is incorrect."
+          : "Check the information you entered and try again.";
+        setMessage(localizeApiMessage(result.error, fallbackKo, fallbackEn));
         setBusy(false);
         return;
       }
@@ -473,7 +479,7 @@ export default function LoginPage() {
             {(action === "signin" || isSignup || action === "reset-password") && (
               <label>
                 <span>
-                  {action === "signin" ? l("아이디 또는 이메일", "ID or email") : l("이메일", "Email")}
+                  {l("이메일", "Email")}
                   {isSignup && <RequiredMark />}
                 </span>
                 <input
