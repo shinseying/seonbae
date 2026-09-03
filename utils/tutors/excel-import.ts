@@ -38,22 +38,22 @@ type ColumnKey =
   | "registry_id" | "name" | "exam" | "score" | "category" | "display_order" | "active"
   | "university" | "university_en" | "banner_url" | "photo_url" | "zoom_host_email"
   | "subject_scores" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
-  | "bio" | "bio_en" | "video_url" | "languages" | "lesson_format";
+  | "bio" | "bio_en" | "video_url" | "languages" | "lesson_format" | "major_year" | "weekly_hours";
 
 const COLUMN_ALIASES: Record<ColumnKey, string[]> = {
   registry_id: ["명부번호", "튜터번호", "카드번호", "registryid", "registry", "cardid"],
-  name: ["튜터이름", "이름", "성명", "지원자이름", "name", "tutorname"],
-  exam: ["시험커리큘럼", "시험", "커리큘럼", "교육과정", "exam", "curriculum"],
-  score: ["검증성적", "성적", "대표성적", "score", "verifiedscore"],
+  name: ["튜터이름", "이름", "성명", "지원자이름", "name", "tutorname", "이름name"],
+  exam: ["시험커리큘럼", "시험", "커리큘럼", "교육과정", "exam", "curriculum", "지원커리큘럼curriculayoucanteach"],
+  score: ["검증성적", "성적", "대표성적", "score", "verifiedscore", "과목과성적subjectsandyourscores"],
   category: ["카테고리", "분류", "category"],
   display_order: ["표시순서", "순서", "displayorder", "order"],
   active: ["공개여부", "공개", "활성", "active", "published"],
-  university: ["대학교한국어", "대학교", "학교", "소속학교", "universitykr", "university"],
+  university: ["대학교한국어", "대학교", "학교", "소속학교", "universitykr", "university", "재학중인대학universitycurrentlyenrolledin"],
   university_en: ["대학교영문", "학교영문", "universityen"],
   banner_url: ["대학교배너", "배너", "배너url", "banner", "bannerurl"],
   photo_url: ["사진url", "튜터사진url", "프로필사진", "photo", "photourl"],
   zoom_host_email: ["zoom호스트이메일", "줌호스트이메일", "zoomemail", "zoomhostemail"],
-  subject_scores: ["과목별성적", "세부성적", "subjectscores", "subjects"],
+  subject_scores: ["과목별성적", "세부성적", "subjectscores", "subjects", "과목과성적subjectsandyourscores"],
   mon: ["월가능시간", "월요일가능시간", "monday", "mon"],
   tue: ["화가능시간", "화요일가능시간", "tuesday", "tue"],
   wed: ["수가능시간", "수요일가능시간", "wednesday", "wed"],
@@ -61,11 +61,16 @@ const COLUMN_ALIASES: Record<ColumnKey, string[]> = {
   fri: ["금가능시간", "금요일가능시간", "friday", "fri"],
   sat: ["토가능시간", "토요일가능시간", "saturday", "sat"],
   sun: ["일가능시간", "일요일가능시간", "sunday", "sun"],
-  bio: ["소개한국어", "한국어소개", "소개", "biokr", "bio"],
+  bio: [
+    "소개한국어", "한국어소개", "소개", "biokr", "bio",
+    "pickonesubjectyouteachwhatdostudentsgetwrongmostoftenandhowdoyoufixit가르칠과목하나를골라학생들이가장많이틀리는부분과그것을어떻게잡아주는지적어주세요",
+  ],
   bio_en: ["소개영어", "소개영문", "영어소개", "bioen"],
   video_url: ["샘플수업영상url", "영상url", "video", "videourl"],
-  languages: ["언어", "가능언어", "languages", "language"],
+  languages: ["언어", "가능언어", "languages", "language", "languagesyouteachin수업가능언어"],
   lesson_format: ["수업형식", "수업방식", "lessonformat", "format"],
+  major_year: ["전공과학년courseandyear"],
+  weekly_hours: ["주당수업가능시간hoursperweekyoucanteach"],
 };
 
 const REQUIRED_COLUMNS: Array<{ key: ColumnKey; label: string }> = [
@@ -130,7 +135,15 @@ export function parseTutorSpreadsheet(
 
     const name = requiredText(row, columns.name, sourceRow, "튜터 이름", 80, rowErrors);
     const exam = requiredText(row, columns.exam, sourceRow, "시험 / 커리큘럼", 80, rowErrors);
-    const score = requiredText(row, columns.score, sourceRow, "검증 성적", 80, rowErrors);
+    const rawScore = read(row, columns.score);
+    const subjectScores = parseSubjectScores(read(row, columns.subject_scores), sourceRow, rowErrors);
+    let score: string;
+    if (columns.score === columns.subject_scores) {
+      score = representativeScore(rawScore, subjectScores);
+      if (!score) rowErrors.push({ row: sourceRow, field: "검증 성적", message: "성적 정보에서 대표 성적을 찾지 못했습니다." });
+    } else {
+      score = requiredText(row, columns.score, sourceRow, "검증 성적", 80, rowErrors);
+    }
     const category = parseCategory(read(row, columns.category), exam);
     if (!category) {
       rowErrors.push({ row: sourceRow, field: "카테고리", message: "IB, AP, A-Level, SAT, 영어 시험 중 하나를 입력해 주세요." });
@@ -147,8 +160,11 @@ export function parseTutorSpreadsheet(
       rowErrors.push({ row: sourceRow, field: "공개 여부", message: activeResult });
     }
 
-    const university = optionalText(row, columns.university, sourceRow, "대학교 (한국어)", 120, rowErrors);
-    const universityEn = optionalText(row, columns.university_en, sourceRow, "대학교 (영문)", 160, rowErrors);
+    const rawUniversity = optionalText(row, columns.university, sourceRow, "대학교", 160, rowErrors);
+    const explicitUniversityEn = optionalText(row, columns.university_en, sourceRow, "대학교 (영문)", 160, rowErrors);
+    const normalizedUniversity = normalizeUniversity(rawUniversity, explicitUniversityEn);
+    const university = normalizedUniversity.ko;
+    const universityEn = normalizedUniversity.en;
     const photoUrl = parseAssetUrl(read(row, columns.photo_url), sourceRow, "사진 URL", rowErrors);
     const bannerUrl = parseBanner(read(row, columns.banner_url), university, universityEn, sourceRow, rowErrors);
     const zoomEmail = read(row, columns.zoom_host_email).toLowerCase();
@@ -156,14 +172,15 @@ export function parseTutorSpreadsheet(
       rowErrors.push({ row: sourceRow, field: "Zoom 호스트 이메일", message: "이메일 형식을 확인해 주세요." });
     }
 
-    const subjectScores = parseSubjectScores(read(row, columns.subject_scores), sourceRow, rowErrors);
     const availability: Record<string, string[]> = {};
     for (const day of ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const) {
       const ranges = parseAvailability(read(row, columns[day]), sourceRow, day, rowErrors);
       if (ranges.length) availability[day] = ranges;
     }
 
-    const bio = optionalText(row, columns.bio, sourceRow, "소개 (한국어)", 600, rowErrors);
+    const writtenBio = optionalText(row, columns.bio, sourceRow, "소개 (한국어)", 600, rowErrors);
+    const majorYear = optionalText(row, columns.major_year, sourceRow, "전공과 학년", 160, rowErrors);
+    const bio = writtenBio || (majorYear ? `전공 및 학년 · ${majorYear}`.slice(0, 600) : null);
     const bioEn = optionalText(row, columns.bio_en, sourceRow, "소개 (영어)", 600, rowErrors);
     const videoUrl = read(row, columns.video_url);
     if (videoUrl && (!isSafeUrl(videoUrl) || !videoUrl.startsWith("https://"))) {
@@ -171,7 +188,9 @@ export function parseTutorSpreadsheet(
     }
 
     const languages = optionalText(row, columns.languages, sourceRow, "언어", 80, rowErrors);
-    const lessonFormat = optionalText(row, columns.lesson_format, sourceRow, "수업 형식", 80, rowErrors);
+    const rawLessonFormat = optionalText(row, columns.lesson_format, sourceRow, "수업 형식", 80, rowErrors);
+    const weeklyHours = optionalText(row, columns.weekly_hours, sourceRow, "주당 가능 시간", 40, rowErrors);
+    const lessonFormat = rawLessonFormat || (weeklyHours ? `온라인 1:1 · 주당 ${weeklyHours}시간 가능`.slice(0, 80) : null);
     errors.push(...rowErrors);
     if (rowErrors.length || !category || typeof activeResult === "string") return;
 
@@ -210,7 +229,6 @@ function findColumns(header: unknown[]) {
     for (const [key, aliases] of Object.entries(COLUMN_ALIASES) as Array<[ColumnKey, string[]]>) {
       if (columns[key] === undefined && aliases.some((alias) => normalizeHeader(alias) === normalized)) {
         columns[key] = index;
-        break;
       }
     }
   });
@@ -304,9 +322,9 @@ function parseSubjectScores(value: string, row: number, errors: TutorImportError
   }
   const scores: Array<{ subject: string; score: string }> = [];
   entries.slice(0, 12).forEach((entry) => {
-    const separator = entry.lastIndexOf(":") >= 0 ? entry.lastIndexOf(":") : entry.lastIndexOf("=");
-    const subject = separator >= 0 ? entry.slice(0, separator).trim() : "";
-    const score = separator >= 0 ? entry.slice(separator + 1).trim() : "";
+    const parsed = splitSubjectScore(entry);
+    const subject = parsed?.subject ?? "";
+    const score = parsed?.score ?? "";
     if (!subject || !score) {
       errors.push({ row, field: "과목별 성적", message: `‘과목:성적’ 형식으로 입력해 주세요: ${entry}` });
       return;
@@ -318,6 +336,41 @@ function parseSubjectScores(value: string, row: number, errors: TutorImportError
     scores.push({ subject, score });
   });
   return scores;
+}
+
+function splitSubjectScore(entry: string) {
+  const clean = entry.trim();
+  const colon = Math.max(clean.lastIndexOf(":"), clean.lastIndexOf("="));
+  if (colon > 0) {
+    return { subject: clean.slice(0, colon).trim(), score: clean.slice(colon + 1).trim() };
+  }
+
+  const hyphen = Math.max(clean.lastIndexOf("-"), clean.lastIndexOf("–"), clean.lastIndexOf("—"));
+  if (hyphen > 0) {
+    return { subject: clean.slice(0, hyphen).trim(), score: clean.slice(hyphen + 1).trim() };
+  }
+
+  const trailing = /^(.+?)\s+((?:\d+\s*)?A\*?|\d+(?:\.\d+)?(?:\/\d+)?(?:\s*\([^)]*\))?)$/i.exec(clean);
+  if (trailing) return { subject: trailing[1].trim(), score: trailing[2].trim() };
+  return null;
+}
+
+function representativeScore(raw: string, scores: Array<{ subject: string; score: string }>) {
+  const aggregate = /\b(\d+\s*A\*)\b/i.exec(raw)?.[1];
+  if (aggregate) return aggregate.replace(/\s+/g, "");
+  const overall = scores.find((entry) => /^(SAT|TOEFL|IELTS|IB)$/i.test(entry.subject.trim()));
+  return (overall?.score || scores[0]?.score || "").slice(0, 80);
+}
+
+function normalizeUniversity(raw: string | null, explicitEnglish: string | null) {
+  if (!raw && !explicitEnglish) return { ko: null, en: null };
+  if (raw?.includes("고려대학교")) return { ko: "고려대학교", en: explicitEnglish || "Korea University" };
+  if (raw?.includes("서울대학교")) return { ko: "서울대학교", en: explicitEnglish || "Seoul National University" };
+  if (raw?.includes("연세대학교")) return { ko: "연세대학교", en: explicitEnglish || "Yonsei University" };
+
+  const paired = raw?.match(/^(.+?)\s*\((.+)\)\s*$/);
+  if (paired) return { ko: paired[1].trim(), en: explicitEnglish || paired[2].trim() };
+  return { ko: raw || explicitEnglish, en: explicitEnglish || raw };
 }
 
 function parseAvailability(value: string, row: number, day: string, errors: TutorImportError[]) {

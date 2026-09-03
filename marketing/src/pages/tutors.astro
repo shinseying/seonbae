@@ -30,13 +30,40 @@ const filters = [
   { key: 'ap', label: 'Advanced Placement' },
   { key: 'alevel', label: 'A Level' },
   { key: 'igcse', label: 'IGCSE' },
-  { key: 'tests', label: 'SAT and ACT' },
+  { key: 'tests', label: 'Tests & English' },
 ].map((f) => ({ ...f, n: count(f.key) }));
 
 const universities = [...new Set(withCats.map(({ entry }) => entry.university))];
 const roster = true;
 ---
 <Base title="Tutors | Seonbae" active="/tutors">
+  <script is:inline>
+    try {
+      if (new URLSearchParams(location.search).get('sandbox') === '1') {
+        document.documentElement.dataset.tutorSandbox = 'loading';
+      }
+    } catch {}
+  </script>
+
+  <section class="sandbox-bar" id="tutor-sandbox" hidden aria-labelledby="sandbox-title">
+    <div class="container sandbox-bar__inner">
+      <div class="sandbox-bar__mark" aria-hidden="true">S</div>
+      <div class="sandbox-bar__copy">
+        <p class="sandbox-bar__eyebrow">SANDBOX · <T en="Nothing is saved" ko="저장되지 않은 미리보기" /></p>
+        <h1 id="sandbox-title"><T en="Review the tutor directory before applying it." ko="실제 반영 전 튜터 명부를 확인하세요." /></h1>
+        <p><span data-sandbox-file></span><span aria-hidden="true"> · </span><strong data-sandbox-count>0</strong> <T en="draft cards" ko="명의 카드 초안" /></p>
+      </div>
+      <div class="sandbox-bar__actions">
+        <a href="/admin"><T en="Back to admin" ko="관리 화면으로" /></a>
+        <button type="button" data-sandbox-apply disabled>
+          <span><T en="Approve and apply to Supabase" ko="검토 완료 · Supabase에 반영" /></span>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="m6.5 12.5 3.4 3.4 7.6-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <p class="sandbox-bar__status" data-sandbox-status role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
   <PageHero
     eyebrow="Tutors"
     eyebrowKo="선배"
@@ -58,7 +85,7 @@ const roster = true;
           <div class="rail__list" role="group" aria-label="Filter tutors by curriculum">
             {filters.map((f, i) => (
               <button type="button" class="rail__btn" data-filter={f.key} aria-pressed={i === 0 ? 'true' : 'false'}>
-                <span class="rail__label" data-filter-label={f.key}><T en={f.label} ko={f.key === 'all' ? '전체 튜터' : f.key === 'ap' ? 'AP' : f.key === 'alevel' ? 'A레벨' : f.key === 'tests' ? 'SAT·ACT' : f.label} /></span>
+                <span class="rail__label" data-filter-label={f.key}><T en={f.label} ko={f.key === 'all' ? '전체 튜터' : f.key === 'ap' ? 'AP' : f.key === 'alevel' ? 'A레벨' : f.key === 'tests' ? 'SAT·ACT·영어 시험' : f.label} /></span>
                 {roster && <span class="rail__n">{f.n}</span>}
               </button>
             ))}
@@ -198,6 +225,32 @@ const roster = true;
 </Base>
 
 <style>
+  /* The import preview is deliberately unmistakable and stays in normal flow,
+     so it cannot cover the site header or any directory controls. */
+  .sandbox-bar[hidden] { display: none; }
+  .sandbox-bar { padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,.16); background: var(--ink); color: var(--white); }
+  .sandbox-bar__inner { display: grid; grid-template-columns: 48px minmax(0,1fr) auto; gap: 14px 18px; align-items: center; }
+  .sandbox-bar__mark { width: 48px; height: 48px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.35); border-radius: 9px; background: rgba(255,255,255,.08); color: var(--yellow); font-family: var(--display); font-size: 1.25rem; font-weight: 900; }
+  .sandbox-bar__eyebrow { margin: 0 0 4px; color: var(--yellow); font-size: .68rem; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+  .sandbox-bar__copy h1 { margin: 0; color: inherit; font-size: clamp(1rem,1.6vw,1.28rem); line-height: 1.25; }
+  .sandbox-bar__copy>p:last-child { margin: 5px 0 0; color: rgba(255,255,255,.7); font-size: .78rem; }
+  .sandbox-bar__actions { display: flex; align-items: center; gap: 8px; }
+  .sandbox-bar__actions a,.sandbox-bar__actions button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 15px; border-radius: 7px; font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
+  .sandbox-bar__actions a { border: 1px solid rgba(255,255,255,.28); color: var(--white); }
+  .sandbox-bar__actions button { min-height: 56px; gap: 12px; padding: 0 22px; border: 1px solid #2f7d4f; background: #2f7d4f; color: #fff; font-size: .82rem; box-shadow: 0 10px 24px rgba(0,0,0,.22); transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+  .sandbox-bar__actions button:hover:not(:disabled) { border-color: #286c45; background: #286c45; box-shadow: 0 13px 28px rgba(0,0,0,.26); transform: translateY(-1px); }
+  .sandbox-bar__actions button:active:not(:disabled) { transform: translateY(0); box-shadow: 0 7px 16px rgba(0,0,0,.2); }
+  .sandbox-bar__actions button svg { flex: none; }
+  .sandbox-bar__actions button:disabled { cursor: wait; opacity: .6; }
+  .sandbox-bar__actions a:focus-visible,.sandbox-bar__actions button:focus-visible { outline: 3px solid rgba(255,255,255,.5); outline-offset: 3px; }
+  .sandbox-bar__status { grid-column: 2/-1; min-height: 1em; margin: -5px 0 0; color: rgba(255,255,255,.72); font-size: .74rem; }
+  .sandbox-bar__status:empty { display: none; }
+  .sandbox-bar__status[data-tone='error'] { color: #ffd0c8; }
+  .sandbox-bar__status[data-tone='ok'] { color: #cfeac8; }
+  :global(html[data-tutor-sandbox='loading']) #tutor-grid>* { visibility: hidden; }
+  :global(html[data-tutor-sandbox]) .closing { opacity: .55; }
+  :global(html[data-tutor-sandbox]) .rail__note { display: none; }
+
   /* ----- Directory grid --------------------------------------------------- */
   .roster {
     display: grid;
@@ -329,6 +382,11 @@ const roster = true;
     .rail__note { display: none; }
   }
   @media (max-width: 820px) {
+    .sandbox-bar__inner { grid-template-columns: 42px minmax(0,1fr); }
+    .sandbox-bar__mark { width: 42px; height: 42px; }
+    .sandbox-bar__actions,.sandbox-bar__status { grid-column: 1/-1; }
+    .sandbox-bar__actions { align-items: stretch; }
+    .sandbox-bar__actions a,.sandbox-bar__actions button { flex: 1; }
     .tutor-grid { grid-template-columns: 1fr; }
     .closing { grid-template-columns: 1fr; align-items: start; }
   }
@@ -378,6 +436,7 @@ const roster = true;
   }
   .tcardx__scores b { font-family: var(--display); font-weight: 800; font-size: .98rem; color: var(--violet); }
   .tcardx__scores span { font-size: .82rem; color: var(--muted); }
+  .tcardx__scores .tcardx__more { color: var(--muted); font-size: .76rem; font-weight: 750; }
 
   .tcardx__bio {
     width: 100%; padding-top: 14px; border-top: 1px solid var(--line);
@@ -542,12 +601,19 @@ const roster = true;
   .vid__frame :global(video), .vid__frame :global(iframe) { width: 100%; height: 100%; border: 0; display: block; }
 
   @media (max-width: 560px) {
+    .sandbox-bar__actions { flex-direction: column; }
     .tcardx__meta { grid-template-columns: 1fr; }
     .book, .vid { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sandbox-bar__actions a,.sandbox-bar__actions button { transition: none; }
   }
 </style>
 
 <script>
+  const PREVIEW_STORAGE_KEY = 'seonbae:tutor-import-preview:v1';
+  const PREVIEW_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+  const sandboxMode = new URLSearchParams(location.search).get('sandbox') === '1';
   const cardPhoto = '/images/ian-bae-placeholder.png';
   const buttons = [...document.querySelectorAll('.rail__btn')] as HTMLButtonElement[];
   const noMatch = document.querySelector('.no-match') as HTMLElement | null;
@@ -564,6 +630,7 @@ const roster = true;
     university?: string;
     university_en?: string;
     photo_url?: string | null;
+    banner_url?: string | null;
     subject_scores?: Array<{ subject: string; score: string }>;
     availability?: Record<string, string[]>;
     bio?: string | null;
@@ -572,7 +639,15 @@ const roster = true;
     languages?: string | null;
     lesson_format?: string | null;
   };
+  type PreviewPayload = {
+    version: number;
+    fileName: string;
+    createdAt: number;
+    existingRegistryIds?: string[];
+    rows: Array<Record<string, unknown>>;
+  };
   let roster: Tutor[] = [];
+  let previewPayload: PreviewPayload | null = null;
   let cells: HTMLElement[] = [...document.querySelectorAll('.tutor-cell')] as HTMLElement[];
 
   // Astro scopes this page's CSS with a data-astro-cid-* attribute. Cards built
@@ -588,13 +663,16 @@ const roster = true;
     root.querySelectorAll<HTMLElement>('*').forEach((node) => node.setAttribute(scopeAttr, ''));
   };
 
-  const categoryFor = (tutor: Tutor) => {
+  const categoriesFor = (tutor: Tutor) => {
     const value = `${tutor.exam} ${tutor.category || ''}`.toUpperCase();
-    if (value.includes('IB')) return 'ib';
-    if (value.includes('AP')) return 'ap';
-    if (value.includes('A LEVEL') || value.includes('A-LEVEL')) return 'alevel';
-    if (value.includes('IGCSE')) return 'igcse';
-    return 'tests';
+    const categories = new Set<string>();
+    if (/\bIB\b/.test(value)) categories.add('ib');
+    if (/\bAP\b|ADVANCED PLACEMENT/.test(value)) categories.add('ap');
+    if (/A[ -]?LEVEL/.test(value)) categories.add('alevel');
+    if (/IGCSE|\bGCSE\b/.test(value)) categories.add('igcse');
+    if (/SAT|ACT|TOEFL|IELTS|ENGLISH|영어/.test(value)) categories.add('tests');
+    if (!categories.size) categories.add('tests');
+    return [...categories];
   };
   const escapeHtml = (value: unknown) => String(value ?? '')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -672,7 +750,30 @@ const roster = true;
     : [];
   const slotsOf = (tutor: Tutor) => (tutor.availability && typeof tutor.availability === 'object') ? tutor.availability : {};
   const hasSlots = (tutor: Tutor) => DAYS.some((day) => (slotsOf(tutor)[day.key] || []).length > 0);
-  const bioOf = (tutor: Tutor) => tr(tutor.bio_en || tutor.bio || '', tutor.bio || tutor.bio_en || '');
+  const bioOf = (tutor: Tutor) => {
+    const value = tr(tutor.bio_en || tutor.bio || '', tutor.bio || tutor.bio_en || '');
+    return language() === 'en' && value.startsWith('전공 및 학년 · ')
+      ? `Major / year · ${value.slice('전공 및 학년 · '.length)}`
+      : value;
+  };
+  const languagesOf = (tutor: Tutor) => {
+    const source = tutor.languages || '';
+    const known = [
+      { test: /Korean|한국어/i, en: 'Korean', ko: '한국어' },
+      { test: /English|영어/i, en: 'English', ko: '영어' },
+      { test: /Chinese|중국어/i, en: 'Chinese', ko: '중국어' },
+      { test: /Japanese|일본어/i, en: 'Japanese', ko: '일본어' },
+    ].filter((item) => item.test.test(source));
+    return known.length
+      ? known.map((item) => language() === 'en' ? item.en : item.ko).join(', ')
+      : source || tr('Korean, English', '한국어, 영어');
+  };
+  const lessonFormatOf = (tutor: Tutor) => {
+    const source = tutor.lesson_format || '';
+    const imported = /^온라인 1:1 · 주당 (.+)시간 가능$/.exec(source);
+    if (imported) return tr(`Online 1:1 · ${imported[1]} hours/week available`, source);
+    return source || tr('Online 1:1', '온라인 1:1');
+  };
 
   // Weekdays and weekends read better than a seven-day list on the card face.
   const availabilitySummary = (tutor: Tutor) => {
@@ -695,10 +796,13 @@ const roster = true;
       const altName = tr(tutor.name, tutor.name_en || tutor.name);
       const uni = escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''));
       const bio = bioOf(tutor);
+      const photo = safeAsset(tutor.photo_url) || cardPhoto;
 
       const scores = scoresOf(tutor);
       const scoreList = scores.length
-        ? scores.map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')
+        ? `${scores.slice(0, 3).map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')}${
+            scores.length > 3 ? `<li class="tcardx__more">+${scores.length - 3} ${tr('more', '개 더보기')}</li>` : ''
+          }`
         : `<li><b>${escapeHtml(tutor.score)}</b><span>${escapeHtml(tutor.exam)}</span></li>`;
 
       // Placeholders keep every card the same shape, so a card without a
@@ -715,15 +819,15 @@ const roster = true;
 
       const meta = `
         <dl class="tcardx__meta">
-          <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(tutor.languages || tr('Korean, English', '한국어, 영어'))}</dd></div>
-          <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(tutor.lesson_format || tr('Online 1:1', '온라인 1:1'))}</dd></div>
+          <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(languagesOf(tutor))}</dd></div>
+          <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(lessonFormatOf(tutor))}</dd></div>
           <div><dt>${tr('Availability', '가능 시간')}</dt><dd>${availabilitySummary(tutor)}</dd></div>
         </dl>`;
 
-      return `<div class="tutor-cell" data-cats="${categoryFor(tutor)}" data-registry-id="${escapeHtml(tutor.registry_id)}">
+      return `<div class="tutor-cell" data-cats="${categoriesFor(tutor).join(' ')}" data-registry-id="${escapeHtml(tutor.registry_id)}">
         <article class="tcardx card" data-profile="${escapeHtml(tutor.registry_id)}" tabindex="0" role="button" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')}">
-          <span class="tcardx__verified">${verifyIcon}${tr('Verified Tutor', '검증 완료')}</span>
-          <img class="tcardx__avatar" src="${cardPhoto}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="320" height="320" loading="lazy" decoding="async" />
+          <span class="tcardx__verified">${verifyIcon}${sandboxMode ? tr('Preview card', '미리보기 카드') : tr('Verified Tutor', '검증 완료')}</span>
+          <img class="tcardx__avatar" src="${photo}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="320" height="320" loading="lazy" decoding="async" />
           <h3 class="tcardx__name">${escapeHtml(displayName)}<small>${escapeHtml(altName)}</small></h3>
           <p class="tcardx__uni">${uni}</p>
           <ul class="tcardx__scores">${scoreList}</ul>
@@ -731,8 +835,8 @@ const roster = true;
           ${videoBlock}
           ${meta}
           <div class="tcardx__foot">
-            <button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}" data-tutor-name="${escapeHtml(displayName)}">
-              ${calendarIcon}${tr('Request a match', '매칭 요청하기')}
+            <button type="button" class="tcardx__book" ${sandboxMode ? 'disabled aria-disabled="true"' : `data-book="${escapeHtml(tutor.registry_id)}" data-tutor-name="${escapeHtml(displayName)}"`}>
+              ${calendarIcon}${sandboxMode ? tr('Preview only', '미리보기 전용') : tr('Request a match', '매칭 요청하기')}
             </button>
           </div>
         </article>
@@ -742,10 +846,11 @@ const roster = true;
     applyScope(grid);
     cells = [...grid.querySelectorAll('.tutor-cell')] as HTMLElement[];
     roster = tutors;
-    roster = tutors;
     Object.keys(staticFilterCounts).forEach((key) => { staticFilterCounts[key] = 0; });
     staticFilterCounts.all = tutors.length;
-    tutors.forEach((tutor) => { staticFilterCounts[categoryFor(tutor)] += 1; });
+    tutors.forEach((tutor) => {
+      categoriesFor(tutor).forEach((category) => { staticFilterCounts[category] += 1; });
+    });
     buttons.forEach((button) => {
       let badge = button.querySelector('.rail__n') as HTMLElement | null;
       if (!badge) {
@@ -758,7 +863,9 @@ const roster = true;
     if (countEl) countEl.textContent = String(tutors.length);
     const countLabel = document.querySelector('.roster__count span');
     if (countLabel) countLabel.textContent = tr('tutors listed', '명의 튜터');
-    const universities = [...new Set(tutors.map((tutor) => tutor.university_en || tutor.university).filter(Boolean))];
+    const universities = [...new Set(tutors
+      .map((tutor) => tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''))
+      .filter(Boolean))];
     const universityLine = document.querySelector('.roster__unis');
     if (universityLine && universities.length) universityLine.textContent = universities.join(' · ');
     const note = document.getElementById('roster-note');
@@ -766,21 +873,154 @@ const roster = true;
     if (noMatch) noMatch.hidden = tutors.length > 0;
   };
 
-  fetch('/api/tutors', { cache: 'no-store', headers: { Accept: 'application/json' } })
-    .then((response) => response.ok ? response.json() : Promise.reject(new Error('Tutor directory unavailable')))
-    .then((rows) => {
-      if (Array.isArray(rows) && rows.length > 0) renderTutors(rows);
-      else {
-        const grid = document.getElementById('tutor-grid');
-        grid?.classList.remove('is-loading');
-        grid?.removeAttribute('aria-busy');
-      }
-    })
-    .catch(() => {
+  const normalizePreviewRow = (raw: Record<string, unknown>): Tutor | null => {
+    const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
+    const registryId = text(raw.registry_id);
+    const name = text(raw.name);
+    const exam = text(raw.exam);
+    const score = text(raw.score);
+    if (!registryId || !name || !exam || !score) return null;
+    const scores = Array.isArray(raw.subjectScores)
+      ? raw.subjectScores
+      : Array.isArray(raw.subject_scores) ? raw.subject_scores : [];
+    const availability = raw.availability && typeof raw.availability === 'object' && !Array.isArray(raw.availability)
+      ? raw.availability as Record<string, string[]>
+      : {};
+    return {
+      registry_id: registryId,
+      name,
+      name_en: text(raw.name_en),
+      exam,
+      score,
+      category: text(raw.category),
+      university: text(raw.university),
+      university_en: text(raw.university_en),
+      photo_url: text(raw.photo_url) || null,
+      banner_url: text(raw.banner_url) || null,
+      subject_scores: scores as Array<{ subject: string; score: string }>,
+      availability,
+      bio: text(raw.bio) || null,
+      bio_en: text(raw.bioEn ?? raw.bio_en) || null,
+      video_url: text(raw.videoUrl ?? raw.video_url) || null,
+      languages: text(raw.languages) || null,
+      lesson_format: text(raw.lessonFormat ?? raw.lesson_format) || null,
+    };
+  };
+
+  const finishGridLoading = () => {
+    const grid = document.getElementById('tutor-grid');
+    grid?.classList.remove('is-loading');
+    grid?.removeAttribute('aria-busy');
+  };
+
+  if (sandboxMode) {
+    const sandbox = document.getElementById('tutor-sandbox');
+    const fileName = sandbox?.querySelector('[data-sandbox-file]') as HTMLElement | null;
+    const previewCount = sandbox?.querySelector('[data-sandbox-count]') as HTMLElement | null;
+    const applyButton = sandbox?.querySelector('[data-sandbox-apply]') as HTMLButtonElement | null;
+    const status = sandbox?.querySelector('[data-sandbox-status]') as HTMLElement | null;
+    if (sandbox) sandbox.hidden = false;
+    const heroCopy = document.querySelector('.phero__copy');
+    const heroCopyEn = heroCopy?.querySelector('[data-l="en"]');
+    const heroCopyKo = heroCopy?.querySelector('[data-l="ko"]');
+    if (heroCopyEn) heroCopyEn.textContent = 'These are unpublished drafts generated from the selected spreadsheet. Verification is not complete.';
+    if (heroCopyKo) heroCopyKo.textContent = '선택한 엑셀에서 만든 비공개 카드 초안입니다. 아직 검증 완료 상태가 아닙니다.';
+
+    const showSandboxError = (message: string) => {
       const grid = document.getElementById('tutor-grid');
-      grid?.classList.remove('is-loading');
-      grid?.removeAttribute('aria-busy');
+      if (grid) grid.innerHTML = '';
+      finishGridLoading();
+      if (countEl) countEl.textContent = '0';
+      if (previewCount) previewCount.textContent = '0';
+      if (fileName) fileName.textContent = tr('No valid preview file', '유효한 미리보기 파일 없음');
+      if (status) { status.textContent = message; status.dataset.tone = 'error'; }
+      document.documentElement.dataset.tutorSandbox = 'ready';
+    };
+
+    try {
+      const stored = window.sessionStorage.getItem(PREVIEW_STORAGE_KEY);
+      const parsed = stored ? JSON.parse(stored) as PreviewPayload : null;
+      const isFresh = parsed && Number.isFinite(parsed.createdAt) && Date.now() - parsed.createdAt <= PREVIEW_MAX_AGE_MS;
+      if (!parsed || parsed.version !== 1 || !isFresh || !Array.isArray(parsed.rows) || !parsed.rows.length) {
+        if (stored) window.sessionStorage.removeItem(PREVIEW_STORAGE_KEY);
+        showSandboxError(tr(
+          'This preview is missing or expired. Return to admin and choose the Excel file again.',
+          '미리보기 정보가 없거나 만료되었습니다. 관리 화면으로 돌아가 엑셀 파일을 다시 선택해 주세요.',
+        ));
+      } else {
+        const tutors = parsed.rows.map(normalizePreviewRow).filter((row): row is Tutor => Boolean(row));
+        if (tutors.length !== parsed.rows.length || !tutors.length) {
+          showSandboxError(tr(
+            'Some card data could not be read. Return to admin and choose the file again.',
+            '일부 카드 정보를 읽지 못했습니다. 관리 화면에서 파일을 다시 선택해 주세요.',
+          ));
+        } else {
+          previewPayload = parsed;
+          renderTutors(tutors);
+          if (fileName) fileName.textContent = parsed.fileName || tr('Excel import', '엑셀 가져오기');
+          if (previewCount) previewCount.textContent = String(tutors.length);
+          if (applyButton) applyButton.disabled = false;
+          if (status) status.textContent = tr(
+            'Private application fields are excluded. Booking controls are disabled in this preview.',
+            '연락처·이메일·증빙 링크는 제외되었으며, 이 화면에서는 매칭 요청도 비활성화됩니다.',
+          );
+          document.documentElement.dataset.tutorSandbox = 'ready';
+        }
+      }
+    } catch {
+      showSandboxError(tr(
+        'The browser could not open this preview. Return to admin and try again.',
+        '브라우저에서 미리보기를 열지 못했습니다. 관리 화면에서 다시 시도해 주세요.',
+      ));
+    }
+
+    applyButton?.addEventListener('click', async () => {
+      if (!previewPayload || !applyButton || !status) return;
+      const existing = new Set((previewPayload.existingRegistryIds || []).map(String));
+      const updateCount = previewPayload.rows.filter((row) => existing.has(String(row.registry_id || ''))).length;
+      const createCount = previewPayload.rows.length - updateCount;
+      const summary = language() === 'en'
+        ? `${createCount} new card${createCount === 1 ? '' : 's'}, ${updateCount} update${updateCount === 1 ? '' : 's'}`
+        : `새 카드 ${createCount}개, 기존 카드 수정 ${updateCount}개`;
+      if (!window.confirm(tr(
+        `Apply ${summary} to Supabase? The cards remain private unless the spreadsheet explicitly marks them active.`,
+        `${summary}를 Supabase에 반영할까요? 엑셀에서 공개로 명시하지 않은 카드는 비공개로 저장됩니다.`,
+      ))) return;
+
+      applyButton.disabled = true;
+      status.removeAttribute('data-tone');
+      status.textContent = tr('Applying the reviewed cards…', '확인한 카드를 반영하는 중입니다…');
+      try {
+        const response = await fetch('/api/admin/tutors/import', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: previewPayload.rows }),
+        });
+        const result = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(result?.error || tr('The cards could not be applied.', '카드를 반영하지 못했습니다.'));
+        window.sessionStorage.removeItem(PREVIEW_STORAGE_KEY);
+        status.dataset.tone = 'ok';
+        status.textContent = tr(
+          'Applied successfully. Return to admin to edit or publish the cards.',
+          '반영을 마쳤습니다. 관리 화면에서 카드를 수정하거나 공개할 수 있습니다.',
+        );
+        applyButton.textContent = tr('Applied', '반영 완료');
+      } catch (error) {
+        status.dataset.tone = 'error';
+        status.textContent = error instanceof Error ? error.message : tr('Please try again.', '다시 시도해 주세요.');
+        applyButton.disabled = false;
+      }
     });
+  } else {
+    fetch('/api/tutors', { cache: 'no-store', headers: { Accept: 'application/json' } })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Tutor directory unavailable')))
+      .then((rows) => {
+        if (Array.isArray(rows) && rows.length > 0) renderTutors(rows);
+        else finishGridLoading();
+      })
+      .catch(finishGridLoading);
+  }
   // ----- Viewer session ----------------------------------------------------
   // Booking needs a signed-in student or parent, so the button explains itself
   // rather than failing after the form is filled in.
@@ -789,7 +1029,7 @@ const roster = true;
     .then((response) => response.ok ? response.json() : { authenticated: false })
     .then((data) => { viewer = data || { authenticated: false }; })
     .catch(() => {});
-  const canBook = () => viewer.authenticated && (viewer.role === 'student' || viewer.role === 'parent');
+  const canBook = () => !sandboxMode && viewer.authenticated && (viewer.role === 'student' || viewer.role === 'parent');
 
   // ----- Profile dialog ----------------------------------------------------
   const profileDialog = document.querySelector('#profile-dialog') as HTMLDialogElement | null;
@@ -805,12 +1045,13 @@ const roster = true;
     const scores = scoresOf(tutor);
     const slots = slotsOf(tutor);
     const video = embeddableVideo(safeAsset(tutor.video_url));
+    const photo = safeAsset(tutor.photo_url) || cardPhoto;
 
     profileBody.innerHTML = `
       <header class="pf__head">
         <div class="pf__portrait">
-          <img src="${cardPhoto}" alt="" width="320" height="320" />
-          <span class="pf__verified">${verifyIcon}${tr('Verified', '검증 완료')}</span>
+          <img src="${photo}" alt="" width="320" height="320" />
+          <span class="pf__verified">${verifyIcon}${sandboxMode ? tr('Preview', '미리보기') : tr('Verified', '검증 완료')}</span>
         </div>
         <div class="pf__ident">
           <h2 class="pf__name" id="profile-name">${escapeHtml(name)}</h2>
@@ -824,8 +1065,8 @@ const roster = true;
       </header>
 
       <dl class="pf__meta">
-        <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(tutor.languages || tr('Korean, English', '한국어, 영어'))}</dd></div>
-        <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(tutor.lesson_format || tr('Online 1:1', '온라인 1:1'))}</dd></div>
+        <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(languagesOf(tutor))}</dd></div>
+        <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(lessonFormatOf(tutor))}</dd></div>
       </dl>
 
       <section class="pf__block">
@@ -857,8 +1098,8 @@ const roster = true;
       </section>
 
       <div class="pf__foot">
-        <button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}">
-          ${calendarIcon}${tr('Request a match', '매칭 요청하기')}
+        <button type="button" class="tcardx__book" ${sandboxMode ? 'disabled aria-disabled="true"' : `data-book="${escapeHtml(tutor.registry_id)}"`}>
+          ${calendarIcon}${sandboxMode ? tr('Preview only', '미리보기 전용') : tr('Request a match', '매칭 요청하기')}
         </button>
       </div>`;
 
@@ -964,6 +1205,7 @@ const roster = true;
 
   bookForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (sandboxMode) return;
     if (!bookForm.reportValidity() || !bookingTutor) return;
 
     const data = new FormData(bookForm);

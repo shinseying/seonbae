@@ -42,6 +42,102 @@ test("course names infer IB and AP categories without a separate category column
   assert.deepEqual(result.rows.map((row) => row.category), ["ib", "ap"]);
 });
 
+test("Google Forms tutor applications map to private, inactive card drafts", () => {
+  const result = parseTutorSpreadsheet([
+    [
+      "Timestamp",
+      "재학중인 대학 (University Currently Enrolled In)",
+      "이름 (Name)",
+      "학교 이메일 (University Email)",
+      "전화번호 (Phone Number)",
+      "전공과 학년 (Course and Year)",
+      "지원 커리큘럼 (Curricula you can teach)",
+      "과목과 성적 (Subjects and your scores)",
+      "Languages you teach in 수업 가능 언어",
+      "주당 수업 가능 시간 (Hours per week you can teach)",
+      "Pick one subject you teach. What do students get wrong most often, and how do you fix it? 가르칠 과목 하나를 골라, 학생들이 가장 많이 틀리는 부분과 그것을 어떻게 잡아 주는지 적어 주세요.",
+      "성적 증명서 (Score Report)",
+      "재학증명서 Certificate of enrollment (any proof that you are a SKY student)",
+      "선배를 어떻게 알게 되셨나요? (How did you hear about Seonbae?)",
+      "확인 (Confirm)",
+      "수업 과정을 완료하는데 소요되는 시간을 적어주세요.",
+      "Email Address",
+    ],
+    [
+      "2026-09-03 10:00",
+      "서울대학교 (Seoul National University)",
+      "홍길동",
+      "student@example.edu",
+      "01012345678",
+      "수학교육과 2학년",
+      "AP, SAT, TOEFL",
+      "AP Calculus BC - 5\nSAT - 1570\nTOEFL - 118",
+      "Korean 한국어, English 영어",
+      "6–10",
+      "",
+      "https://example.com/private-score-report",
+      "https://example.com/private-enrolment-proof",
+      "지인 소개",
+      "동의합니다",
+      "25 sessions",
+      "personal@example.com",
+    ],
+  ], { existingRegistryIds: ["P-010"], maxDisplayOrder: 10 });
+
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.rows.length, 1);
+  assert.deepEqual(result.rows[0], {
+    registry_id: "P-011",
+    name: "홍길동",
+    exam: "AP, SAT, TOEFL",
+    score: "1570",
+    category: "ap",
+    university: "서울대학교",
+    university_en: "Seoul National University",
+    photo_url: null,
+    banner_url: "/university-snu-banner.png",
+    zoom_host_email: null,
+    display_order: 11,
+    active: false,
+    subjectScores: [
+      { subject: "AP Calculus BC", score: "5" },
+      { subject: "SAT", score: "1570" },
+      { subject: "TOEFL", score: "118" },
+    ],
+    availability: {},
+    bio: "전공 및 학년 · 수학교육과 2학년",
+    bioEn: null,
+    videoUrl: null,
+    languages: "Korean 한국어, English 영어",
+    lessonFormat: "온라인 1:1 · 주당 6–10시간 가능",
+    sourceRow: 2,
+  });
+  assert.equal("phone" in result.rows[0], false);
+  assert.equal("email" in result.rows[0], false);
+});
+
+test("aggregate A-Level results become a concise representative score", () => {
+  const result = parseTutorSpreadsheet([
+    [
+      "재학중인 대학 (University Currently Enrolled In)",
+      "이름 (Name)",
+      "지원 커리큘럼 (Curricula you can teach)",
+      "과목과 성적 (Subjects and your scores)",
+    ],
+    [
+      "고려대학교 (Korea University)",
+      "테스트 튜터",
+      "A-Level",
+      "Maths, Further Maths, Computer Science, Physics - 4A*",
+    ],
+  ]);
+
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.rows[0].score, "4A*");
+  assert.equal(result.rows[0].category, "alevel");
+  assert.equal(result.rows[0].university_en, "Korea University");
+});
+
 test("missing required columns and duplicate IDs block the import", () => {
   const missing = parseTutorSpreadsheet([["이름"], ["김선배"]]);
   assert.equal(missing.rows.length, 0);
