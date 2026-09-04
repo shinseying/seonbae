@@ -91,6 +91,32 @@ function emptyTutor(registryId: string, displayOrder: number): AdminTutor {
   };
 }
 
+// Keep the sandbox representative of the current directory without carrying
+// operational account data (such as the tutor's Zoom host email) into browser
+// storage. These are all fields that can already appear on a public card.
+function tutorPreviewSnapshot(tutor: AdminTutor) {
+  return {
+    registry_id: tutor.registry_id,
+    name: tutor.name,
+    exam: tutor.exam,
+    score: tutor.score,
+    category: tutor.category,
+    university: tutor.university,
+    university_en: tutor.university_en,
+    photo_url: tutor.photo_url,
+    banner_url: tutor.banner_url,
+    display_order: tutor.display_order,
+    active: tutor.active,
+    subject_scores: tutor.subject_scores ?? [],
+    availability: tutor.availability ?? {},
+    bio: tutor.bio,
+    bio_en: tutor.bio_en,
+    video_url: tutor.video_url,
+    languages: tutor.languages,
+    lesson_format: tutor.lesson_format,
+  };
+}
+
 // Registry numbers on manually added cards run P-001, P-002, ... Suggest the
 // next free one; the admin can still type something else.
 function nextRegistryId(tutors: AdminTutor[]) {
@@ -112,6 +138,7 @@ export default function AdminTutorEditor({
   accounts: AdminAccount[];
 }) {
   const [tutors, setTutors] = useState(initialTutors);
+  const [committedTutors, setCommittedTutors] = useState(initialTutors);
   const [links, setLinks] = useState(accounts);
   // The availability inputs are free text, but the model behind them is an
   // array. Round-tripping through split/join ate the comma the moment it was
@@ -192,8 +219,8 @@ export default function AdminTutorEditor({
       const { readSheet } = await import("read-excel-file/browser");
       const sheet = await readSheet(file);
       const parsed = parseTutorSpreadsheet(sheet as unknown[][], {
-        existingRegistryIds: tutors.map((tutor) => tutor.registry_id),
-        maxDisplayOrder: tutors.reduce((max, tutor) => Math.max(max, tutor.display_order), 0),
+        existingRegistryIds: committedTutors.map((tutor) => tutor.registry_id),
+        maxDisplayOrder: committedTutors.reduce((max, tutor) => Math.max(max, tutor.display_order), 0),
       });
       if (parsed.errors.length) {
         setImportPreview({ fileName: file.name, ...parsed });
@@ -208,7 +235,8 @@ export default function AdminTutorEditor({
         version: 1,
         fileName: file.name,
         createdAt: Date.now(),
-        existingRegistryIds: tutors.map((tutor) => tutor.registry_id),
+        existingRegistryIds: committedTutors.map((tutor) => tutor.registry_id),
+        existingRows: committedTutors.map(tutorPreviewSnapshot),
         rows: parsed.rows,
       }));
       setImportMessage(`${parsed.rows.length}명의 샌드박스 미리보기를 여는 중입니다…`);
@@ -246,11 +274,13 @@ export default function AdminTutorEditor({
     setDayText({});
     if (isDraft) {
       setTutors((current) => [...current, result].sort(byDisplayOrder));
+      setCommittedTutors((current) => [...current, result].sort(byDisplayOrder));
       setDraft(null);
       setSelectedId(result.registry_id);
       setMessage(`${result.name} 튜터 카드를 만들었습니다. ${result.active ? "공개 명부에 바로 표시됩니다." : "‘공개 명부에 표시’를 켜면 사이트에 나타납니다."}`);
     } else {
       setTutors((current) => current.map((tutor) => tutor.registry_id === selectedId ? result : tutor));
+      setCommittedTutors((current) => current.map((tutor) => tutor.registry_id === selectedId ? result : tutor));
       setMessage("저장되었습니다. 공개 튜터 명부에도 바로 반영됩니다.");
     }
     setSaving(false);
@@ -317,6 +347,7 @@ export default function AdminTutorEditor({
 
     const remaining = tutors.filter((tutor) => tutor.registry_id !== selected.registry_id);
     setTutors(remaining);
+    setCommittedTutors((current) => current.filter((tutor) => tutor.registry_id !== selected.registry_id));
     setSelectedId(remaining[0]?.registry_id ?? "");
     setMessage(`${selected.name} 튜터를 삭제했습니다.`);
   }
@@ -558,8 +589,9 @@ export default function AdminTutorEditor({
                       {deleting ? "삭제 중..." : "튜터 삭제"}
                     </button>
                   )}
-                  <button type="button" onClick={saveTutor} disabled={saving || deleting}>
-                    {saving ? (isDraft ? "만드는 중..." : "저장 중...") : (isDraft ? "카드 만들기" : "Supabase에 저장")} <span>↗</span>
+                  <button type="button" className={styles.applyButton} onClick={saveTutor} disabled={saving || deleting}>
+                    {saving ? (isDraft ? "만드는 중..." : "반영 중...") : (isDraft ? "카드 만들기 · Supabase에 반영" : "Supabase에 반영")}
+                    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m6.5 12.5 3.4 3.4 7.6-8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
                   </button>
                 </div>
               </footer>

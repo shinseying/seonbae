@@ -51,7 +51,12 @@ const roster = true;
       <div class="sandbox-bar__copy">
         <p class="sandbox-bar__eyebrow">SANDBOX · <T en="Nothing is saved" ko="저장되지 않은 미리보기" /></p>
         <h1 id="sandbox-title"><T en="Review the tutor directory before applying it." ko="실제 반영 전 튜터 명부를 확인하세요." /></h1>
-        <p><span data-sandbox-file></span><span aria-hidden="true"> · </span><strong data-sandbox-count>0</strong> <T en="draft cards" ko="명의 카드 초안" /></p>
+        <p><span data-sandbox-file></span><span aria-hidden="true"> · </span><strong data-sandbox-count>0</strong> <T en="cards in this sandbox" ko="장의 샌드박스 카드" /></p>
+        <div class="sandbox-legend" aria-label="Sandbox card status">
+          <span data-state="existing"><i aria-hidden="true"></i><T en="Existing" ko="현재 카드" /><b data-sandbox-existing-count>0</b></span>
+          <span data-state="new"><i aria-hidden="true"></i><T en="New draft" ko="새 카드" /><b data-sandbox-new-count>0</b></span>
+          <span data-state="update"><i aria-hidden="true"></i><T en="Proposed update" ko="수정 카드" /><b data-sandbox-update-count>0</b></span>
+        </div>
       </div>
       <div class="sandbox-bar__actions">
         <a href="/admin"><T en="Back to admin" ko="관리 화면으로" /></a>
@@ -233,7 +238,14 @@ const roster = true;
   .sandbox-bar__mark { width: 48px; height: 48px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.35); border-radius: 9px; background: rgba(255,255,255,.08); color: var(--yellow); font-family: var(--display); font-size: 1.25rem; font-weight: 900; }
   .sandbox-bar__eyebrow { margin: 0 0 4px; color: var(--yellow); font-size: .68rem; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
   .sandbox-bar__copy h1 { margin: 0; color: inherit; font-size: clamp(1rem,1.6vw,1.28rem); line-height: 1.25; }
-  .sandbox-bar__copy>p:last-child { margin: 5px 0 0; color: rgba(255,255,255,.7); font-size: .78rem; }
+  .sandbox-bar__copy>p:nth-of-type(2) { margin: 5px 0 0; color: rgba(255,255,255,.7); font-size: .78rem; }
+  .sandbox-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 9px; }
+  .sandbox-legend>span { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,.8); font-size: .7rem; font-weight: 700; }
+  .sandbox-legend i { width: 9px; height: 9px; flex: none; border: 2px solid currentColor; border-radius: 50%; background: currentColor; box-shadow: inset 0 0 0 2px var(--ink); }
+  .sandbox-legend b { min-width: 1.35rem; padding: 2px 5px; border-radius: 4px; background: rgba(255,255,255,.1); color: #fff; font-variant-numeric: tabular-nums; text-align: center; }
+  .sandbox-legend [data-state='existing'] { color: #a9d4f5; }
+  .sandbox-legend [data-state='new'] { color: #aee3bc; }
+  .sandbox-legend [data-state='update'] { color: #ffd38a; }
   .sandbox-bar__actions { display: flex; align-items: center; gap: 8px; }
   .sandbox-bar__actions a,.sandbox-bar__actions button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 15px; border-radius: 7px; font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
   .sandbox-bar__actions a { border: 1px solid rgba(255,255,255,.28); color: var(--white); }
@@ -415,6 +427,14 @@ const roster = true;
     color: var(--violet); font-size: .78rem; font-weight: 700;
     box-shadow: var(--shadow-sm);
   }
+  /* Sandbox cards retain the public layout; a restrained outline and a named
+     badge expose what will change without making colour carry the meaning. */
+  .tutor-cell[data-preview-state='existing'] .tcardx { border-color: rgba(53,101,143,.52); box-shadow: 0 14px 36px rgba(53,101,143,.1); }
+  .tutor-cell[data-preview-state='new'] .tcardx { border-color: rgba(47,125,79,.58); box-shadow: 0 14px 36px rgba(47,125,79,.11); }
+  .tutor-cell[data-preview-state='update'] .tcardx { border-color: rgba(168,94,20,.58); box-shadow: 0 14px 36px rgba(168,94,20,.11); }
+  .tutor-cell[data-preview-state='existing'] .tcardx__verified { border-color: #9fc2df; background: #eaf3fb; color: #24527a; }
+  .tutor-cell[data-preview-state='new'] .tcardx__verified { border-color: #9fcbae; background: #e7f4eb; color: #245f3c; }
+  .tutor-cell[data-preview-state='update'] .tcardx__verified { border-color: #e3bd7e; background: #fff2d6; color: #7a460d; }
   .tcardx__avatar {
     width: 118px; height: 118px; border-radius: 50%;
     object-fit: contain; background: var(--violet-soft);
@@ -602,6 +622,7 @@ const roster = true;
 
   @media (max-width: 560px) {
     .sandbox-bar__actions { flex-direction: column; }
+    .sandbox-legend { gap: 7px 10px; }
     .tcardx__meta { grid-template-columns: 1fr; }
     .book, .vid { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
   }
@@ -638,16 +659,21 @@ const roster = true;
     video_url?: string | null;
     languages?: string | null;
     lesson_format?: string | null;
+    display_order?: number;
+    active?: boolean;
   };
+  type PreviewState = 'existing' | 'new' | 'update';
   type PreviewPayload = {
     version: number;
     fileName: string;
     createdAt: number;
     existingRegistryIds?: string[];
+    existingRows?: Array<Record<string, unknown>>;
     rows: Array<Record<string, unknown>>;
   };
   let roster: Tutor[] = [];
   let previewPayload: PreviewPayload | null = null;
+  let previewStates = new Map<string, PreviewState>();
   let cells: HTMLElement[] = [...document.querySelectorAll('.tutor-cell')] as HTMLElement[];
 
   // Astro scopes this page's CSS with a data-astro-cid-* attribute. Cards built
@@ -786,7 +812,7 @@ const roster = true;
     return tr('On request', '문의');
   };
 
-  const renderTutors = (tutors: Tutor[]) => {
+  const renderTutors = (tutors: Tutor[], states = new Map<string, PreviewState>()) => {
     const grid = document.getElementById('tutor-grid');
     if (!grid) return;
     grid.classList.remove('is-loading');
@@ -797,6 +823,12 @@ const roster = true;
       const uni = escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''));
       const bio = bioOf(tutor);
       const photo = safeAsset(tutor.photo_url) || cardPhoto;
+      const previewState = sandboxMode ? states.get(tutor.registry_id) || 'new' : null;
+      const previewLabel = previewState === 'existing'
+        ? tr('Existing card', '현재 카드')
+        : previewState === 'update'
+          ? tr('Proposed update', '수정 카드')
+          : tr('New draft', '새 카드');
 
       const scores = scoresOf(tutor);
       const scoreList = scores.length
@@ -824,9 +856,9 @@ const roster = true;
           <div><dt>${tr('Availability', '가능 시간')}</dt><dd>${availabilitySummary(tutor)}</dd></div>
         </dl>`;
 
-      return `<div class="tutor-cell" data-cats="${categoriesFor(tutor).join(' ')}" data-registry-id="${escapeHtml(tutor.registry_id)}">
+      return `<div class="tutor-cell" data-cats="${categoriesFor(tutor).join(' ')}" data-registry-id="${escapeHtml(tutor.registry_id)}"${previewState ? ` data-preview-state="${previewState}"` : ''}>
         <article class="tcardx card" data-profile="${escapeHtml(tutor.registry_id)}" tabindex="0" role="button" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')}">
-          <span class="tcardx__verified">${verifyIcon}${sandboxMode ? tr('Preview card', '미리보기 카드') : tr('Verified Tutor', '검증 완료')}</span>
+          <span class="tcardx__verified">${verifyIcon}${sandboxMode ? previewLabel : tr('Verified Tutor', '검증 완료')}</span>
           <img class="tcardx__avatar" src="${photo}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="320" height="320" loading="lazy" decoding="async" />
           <h3 class="tcardx__name">${escapeHtml(displayName)}<small>${escapeHtml(altName)}</small></h3>
           <p class="tcardx__uni">${uni}</p>
@@ -904,6 +936,8 @@ const roster = true;
       video_url: text(raw.videoUrl ?? raw.video_url) || null,
       languages: text(raw.languages) || null,
       lesson_format: text(raw.lessonFormat ?? raw.lesson_format) || null,
+      display_order: Number.isFinite(Number(raw.display_order)) ? Number(raw.display_order) : 0,
+      active: raw.active === true,
     };
   };
 
@@ -917,6 +951,9 @@ const roster = true;
     const sandbox = document.getElementById('tutor-sandbox');
     const fileName = sandbox?.querySelector('[data-sandbox-file]') as HTMLElement | null;
     const previewCount = sandbox?.querySelector('[data-sandbox-count]') as HTMLElement | null;
+    const existingCountEl = sandbox?.querySelector('[data-sandbox-existing-count]') as HTMLElement | null;
+    const newCountEl = sandbox?.querySelector('[data-sandbox-new-count]') as HTMLElement | null;
+    const updateCountEl = sandbox?.querySelector('[data-sandbox-update-count]') as HTMLElement | null;
     const applyButton = sandbox?.querySelector('[data-sandbox-apply]') as HTMLButtonElement | null;
     const status = sandbox?.querySelector('[data-sandbox-status]') as HTMLElement | null;
     if (sandbox) sandbox.hidden = false;
@@ -932,6 +969,9 @@ const roster = true;
       finishGridLoading();
       if (countEl) countEl.textContent = '0';
       if (previewCount) previewCount.textContent = '0';
+      if (existingCountEl) existingCountEl.textContent = '0';
+      if (newCountEl) newCountEl.textContent = '0';
+      if (updateCountEl) updateCountEl.textContent = '0';
       if (fileName) fileName.textContent = tr('No valid preview file', '유효한 미리보기 파일 없음');
       if (status) { status.textContent = message; status.dataset.tone = 'error'; }
       document.documentElement.dataset.tutorSandbox = 'ready';
@@ -948,17 +988,36 @@ const roster = true;
           '미리보기 정보가 없거나 만료되었습니다. 관리 화면으로 돌아가 엑셀 파일을 다시 선택해 주세요.',
         ));
       } else {
-        const tutors = parsed.rows.map(normalizePreviewRow).filter((row): row is Tutor => Boolean(row));
-        if (tutors.length !== parsed.rows.length || !tutors.length) {
+        const importedTutors = parsed.rows.map(normalizePreviewRow).filter((row): row is Tutor => Boolean(row));
+        if (importedTutors.length !== parsed.rows.length || !importedTutors.length) {
           showSandboxError(tr(
             'Some card data could not be read. Return to admin and choose the file again.',
             '일부 카드 정보를 읽지 못했습니다. 관리 화면에서 파일을 다시 선택해 주세요.',
           ));
         } else {
+          const existingTutors = (Array.isArray(parsed.existingRows) ? parsed.existingRows : [])
+            .map(normalizePreviewRow)
+            .filter((row): row is Tutor => Boolean(row));
+          const knownExistingIds = new Set((parsed.existingRegistryIds || []).map(String));
+          const merged = new Map(existingTutors.map((tutor) => [tutor.registry_id, tutor]));
+          previewStates = new Map(existingTutors.map((tutor) => [tutor.registry_id, 'existing' as PreviewState]));
+          importedTutors.forEach((tutor) => {
+            previewStates.set(tutor.registry_id, merged.has(tutor.registry_id) || knownExistingIds.has(tutor.registry_id) ? 'update' : 'new');
+            merged.set(tutor.registry_id, tutor);
+          });
+          const tutors = [...merged.values()].sort((a, b) =>
+            (a.display_order || Number.MAX_SAFE_INTEGER) - (b.display_order || Number.MAX_SAFE_INTEGER)
+            || a.registry_id.localeCompare(b.registry_id),
+          );
+          const counts = { existing: 0, new: 0, update: 0 };
+          previewStates.forEach((state) => { counts[state] += 1; });
           previewPayload = parsed;
-          renderTutors(tutors);
+          renderTutors(tutors, previewStates);
           if (fileName) fileName.textContent = parsed.fileName || tr('Excel import', '엑셀 가져오기');
           if (previewCount) previewCount.textContent = String(tutors.length);
+          if (existingCountEl) existingCountEl.textContent = String(counts.existing);
+          if (newCountEl) newCountEl.textContent = String(counts.new);
+          if (updateCountEl) updateCountEl.textContent = String(counts.update);
           if (applyButton) applyButton.disabled = false;
           if (status) status.textContent = tr(
             'Private application fields are excluded. Booking controls are disabled in this preview.',

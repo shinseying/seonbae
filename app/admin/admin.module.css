@@ -85,6 +85,11 @@
 .actionButtons{display:flex;align-items:center;gap:10px}
 .deleteButton{background:transparent!important;color:#b3452a!important;border:1px solid rgba(179,69,42,.4)!important;box-shadow:none!important}
 .deleteButton:disabled{opacity:.5}
+.actions .applyButton{min-width:220px;min-height:56px;padding:0 10px 0 22px!important;background:#2f7d4f!important;border:1px solid #2f7d4f!important;color:#fff!important;justify-content:space-between;box-shadow:0 12px 26px rgba(47,125,79,.2);font-size:.8rem!important;transition:transform .18s ease,background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
+.actions .applyButton:hover:not(:disabled){transform:translateY(-1px);background:#286c45!important;border-color:#286c45!important;box-shadow:0 15px 30px rgba(47,125,79,.26)}
+.actions .applyButton:active:not(:disabled){transform:translateY(0);box-shadow:0 7px 16px rgba(47,125,79,.18)}
+.actions .applyButton:focus-visible{outline:3px solid rgba(47,125,79,.26);outline-offset:3px}
+.actions .applyButton span svg{width:17px;height:17px;display:block}
 
 /* Add-a-card button. In the roster it is a direct child of .tutorList, which
    lays its buttons out as a three-column grid, so it opts back out to a plain
@@ -102,3 +107,6 @@
 .assignRow button{min-height:42px;padding:0 14px;border:1px solid var(--line);border-radius:7px;background:transparent;color:#8a8279;font-size:.68rem;font-weight:700;cursor:pointer}
 .assignRow button:hover:not(:disabled){border-color:var(--red);color:var(--red)}
 .assignRow button:disabled,.assignRow select:disabled{opacity:.5;cursor:wait}
+
+@media(max-width:680px){.actionButtons{width:100%;flex-direction:column-reverse;align-items:stretch}.actions .applyButton{width:100%;min-width:0}.deleteButton{width:100%;justify-content:center!important}}
+@media(prefers-reduced-motion:reduce){.actions .applyButton{transition:none}}
