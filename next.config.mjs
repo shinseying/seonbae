@@ -80,6 +80,25 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Authentication screens must always come from the active deployment.
+        // Public CDN caching can leave a different device on an older login UI
+        // even though the authentication API has already been updated.
+        source: "/login",
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: "/login/:path*",
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: "/admin-verify",
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: "/admin-shell",
+        headers: privateNoStoreHeaders,
+      },
+      {
         source: "/portal/tutor/contract",
         headers: [
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'" },
@@ -118,5 +137,14 @@ const nextConfig = {
     ];
   },
 };
+
+const privateNoStoreHeaders = [
+  {
+    key: "Cache-Control",
+    value: "private, no-store, max-age=0, must-revalidate",
+  },
+  { key: "Pragma", value: "no-cache" },
+  { key: "Expires", value: "0" },
+];
 
 export default nextConfig;
