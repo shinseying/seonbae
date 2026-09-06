@@ -1,6 +1,9 @@
 ---
 import Base from '../layouts/Base.astro';
 import T from '../components/T.astro';
+import { localeFromPath } from '../i18n/locale';
+
+const isEnglish = localeFromPath(Astro.url.pathname) === 'en';
 
 const criteria = [
   { t: { en: 'SKY students', ko: 'SKY 재학생' }, c: { en: 'Students who study at Seoul National University, Yonsei University, or Korea University.', ko: '서울대학교, 연세대학교, 고려대학교에 재학 중인 학생.' } },
@@ -99,7 +102,7 @@ const keep = [
        is the only thing this page asks anyone to do. -->
   <section class="section bg-cream apply" id="apply">
     <div class="container">
-      <form class="apply-form card reveal" novalidate>
+      <form class="apply-form card reveal" data-thank-you-path={isEnglish ? '/en/become-a-tutor/thank-you' : '/become-a-tutor/thank-you'} novalidate>
         <h2 class="h2 apply-form__title"><T en="Apply to tutor." ko="지원서 작성" /></h2>
 
         <input type="text" name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
@@ -125,14 +128,14 @@ const keep = [
           <div class="form-field">
             <label for="ap-uni"><T en="University" ko="대학" /></label>
             <select id="ap-uni" name="university" class="form-control" required>
-              <option value="서울대학교" data-label-en="Seoul National University" data-label-ko="서울대학교">서울대학교</option>
-              <option value="고려대학교" data-label-en="Korea University" data-label-ko="고려대학교">고려대학교</option>
-              <option value="연세대학교" data-label-en="Yonsei University" data-label-ko="연세대학교">연세대학교</option>
+              <option value="서울대학교">{isEnglish ? 'Seoul National University' : '서울대학교'}</option>
+              <option value="고려대학교">{isEnglish ? 'Korea University' : '고려대학교'}</option>
+              <option value="연세대학교">{isEnglish ? 'Yonsei University' : '연세대학교'}</option>
             </select>
           </div>
           <div class="form-field">
             <label for="ap-major"><T en="Course and year" ko="전공과 학년" /></label>
-            <input id="ap-major" name="major" class="form-control" type="text" required maxlength="120" data-placeholder-en="International Studies, 2nd year" data-placeholder-ko="국제학부 2학년" />
+            <input id="ap-major" name="major" class="form-control" type="text" required maxlength="120" placeholder={isEnglish ? 'International Studies, 2nd year' : '국제학부 2학년'} />
           </div>
         </div>
 
@@ -152,17 +155,17 @@ const keep = [
           </div>
           <div class="form-field">
             <label for="ap-languages"><T en="Languages you teach in" ko="수업 가능 언어" /></label>
-            <input id="ap-languages" name="languages" class="form-control" type="text" required maxlength="80" data-placeholder-en="Korean, English" data-placeholder-ko="한국어, 영어" />
+            <input id="ap-languages" name="languages" class="form-control" type="text" required maxlength="80" placeholder={isEnglish ? 'Korean, English' : '한국어, 영어'} />
           </div>
         </div>
 
         <div class="form-field">
           <label for="ap-format"><T en="Lesson format you prefer" ko="선호하는 수업 형식" /></label>
           <select id="ap-format" name="lessonFormat" class="form-control" required>
-            <option value="온라인 1:1" data-label-en="Online 1:1" data-label-ko="온라인 1:1">온라인 1:1</option>
-            <option value="온라인 소그룹" data-label-en="Online small group" data-label-ko="온라인 소그룹">온라인 소그룹</option>
-            <option value="대면 1:1" data-label-en="In person 1:1" data-label-ko="대면 1:1">대면 1:1</option>
-            <option value="온라인·대면 모두" data-label-en="Online or in person" data-label-ko="온라인·대면 모두">온라인·대면 모두</option>
+            <option value="온라인 1:1">{isEnglish ? 'Online 1:1' : '온라인 1:1'}</option>
+            <option value="온라인 소그룹">{isEnglish ? 'Online small group' : '온라인 소그룹'}</option>
+            <option value="대면 1:1">{isEnglish ? 'In person 1:1' : '대면 1:1'}</option>
+            <option value="온라인·대면 모두">{isEnglish ? 'Online or in person' : '온라인·대면 모두'}</option>
           </select>
         </div>
 
@@ -189,7 +192,7 @@ const keep = [
 
         <div class="form-field">
           <label for="ap-intro"><T en="Teaching experience" ko="소개 및 수업 경험" /></label>
-          <textarea id="ap-intro" name="introduction" class="form-control" required rows="5" maxlength="2000" data-placeholder-en="Why you are applying, what you have taught, and when you are free." data-placeholder-ko="지원 동기와 수업 경험, 가능한 시간대를 적어 주세요."></textarea>
+          <textarea id="ap-intro" name="introduction" class="form-control" required rows="5" maxlength="2000" placeholder={isEnglish ? 'Why you are applying, what you have taught, and when you are free.' : '지원 동기와 수업 경험, 가능한 시간대를 적어 주세요.'}></textarea>
         </div>
 
         <button type="submit" class="btn btn--primary btn--lg apply-submit">
@@ -326,19 +329,6 @@ const keep = [
   const language = () => document.documentElement.dataset.lang === 'en' ? 'en' : 'ko';
   const t = (en: string, ko: string) => language() === 'en' ? en : ko;
 
-  const refreshLanguage = () => {
-    const lang = language();
-    document.querySelectorAll<HTMLOptionElement>('[data-label-en]').forEach((option) => {
-      option.textContent = lang === 'en' ? (option.dataset.labelEn || '') : (option.dataset.labelKo || '');
-    });
-    document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-placeholder-en]').forEach((field) => {
-      field.placeholder = lang === 'en' ? (field.dataset.placeholderEn || '') : (field.dataset.placeholderKo || '');
-    });
-  };
-  refreshLanguage();
-  document.querySelectorAll('[data-set-lang]').forEach((button) => {
-    button.addEventListener('click', () => requestAnimationFrame(refreshLanguage));
-  });
 
   // One row per subject the applicant wants to teach: the score and its proof
   // travel together, so the reviewer never has to match a file to a subject.
@@ -353,10 +343,10 @@ const keep = [
     row.className = 'subject-row';
     row.innerHTML = `
       <input class="form-control subject-row__name" type="text" name="subjectName" required maxlength="80"
-        data-placeholder-en="Subject" data-placeholder-ko="과목"
+        placeholder="${t('Subject', '과목')}"
         aria-label="${t('Subject', '과목')}" />
       <input class="form-control subject-row__score" type="text" name="subjectScore" required maxlength="24"
-        data-placeholder-en="Score" data-placeholder-ko="성적"
+        placeholder="${t('Score', '성적')}"
         aria-label="${t('Score', '성적')}" />
       <button type="button" class="subject-remove" aria-label="${t('Remove subject', '과목 삭제')}">&times;</button>
     `;
@@ -366,7 +356,6 @@ const keep = [
       if (rowHost.children.length === 0) addSubjectRow();
     });
     rowHost.appendChild(row);
-    refreshLanguage();
   };
 
   addRowButton?.addEventListener('click', addSubjectRow);
@@ -403,7 +392,7 @@ const keep = [
       const handle = result && result.id && result.token
         ? `?id=${encodeURIComponent(result.id)}&t=${encodeURIComponent(result.token)}`
         : '';
-      window.location.assign(`/become-a-tutor/thank-you${handle}`);
+      window.location.assign(`${form.dataset.thankYouPath || '/become-a-tutor/thank-you'}${handle}`);
       return;
     } catch (error) {
       show(error instanceof Error ? error.message : t('Please try again shortly.', '잠시 후 다시 시도해 주세요.'), 'error');

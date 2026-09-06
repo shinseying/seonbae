@@ -1,6 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
 import T from '../../components/T.astro';
+import { localeFromPath, localePath } from '../../i18n/locale';
+const homeHref = localePath('/', localeFromPath(Astro.url.pathname));
 ---
 
 <Base
@@ -50,7 +52,7 @@ import T from '../../components/T.astro';
           <p class="ty-status" role="status" aria-live="polite" data-status hidden></p>
         </form>
 
-        <a class="textlink ty-home" href="/"><span><T en="Back to home" ko="홈으로 돌아가기" /></span>
+        <a class="textlink ty-home" href={homeHref}><span><T en="Back to home" ko="홈으로 돌아가기" /></span>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
       </div>

@@ -3,6 +3,7 @@ import Contour from './Contour.astro';
 import Avatar from './Avatar.astro';
 import T from './T.astro';
 import { ui } from '../i18n/home';
+import { localeFromPath, localePath } from '../i18n/locale';
 
 interface Props {
   eyebrow?: string;
@@ -18,6 +19,8 @@ const {
   ctaLabel = 'Get matched',
   ctaHref = '/get-matched',
 } = Astro.props;
+const locale = localeFromPath(Astro.url.pathname);
+const link = (href: string) => localePath(href, locale);
 
 const orbit = [
   { name: 'Jiwoo H.', accent: 'mint' as const },
@@ -44,11 +47,11 @@ const orbit = [
         <h2 class="h2 conv-heading"><T en={ui.conversion.heading.en} ko={ui.conversion.heading.ko} /></h2>
         <p class="lead conv-copy"><T en={ui.conversion.copy.en} ko={ui.conversion.copy.ko} /></p>
         <div class="cta-row conv-cta">
-          <a href="/get-matched" class="btn btn--primary btn--lg">
+          <a href={link('/get-matched')} class="btn btn--primary btn--lg">
             <span><T en={ui.conversion.cta.en} ko={ui.conversion.cta.ko} /></span>
             <span class="btn__disc" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </a>
-          <a href="/how-it-works" class="textlink">
+          <a href={link('/how-it-works')} class="textlink">
             <span><T en={ui.seeHow.en} ko={ui.seeHow.ko} /></span>
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>

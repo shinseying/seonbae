@@ -3,6 +3,11 @@ import Base from '../layouts/Base.astro';
 import PageHero from '../components/PageHero.astro';
 import Eyebrow from '../components/Eyebrow.astro';
 import T from '../components/T.astro';
+import { localeFromPath, localePath } from '../i18n/locale';
+
+const locale = localeFromPath(Astro.url.pathname);
+const link = (href: string) => localePath(href, locale);
+const isEnglish = locale === 'en';
 
 const subjects = [
   ['IB Diploma', 'IB 디플로마'], ['Advanced Placement', 'AP'], ['A Level', 'A레벨'],
@@ -10,7 +15,7 @@ const subjects = [
 ];
 const levels = [['Lower secondary', '중등 과정'], ['IGCSE', 'IGCSE'], ['IB or A Level', 'IB 또는 A레벨'], ['University prep', '대학 입시 준비'], ['Adult learner', '성인 학습자']];
 ---
-<Base title="Contact — Seonbae" active="/contact" showConversion={false}>
+<Base active="/contact" showConversion={false}>
   <PageHero
     eyebrow="Contact"
     eyebrowKo="문의"
@@ -30,7 +35,7 @@ const levels = [['Lower secondary', '중등 과정'], ['IGCSE', 'IGCSE'], ['IB o
         <div class="form-grid">
           <div class="form-field">
             <label for="student"><T en="Student name" ko="학생 이름" /> <span class="req">*</span></label>
-            <input class="form-control" id="student" name="student" type="text" required data-placeholder-en="Who are the lessons for?" data-placeholder-ko="수업을 받을 학생 이름" />
+            <input class="form-control" id="student" name="student" type="text" required placeholder={isEnglish ? 'Who are the lessons for?' : '수업을 받을 학생 이름'} />
           </div>
           <div class="form-field">
             <label for="email"><T en="Parent or learner email" ko="학부모 또는 학생 이메일" /> <span class="req">*</span></label>
@@ -42,32 +47,32 @@ const levels = [['Lower secondary', '중등 과정'], ['IGCSE', 'IGCSE'], ['IB o
           <div class="form-field">
             <label for="level"><T en="Grade or level" ko="학년·과정" /></label>
             <select class="form-control" id="level" name="level">
-              <option value="" selected data-label-en="Select a level" data-label-ko="과정을 선택하세요">과정을 선택하세요</option>
-              {levels.map((l) => <option value={l[0]} data-label-en={l[0]} data-label-ko={l[1]}>{l[1]}</option>)}
+              <option value="" selected>{isEnglish ? 'Select a level' : '과정을 선택하세요'}</option>
+              {levels.map((l) => <option value={l[0]}>{isEnglish ? l[0] : l[1]}</option>)}
             </select>
           </div>
           <div class="form-field">
             <label for="subject"><T en="Subject" ko="과목" /></label>
             <select class="form-control" id="subject" name="subject">
-              <option value="" selected data-label-en="Select a subject" data-label-ko="과목을 선택하세요">과목을 선택하세요</option>
-              {subjects.map((s) => <option value={s[0]} data-label-en={s[0]} data-label-ko={s[1]}>{s[1]}</option>)}
+              <option value="" selected>{isEnglish ? 'Select a subject' : '과목을 선택하세요'}</option>
+              {subjects.map((s) => <option value={s[0]}>{isEnglish ? s[0] : s[1]}</option>)}
             </select>
           </div>
         </div>
 
         <div class="form-field">
           <label for="goal"><T en="What is the goal?" ko="학습 목표" /></label>
-          <input class="form-control" id="goal" name="goal" type="text" data-placeholder-en="A grade, a test score, or steadier confidence" data-placeholder-ko="목표 등급, 시험 점수 또는 자신감 회복" />
+          <input class="form-control" id="goal" name="goal" type="text" placeholder={isEnglish ? 'A grade, a test score, or steadier confidence' : '목표 등급, 시험 점수 또는 자신감 회복'} />
         </div>
 
         <div class="form-field">
           <label for="times"><T en="Preferred times" ko="희망 시간" /></label>
-          <input class="form-control" id="times" name="times" type="text" data-placeholder-en="Which evenings or weekends suit you, and your time zone" data-placeholder-ko="가능한 평일 저녁이나 주말, 거주 지역의 시간대" />
+          <input class="form-control" id="times" name="times" type="text" placeholder={isEnglish ? 'Which evenings or weekends suit you, and your time zone' : '가능한 평일 저녁이나 주말, 거주 지역의 시간대'} />
         </div>
 
         <div class="form-field">
           <label for="context"><T en="Anything else" ko="추가로 알려주실 내용" /></label>
-          <textarea class="form-control" id="context" name="context" data-placeholder-en="Recent grades, a deadline coming up, or a subject that has been a struggle" data-placeholder-ko="최근 성적, 다가오는 마감일 또는 어려움을 겪는 과목"></textarea>
+          <textarea class="form-control" id="context" name="context" placeholder={isEnglish ? 'Recent grades, a deadline coming up, or a subject that has been a struggle' : '최근 성적, 다가오는 마감일 또는 어려움을 겪는 과목'}></textarea>
         </div>
 
         <button type="submit" class="btn btn--primary btn--lg contact-submit">
@@ -93,7 +98,7 @@ const levels = [['Lower secondary', '중등 과정'], ['IGCSE', 'IGCSE'], ['IB o
         <div class="contact-card contact-card--soft">
           <h2 class="h3" style="font-size:1.25rem"><T en="Ready to start?" ko="바로 시작할까요?" /></h2>
           <p class="body" style="margin-top:10px"><T en="If you already know what you need, the matching form is the fastest way in." ko="필요한 내용을 알고 있다면 매칭 신청서가 가장 빠른 방법입니다." /></p>
-          <a href="/get-matched" class="textlink" style="margin-top:14px"><T en="Get matched" ko="매칭 시작하기" />
+          <a href={link('/get-matched')} class="textlink" style="margin-top:14px"><T en="Get matched" ko="매칭 시작하기" />
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
         </div>

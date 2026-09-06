@@ -9,9 +9,11 @@ interface Props {
 const { tone = 'ink', href = '/', class: cls = '' } = Astro.props;
 const wordColor = tone === 'light' ? 'var(--on-dark)' : 'var(--ink)';
 const mark = tone === 'light' ? '/logo-light.png' : '/logo.png';
+import { localeFromPath, localePath } from '../i18n/locale';
+const resolvedHref = localePath(href, localeFromPath(Astro.url.pathname));
 ---
 
-<a href={href} class={`logo ${cls}`} aria-label={href === '/' ? 'Seonbae home' : 'About Seonbae'}>
+<a href={resolvedHref} class={`logo ${cls}`} aria-label={href === '/' ? 'Seonbae home' : 'About Seonbae'}>
   <img src={mark} alt="" class="logo__img" width="58" height="45" />
   <span class="logo__word" style={`color:${wordColor}`}>Seonbae</span>
 </a>

@@ -6,11 +6,12 @@ import { subjectCount } from '../data/rates';
 import MarkedTitle from './MarkedTitle.astro';
 import T from './T.astro';
 import { subjectsKo } from '../i18n/content';
+import { localeFromPath, localePath } from '../i18n/locale';
 
 interface Props { entry: CollectionEntry<'subjects'>; variant?: 'row' | 'grid'; }
 const { entry, variant = 'row' } = Astro.props;
 const s = entry.data;
-const href = `/subjects/${entry.id}`;
+const href = localePath(`/subjects/${entry.id}`, localeFromPath(Astro.url.pathname));
 const nSubjects = subjectCount(entry.id);
 const ko = subjectsKo[entry.id];
 // The card stays white and the curriculum's colour is carried by a single

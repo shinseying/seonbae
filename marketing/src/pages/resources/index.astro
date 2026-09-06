@@ -5,14 +5,17 @@ import PageHero from '../../components/PageHero.astro';
 import ResourceCard from '../../components/ResourceCard.astro';
 import T from '../../components/T.astro';
 import { resourceCategoryKo } from '../../i18n/content';
+import { localeFromPath, localePath } from '../../i18n/locale';
 
 const resources = (await getCollection('resources')).sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 const [lead, ...rest] = resources;
 
 const categories = ['All', 'Study Skills', 'Subject Help', 'Test Prep', 'Parent Guides', 'Getting Started'];
 const slug = (c: string) => c.toLowerCase().replace(/ /g, '-');
+const locale = localeFromPath(Astro.url.pathname);
+const link = (href: string) => localePath(href, locale);
 ---
-<Base title="Resources - Seonbae" active="/resources">
+<Base active="/resources">
   <PageHero
     eyebrow="Resources"
     eyebrowKo="학습 자료"
@@ -28,7 +31,7 @@ const slug = (c: string) => c.toLowerCase().replace(/ /g, '-');
   {lead && (
     <section class="section bg-white section--tight">
       <div class="container">
-        <a href={`/resources/${lead.id}`} class="lead-resource reveal">
+        <a href={link(`/resources/${lead.id}`)} class="lead-resource reveal">
           <div class="lead-resource__media">
             <ResourceCard entry={lead} variant="standard" />
           </div>
@@ -50,7 +53,7 @@ const slug = (c: string) => c.toLowerCase().replace(/ /g, '-');
         ))}
       </div>
       <p class="no-match" hidden><T en="Nothing here yet in that category. Try another." ko="이 분류에는 아직 글이 없습니다. 다른 분류를 선택해 주세요." /></p>
-      <p class="paid-note reveal"><a href="/mock-exams"><T en="The same research team also builds our mock exams and level tests, which are paid. Everything on this page stays free." ko="같은 연구팀이 유료 모의고사와 레벨 테스트도 만듭니다. 이 페이지의 모든 자료는 계속 무료입니다." /></a></p>
+      <p class="paid-note reveal"><a href={link('/mock-exams')}><T en="The same research team also builds our mock exams and level tests, which are paid. Everything on this page stays free." ko="같은 연구팀이 유료 모의고사와 레벨 테스트도 만듭니다. 이 페이지의 모든 자료는 계속 무료입니다." /></a></p>
     </div>
   </section>
 </Base>

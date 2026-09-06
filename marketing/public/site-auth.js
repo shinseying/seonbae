@@ -13,6 +13,10 @@
     return document.documentElement.dataset.lang === 'en' ? 'en' : 'ko';
   }
 
+  function marketingPath(path, lang) {
+    return lang === 'en' ? '/en' + path : path;
+  }
+
   function render(session) {
     var authenticated = Boolean(session && session.authenticated);
     var lang = language();
@@ -22,7 +26,7 @@
       link.removeAttribute('aria-busy');
       link.removeAttribute('aria-hidden');
       link.removeAttribute('tabindex');
-      link.href = authenticated ? '#' : '/login';
+      link.href = authenticated ? '#' : (lang === 'en' ? '/login?lang=en' : '/login');
       link.classList.toggle('is-logout', authenticated);
       var label = link.querySelector('[data-auth-primary-label]');
       if (label) label.textContent = authenticated
@@ -41,14 +45,14 @@
             credentials: 'same-origin',
             headers: { Accept: 'application/json' },
           }).finally(function () {
-            window.location.assign('/');
+            window.location.assign(lang === 'en' ? '/en/' : '/');
           });
         });
       }
     });
 
     document.querySelectorAll('[data-auth-portal]').forEach(function (link) {
-      link.href = authenticated ? (session.destination || '/portal') : '/get-matched';
+      link.href = authenticated ? (session.destination || '/portal') : marketingPath('/get-matched', lang);
       var label = link.querySelector('[data-auth-portal-label]');
       if (label) label.textContent = authenticated
         ? (lang === 'ko' ? '포털' : 'Portal')
@@ -61,7 +65,7 @@
     // back. ?stay=1 still opts out of even the first redirect.
     if (
       authenticated
-      && window.location.pathname === '/'
+      && (window.location.pathname === '/' || window.location.pathname === '/en' || window.location.pathname === '/en/')
       && new URLSearchParams(window.location.search).get('stay') !== '1'
     ) {
       var redirected = false;

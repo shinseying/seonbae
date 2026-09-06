@@ -10,6 +10,7 @@ import { ratesFor, priceRange, type CurriculumSlug } from '../../data/rates';
 import { examsFor } from '../../data/exams';
 import T from '../../components/T.astro';
 import { subjectsKo } from '../../i18n/content';
+import { localeFromPath, localePath } from '../../i18n/locale';
 
 export async function getStaticPaths() {
   const subjects = await getCollection('subjects');
@@ -30,12 +31,14 @@ const curriculumRates = ratesFor(slug);
 const curriculumExams = examsFor(slug);
 const span = curriculumRates.length ? priceRange(curriculumRates) : null;
 const ko = subjectsKo[entry.id];
+const locale = localeFromPath(Astro.url.pathname);
+const link = (href: string) => localePath(href, locale);
 ---
-<Base title={`${s.title} tutoring | Seonbae`} description={s.summary} active="/subjects">
+<Base title={`${s.title} tutoring | Seonbae`} titleKo={`${ko?.title ?? s.title} 과외 | 선배`} description={s.summary} descriptionKo={ko?.summary ?? s.summary} active="/subjects">
   <section class="subj-hero has-contour">
     <div class="container">
       <div class="reveal is-in subj-lead">
-        <a href="/subjects" class="back-link">
+        <a href={link('/subjects')} class="back-link">
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <T en="All subjects" ko="전체 과목" />
         </a>
@@ -61,8 +64,7 @@ const ko = subjectsKo[entry.id];
   <section class="section bg-white">
     <div class="container subj-layout">
       <div class="subj-main prose">
-        <div data-l="en"><Content /></div>
-        <div data-l="ko" class="kr">{(ko?.body ?? []).map((paragraph) => <p>{paragraph}</p>)}</div>
+        {locale === 'en' ? <Content /> : <div class="kr">{(ko?.body ?? []).map((paragraph) => <p>{paragraph}</p>)}</div>}
       </div>
       <aside class="study-scope reveal">
         <h2><T en="What we will study together" ko="함께 공부할 내용" /></h2>

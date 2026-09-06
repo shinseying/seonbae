@@ -4,6 +4,11 @@ import PageHero from '../components/PageHero.astro';
 import T from '../components/T.astro';
 import Icon from '../components/Icon.astro';
 import { leadership, TUTOR_CARD_PHOTO } from '../data/people';
+import { localeFromPath, localePath } from '../i18n/locale';
+
+const locale = localeFromPath(Astro.url.pathname);
+const link = (href: string) => localePath(href, locale);
+const isEnglish = locale === 'en';
 
 const ianTutor = {
   name: 'Ian Bae',
@@ -33,7 +38,19 @@ const filters = [
   { key: 'tests', label: 'Tests & English' },
 ].map((f) => ({ ...f, n: count(f.key) }));
 
-const universities = [...new Set(withCats.map(({ entry }) => entry.university))];
+const universityKey = (value: string) => {
+  if (/Seoul National|서울(?:대학교|대)/i.test(value)) return 'snu';
+  if (/Korea University|고려(?:대학교|대)/i.test(value)) return 'korea';
+  if (/Yonsei|연세(?:대학교|대)/i.test(value)) return 'yonsei';
+  return null;
+};
+const universityLabels = locale === 'en'
+  ? { snu: 'Seoul National University', korea: 'Korea University', yonsei: 'Yonsei University' }
+  : { snu: '서울대학교', korea: '고려대학교', yonsei: '연세대학교' };
+const presentUniversities = new Set(withCats.map(({ entry }) => universityKey(`${entry.university} ${entry.universityKo}`)).filter(Boolean));
+const universities = (['snu', 'korea', 'yonsei'] as const)
+  .filter((key) => presentUniversities.has(key))
+  .map((key) => universityLabels[key]);
 const roster = true;
 const timetableDays = [
   { en: 'M', ko: '월' },
@@ -45,7 +62,7 @@ const timetableDays = [
   { en: 'S', ko: '일' },
 ];
 ---
-<Base title="Tutors | Seonbae" active="/tutors">
+<Base active="/tutors">
   <script is:inline>
     try {
       if (new URLSearchParams(location.search).get('sandbox') === '1') {
@@ -112,7 +129,7 @@ const timetableDays = [
               <li><T en="Enrolment confirmed in writing" ko="재학 증명 확인" /></li>
               <li><T en="Background check cleared" ko="신원 확인 완료" /></li>
             </ul>
-            <a href="/verification" class="textlink rail__link"><T en="Our standard" ko="검증 기준" />
+            <a href={link('/verification')} class="textlink rail__link"><T en="Our standard" ko="검증 기준" />
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
           </div>
@@ -138,7 +155,7 @@ const timetableDays = [
                   <section class="tcardx__availability">
                     <div class="tcardx__availability-head">
                       <b><T en="Availability" ko="가능 시간" /></b>
-                      <span><T en="06–24" ko="06–24시" /></span>
+                      <span><T en="06:00 to 24:00" ko="06시부터 24시" /></span>
                     </div>
                     <div class="weekgrid" role="img" aria-label="No published availability">
                       <div class="weekgrid__head">
@@ -166,7 +183,7 @@ const timetableDays = [
             ))}
           </div>
 
-          <p class="roster__note" id="roster-note" hidden><T en="Only active, verified records from the Seonbae registry appear here." ko="선배 명부에서 활성화된 검증 완료 튜터만 표시됩니다." /> <a href="/verification"><T en="See the standard" ko="검증 기준 보기" /></a></p>
+          <p class="roster__note" id="roster-note" hidden><T en="Only active, verified records from the Seonbae registry appear here." ko="선배 명부에서 활성화된 검증 완료 튜터만 표시됩니다." /> <a href={link('/verification')}><T en="See the standard" ko="검증 기준 보기" /></a></p>
           <p class="no-match" hidden><T en="No tutors in that category yet. Try another, or tell us what you need." ko="이 분류의 튜터가 아직 없습니다. 다른 분류를 보거나 필요한 내용을 알려주세요." /></p>
           <p class="sr-only" role="status" aria-live="polite" id="tutor-live"></p>
         </div>
@@ -185,8 +202,8 @@ const timetableDays = [
           <p class="lead" style="margin-top:16px"><T en="Tell us your subject, level, goals, and availability. A person will review your request and match you with a tutor who fits." ko="과목, 수준, 목표, 가능한 시간을 알려주세요. 담당자가 직접 요청을 확인하고 잘 맞는 선배를 찾아드립니다." /></p>
         </div>
         <div class="closing__do">
-          <a href="/get-matched" class="btn btn--primary btn--lg"><span><T en="Request a consultation" ko="상담 신청" /></span><span class="btn__disc" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
-          <a href="/how-it-works" class="textlink"><span><T en="How matching works" ko="매칭 방식 보기" /></span></a>
+          <a href={link('/get-matched')} class="btn btn--primary btn--lg"><span><T en="Request a consultation" ko="상담 신청" /></span><span class="btn__disc" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
+          <a href={link('/how-it-works')} class="textlink"><span><T en="How matching works" ko="매칭 방식 보기" /></span></a>
         </div>
       </div>
     </div>
@@ -215,20 +232,20 @@ const timetableDays = [
         <input type="text" name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
         <div class="form-field">
           <label for="bk-subject"><T en="Subject" ko="과목" /></label>
-          <input id="bk-subject" name="subject" class="form-control" type="text" required maxlength="100" data-placeholder-en="IB Economics HL" data-placeholder-ko="IB 경제 HL" />
+          <input id="bk-subject" name="subject" class="form-control" type="text" required maxlength="100" placeholder={isEnglish ? 'IB Economics HL' : 'IB 경제 HL'} />
         </div>
         <div class="form-grid">
           <div class="form-field">
             <label for="bk-day"><T en="Preferred day" ko="희망 요일" /></label>
             <select id="bk-day" name="preferredDay" class="form-control" required>
-              <option value="" disabled selected data-label-en="Choose a day" data-label-ko="요일 선택">요일 선택</option>
-              <option value="mon" data-label-en="Monday" data-label-ko="월요일">월요일</option>
-              <option value="tue" data-label-en="Tuesday" data-label-ko="화요일">화요일</option>
-              <option value="wed" data-label-en="Wednesday" data-label-ko="수요일">수요일</option>
-              <option value="thu" data-label-en="Thursday" data-label-ko="목요일">목요일</option>
-              <option value="fri" data-label-en="Friday" data-label-ko="금요일">금요일</option>
-              <option value="sat" data-label-en="Saturday" data-label-ko="토요일">토요일</option>
-              <option value="sun" data-label-en="Sunday" data-label-ko="일요일">일요일</option>
+              <option value="" disabled selected>{isEnglish ? 'Choose a day' : '요일 선택'}</option>
+              <option value="mon">{isEnglish ? 'Monday' : '월요일'}</option>
+              <option value="tue">{isEnglish ? 'Tuesday' : '화요일'}</option>
+              <option value="wed">{isEnglish ? 'Wednesday' : '수요일'}</option>
+              <option value="thu">{isEnglish ? 'Thursday' : '목요일'}</option>
+              <option value="fri">{isEnglish ? 'Friday' : '금요일'}</option>
+              <option value="sat">{isEnglish ? 'Saturday' : '토요일'}</option>
+              <option value="sun">{isEnglish ? 'Sunday' : '일요일'}</option>
             </select>
           </div>
           <div class="form-field">
@@ -821,6 +838,23 @@ const timetableDays = [
   const calendarIcon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7z M4 10h16 M8 3v4 M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const language = () => document.documentElement.dataset.lang === 'en' ? 'en' : 'ko';
   const tr = (en: string, ko: string) => language() === 'en' ? en : ko;
+  type UniversityKey = 'snu' | 'korea' | 'yonsei';
+  const universityKeyOf = (value: string): UniversityKey | null => {
+    if (/Seoul National|서울(?:대학교|대)/i.test(value)) return 'snu';
+    if (/Korea University|고려(?:대학교|대)/i.test(value)) return 'korea';
+    if (/Yonsei|연세(?:대학교|대)/i.test(value)) return 'yonsei';
+    return null;
+  };
+  const universityLabel = (key: UniversityKey) => ({
+    snu: tr('Seoul National University', '서울대학교'),
+    korea: tr('Korea University', '고려대학교'),
+    yonsei: tr('Yonsei University', '연세대학교'),
+  })[key];
+  const cleanUniversity = (tutor: Tutor) => {
+    const source = `${tutor.university_en || ''} ${tutor.university || ''}`.trim();
+    const key = universityKeyOf(source);
+    return key ? universityLabel(key) : tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || '');
+  };
 
   const filterRoster = (btn: HTMLButtonElement) => {
     btn.addEventListener('click', () => {
@@ -941,7 +975,7 @@ const timetableDays = [
     grid.innerHTML = tutors.map((tutor) => {
       const displayName = tr(tutor.name_en || tutor.name, tutor.name);
       const altName = tr(tutor.name, tutor.name_en || tutor.name);
-      const uni = escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''));
+      const uni = escapeHtml(cleanUniversity(tutor));
       const bio = bioOf(tutor);
       const photo = safeAsset(tutor.photo_url) || cardPhoto;
       const previewState = sandboxMode ? states.get(tutor.registry_id) || 'new' : null;
@@ -976,7 +1010,7 @@ const timetableDays = [
           <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(lessonFormatOf(tutor))}</dd></div>
         </dl>
         <section class="tcardx__availability">
-          <div class="tcardx__availability-head"><b>${tr('Availability', '가능 시간')}</b><span>${tr('06–24', '06–24시')}</span></div>
+          <div class="tcardx__availability-head"><b>${tr('Availability', '가능 시간')}</b><span>${tr('06:00 to 24:00', '06시부터 24시')}</span></div>
           ${availabilityTimetable(tutor)}
         </section>`;
 
@@ -1019,9 +1053,12 @@ const timetableDays = [
     if (countEl) countEl.textContent = String(tutors.length);
     const countLabel = document.querySelector('.roster__count span');
     if (countLabel) countLabel.textContent = tr('tutors listed', '명의 튜터');
-    const universities = [...new Set(tutors
-      .map((tutor) => tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''))
-      .filter(Boolean))];
+    const universityKeys = new Set(tutors
+      .map((tutor) => universityKeyOf(`${tutor.university_en || ''} ${tutor.university || ''}`))
+      .filter((key): key is UniversityKey => Boolean(key)));
+    const universities = (['snu', 'korea', 'yonsei'] as UniversityKey[])
+      .filter((key) => universityKeys.has(key))
+      .map(universityLabel);
     const universityLine = document.querySelector('.roster__unis');
     if (universityLine && universities.length) universityLine.textContent = universities.join(' · ');
     const note = document.getElementById('roster-note');
@@ -1082,10 +1119,10 @@ const timetableDays = [
     const status = sandbox?.querySelector('[data-sandbox-status]') as HTMLElement | null;
     if (sandbox) sandbox.hidden = false;
     const heroCopy = document.querySelector('.phero__copy');
-    const heroCopyEn = heroCopy?.querySelector('[data-l="en"]');
-    const heroCopyKo = heroCopy?.querySelector('[data-l="ko"]');
-    if (heroCopyEn) heroCopyEn.textContent = 'These are unpublished drafts generated from the selected spreadsheet. Verification is not complete.';
-    if (heroCopyKo) heroCopyKo.textContent = '선택한 엑셀에서 만든 비공개 카드 초안입니다. 아직 검증 완료 상태가 아닙니다.';
+    if (heroCopy) heroCopy.textContent = tr(
+      'These are unpublished drafts generated from the selected spreadsheet. Verification is not complete.',
+      '선택한 엑셀에서 만든 비공개 카드 초안입니다. 아직 검증 완료 상태가 아닙니다.',
+    );
 
     const showSandboxError = (message: string) => {
       const grid = document.getElementById('tutor-grid');
@@ -1223,7 +1260,7 @@ const timetableDays = [
     if (!tutor || !profileDialog || !profileBody) return;
 
     const name = tr(tutor.name_en || tutor.name, tutor.name);
-    const uni = escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''));
+    const uni = escapeHtml(cleanUniversity(tutor));
     const bio = bioOf(tutor);
     const scores = scoresOf(tutor);
     const video = embeddableVideo(safeAsset(tutor.video_url));
@@ -1445,5 +1482,4 @@ const timetableDays = [
   document.querySelector('[data-close-book]')?.addEventListener('click', () => dialog?.close());
   document.querySelector('[data-close-profile]')?.addEventListener('click', () => profileDialog?.close());
   document.querySelector('[data-close-video]')?.addEventListener('click', () => videoDialog?.close());
-  document.querySelectorAll('[data-set-lang]').forEach((button) => button.addEventListener('click', () => location.reload()));
 </script>

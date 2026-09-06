@@ -4,9 +4,11 @@ import PageHero from '../components/PageHero.astro';
 import Eyebrow from '../components/Eyebrow.astro';
 import Button from '../components/Button.astro';
 import T from '../components/T.astro';
+import { localeFromPath } from '../i18n/locale';
 import { won } from '../lib/format';
 import { MEMBER_DISCOUNT, exams, memberPrice } from '../data/exams';
 
+const locale = localeFromPath(Astro.url.pathname);
 const minTurnaround = Math.min(...exams.map((exam) => exam.turnaround));
 const maxTurnaround = Math.max(...exams.map((exam) => exam.turnaround));
 const discountPercent = Math.round(MEMBER_DISCOUNT * 100);
@@ -61,7 +63,7 @@ const steps = [
   {
     title: 'Find it in your portal',
     titleKo: '포털에서 확인하기',
-    copy: 'Your test is added directly to your Seonbae Portal, ready whenever you are. Everything you need is already there — just open it when you are ready to begin.',
+    copy: 'Your test is added directly to your Seonbae Portal, ready whenever you are. Everything you need is already there. Just open it when you are ready to begin.',
     copyKo: '구매한 시험은 선배 포털에 바로 등록됩니다. 준비가 되면 열어서 시작하기만 하면 됩니다.',
   },
   {
@@ -119,8 +121,9 @@ const piles = [
     secondaryLabelKo="피드백 보기"
     secondaryHref="#report"
   >
-    <span data-l="en">Take the exam before it <span class="mark">counts.</span></span>
-    <span data-l="ko" class="kr"><span class="mark">실전처럼</span> 연습하세요.</span>
+    {locale === 'en'
+      ? <span>Take the exam before it <span class="mark">counts.</span></span>
+      : <span class="kr"><span class="mark">실전처럼</span> 연습하세요.</span>}
   </PageHero>
 
   <section class="section bg-white">
@@ -129,8 +132,8 @@ const piles = [
         <Eyebrow label="What it is" labelKo="모의고사란" />
         <h2 class="h2"><T en="A test that tells you what to do next." ko="시험을 발판 삼으세요." /></h2>
         <div class="what-copy">
-          <p class="lead"><T en="Test, submit, and improve—all through your Seonbae Portal." ko="응시부터 제출, 실력 향상까지 모두 선배 포털에서." /></p>
-          <p class="body"><T en={`You do not need to be taking lessons with Seonbae to use our mock exams or level tests — but if you are currently learning with Seonbae Tutors, you will receive ${discountPercent}% off.`} ko={`모의고사와 레벨 테스트는 선배 수업을 듣지 않아도 이용할 수 있습니다. 선배 튜터와 수업 중이라면 ${discountPercent}% 할인이 적용됩니다.`} /></p>
+          <p class="lead"><T en="Test, submit, and improve, all through your Seonbae Portal." ko="응시부터 제출, 실력 향상까지 모두 선배 포털에서." /></p>
+          <p class="body"><T en={`You do not need to be taking lessons with Seonbae to use our mock exams or level tests. If you are currently learning with Seonbae Tutors, you will receive ${discountPercent}% off.`} ko={`모의고사와 레벨 테스트는 선배 수업을 듣지 않아도 이용할 수 있습니다. 선배 튜터와 수업 중이라면 ${discountPercent}% 할인이 적용됩니다.`} /></p>
         </div>
       </div>
       <dl class="facts reveal" data-delay="80ms">

@@ -1,14 +1,17 @@
+---
+import T from './T.astro';
+---
 <div class="cookie-consent" data-cookie-consent hidden>
   <section class="cookie-consent__banner" aria-labelledby="cookie-consent-title" aria-live="polite">
     <div>
       <p class="cookie-consent__eyebrow">COOKIE CHOICES</p>
-      <h2 id="cookie-consent-title"><span data-l="ko">쿠키 사용을 선택해 주세요.</span><span data-l="en">Choose how we use cookies.</span></h2>
-      <p><span data-l="ko">로그인·보안·포털 연결에 필요한 쿠키는 항상 사용합니다. 분석 및 마케팅 쿠키는 허용할 때만 사용합니다.</span><span data-l="en">Cookies required for login, security, and portal access are always on. Analytics and marketing cookies are used only with your permission.</span></p>
+      <h2 id="cookie-consent-title"><T en="Choose how we use cookies." ko="쿠키 사용을 선택해 주세요." /></h2>
+      <p><T en="Cookies required for login, security, and portal access are always on. Analytics and marketing cookies are used only with your permission." ko="로그인, 보안, 포털 연결에 필요한 쿠키는 항상 사용합니다. 분석 및 마케팅 쿠키는 허용할 때만 사용합니다." /></p>
     </div>
     <div class="cookie-consent__actions">
-      <button type="button" class="cookie-consent__button cookie-consent__button--quiet" data-cookie-necessary><span data-l="ko">필수만 허용</span><span data-l="en">Necessary only</span></button>
-      <button type="button" class="cookie-consent__button cookie-consent__button--quiet" data-cookie-customize><span data-l="ko">선택하기</span><span data-l="en">Customize</span></button>
-      <button type="button" class="cookie-consent__button cookie-consent__button--primary" data-cookie-allow-all><span data-l="ko">모두 허용</span><span data-l="en">Allow all</span></button>
+      <button type="button" class="cookie-consent__button cookie-consent__button--quiet" data-cookie-necessary><T en="Necessary only" ko="필수만 허용" /></button>
+      <button type="button" class="cookie-consent__button cookie-consent__button--quiet" data-cookie-customize><T en="Customize" ko="선택하기" /></button>
+      <button type="button" class="cookie-consent__button cookie-consent__button--primary" data-cookie-allow-all><T en="Allow all" ko="모두 허용" /></button>
     </div>
   </section>
 </div>
@@ -18,26 +21,26 @@
     <div class="cookie-settings__heading">
       <div>
         <p class="cookie-consent__eyebrow">COOKIE SETTINGS</p>
-        <h2 id="cookie-settings-title"><span data-l="ko">쿠키 설정</span><span data-l="en">Cookie settings</span></h2>
+        <h2 id="cookie-settings-title"><T en="Cookie settings" ko="쿠키 설정" /></h2>
       </div>
       <button type="submit" class="cookie-settings__close" aria-label="Close">×</button>
     </div>
-    <p class="cookie-settings__intro"><span data-l="ko">필수 쿠키는 계정 보안과 요청한 서비스를 제공하는 데 필요해 끌 수 없습니다.</span><span data-l="en">Necessary cookies cannot be disabled because they secure your account and deliver services you request.</span></p>
+    <p class="cookie-settings__intro"><T en="Necessary cookies cannot be disabled because they secure your account and deliver services you request." ko="필수 쿠키는 계정 보안과 요청한 서비스를 제공하는 데 필요해 끌 수 없습니다." /></p>
     <label class="cookie-settings__row">
-      <span><b><span data-l="ko">필수 쿠키</span><span data-l="en">Necessary cookies</span></b><small><span data-l="ko">로그인, 보안, 언어, 포털 연결</span><span data-l="en">Login, security, language, and portal access</span></small></span>
+      <span><b><T en="Necessary cookies" ko="필수 쿠키" /></b><small><T en="Login, security, language, and portal access" ko="로그인, 보안, 언어, 포털 연결" /></small></span>
       <input type="checkbox" checked disabled />
     </label>
     <label class="cookie-settings__row">
-      <span><b><span data-l="ko">분석 쿠키</span><span data-l="en">Analytics cookies</span></b><small><span data-l="ko">사이트 이용 방식을 익명으로 이해</span><span data-l="en">Understand site use in aggregate</span></small></span>
+      <span><b><T en="Analytics cookies" ko="분석 쿠키" /></b><small><T en="Understand site use in aggregate" ko="사이트 이용 방식을 익명으로 이해" /></small></span>
       <input type="checkbox" data-cookie-analytics />
     </label>
     <label class="cookie-settings__row">
-      <span><b><span data-l="ko">마케팅 쿠키</span><span data-l="en">Marketing cookies</span></b><small><span data-l="ko">관련 안내와 캠페인 성과 측정</span><span data-l="en">Relevant messages and campaign measurement</span></small></span>
+      <span><b><T en="Marketing cookies" ko="마케팅 쿠키" /></b><small><T en="Relevant messages and campaign measurement" ko="관련 안내와 캠페인 성과 측정" /></small></span>
       <input type="checkbox" data-cookie-marketing />
     </label>
     <div class="cookie-settings__actions">
-      <button type="submit" class="cookie-consent__button cookie-consent__button--quiet"><span data-l="ko">취소</span><span data-l="en">Cancel</span></button>
-      <button type="button" class="cookie-consent__button cookie-consent__button--primary" data-cookie-save><span data-l="ko">선택 저장</span><span data-l="en">Save choices</span></button>
+      <button type="submit" class="cookie-consent__button cookie-consent__button--quiet"><T en="Cancel" ko="취소" /></button>
+      <button type="button" class="cookie-consent__button cookie-consent__button--primary" data-cookie-save><T en="Save choices" ko="선택 저장" /></button>
     </div>
   </form>
 </dialog>

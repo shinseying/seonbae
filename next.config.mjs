@@ -11,6 +11,36 @@ const nextConfig = {
     return {
       beforeFiles: [
         {
+          source: "/en",
+          destination: "/marketing/en/index.html",
+        },
+        ...[
+          "/about",
+          "/become-a-tutor",
+          "/become-a-tutor/thank-you",
+          "/contact",
+          "/get-matched",
+          "/how-it-works",
+          "/mock-exams",
+          "/pricing",
+          "/resources",
+          "/subjects",
+          "/tutors",
+          "/verification",
+          "/404",
+        ].map((path) => ({
+          source: `/en${path}`,
+          destination: `/marketing/en${path}/index.html`,
+        })),
+        {
+          source: "/en/resources/:slug",
+          destination: "/marketing/en/resources/:slug/index.html",
+        },
+        {
+          source: "/en/subjects/:slug",
+          destination: "/marketing/en/subjects/:slug/index.html",
+        },
+        {
           source: "/",
           destination: "/marketing/index.html",
         },

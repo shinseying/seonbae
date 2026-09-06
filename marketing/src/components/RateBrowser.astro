@@ -3,6 +3,7 @@ import { groupedRatesFor, ratesFor, type CurriculumSlug } from '../data/rates';
 import { won } from '../lib/format';
 import T from './T.astro';
 import { subjectsKo } from '../i18n/content';
+import { localeFromPath } from '../i18n/locale';
 
 // A searchable, per-subject rate table. Prices are set per subject, never per
 // curriculum, so this is the only place a family ever reads a price.
@@ -17,6 +18,7 @@ interface Props {
 }
 const { curricula, showTabs = false, showCurriculumHeadings = false, id = 'rates', surface = 'white' } = Astro.props;
 const surfaceVar = surface === 'cream' ? 'var(--canvas)' : 'var(--white)';
+const isEnglish = localeFromPath(Astro.url.pathname) === 'en';
 
 const total = curricula.reduce((n, c) => n + ratesFor(c.slug).length, 0);
 const groupKo: Record<string, string> = {
@@ -33,13 +35,13 @@ const groupKo: Record<string, string> = {
   <div class="rb__bar">
     <label class="rb__search">
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.7"/><path d="M13.2 13.2L17 17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <input type="search" class="rb__input" placeholder="Search by subject name. E.g. Physics or Calculus" data-placeholder-en="Search by subject name. E.g. Physics or Calculus" data-placeholder-ko="과목명으로 검색하세요. 예: Physics, Calculus" aria-label="Search subjects" data-aria-en="Search subjects" data-aria-ko="과목 검색" />
+      <input type="search" class="rb__input" placeholder={isEnglish ? 'Search by subject name. E.g. Physics or Calculus' : '과목명으로 검색하세요. 예: Physics, Calculus'} aria-label={isEnglish ? 'Search subjects' : '과목 검색'} />
     </label>
     <p class="rb__count"><span class="rb__n">{total}</span> <T en="subjects" ko="개 과목" /></p>
   </div>
 
   {showTabs && (
-    <div class="rb__tabs" role="group" aria-label="Filter by curriculum" data-aria-en="Filter by curriculum" data-aria-ko="교육과정별 필터">
+    <div class="rb__tabs" role="group" aria-label={isEnglish ? 'Filter by curriculum' : '교육과정별 필터'}>
       <button type="button" class="rb__tab" data-cur="all" aria-pressed="true"><T en="All" ko="전체" /></button>
       {curricula.map((c) => (
         <button type="button" class="rb__tab" data-cur={c.slug} aria-pressed="false"><T en={c.label} ko={subjectsKo[c.slug]?.title ?? c.label} /></button>

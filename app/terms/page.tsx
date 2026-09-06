@@ -1,12 +1,16 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { TERMS_VERSION } from "../../utils/auth/legal";
 import styles from "../legal/legal.module.css";
+import { legalMetadata } from "../legal/metadata";
 
-export const metadata: Metadata = {
-  title: "이용약관 — 선배",
+export const metadata = legalMetadata({
+  title: "이용약관 | 선배",
   description: "선배 웹사이트, 계정, 학습 포털과 튜터 연결 서비스의 이용 조건입니다.",
-};
+  canonical: "/terms",
+  koPath: "/terms",
+  enPath: "/en/terms",
+  locale: "ko",
+});
 
 const sections = [
   ["scope", "1. 목적과 적용"],
@@ -37,11 +41,10 @@ export default function TermsPage() {
         <nav className={styles.toc} aria-label="이용약관 목차">
           <b>목차</b>
           {sections.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}
-          <a href="#english">English version</a>
         </nav>
         <article className={styles.document}>
           <p className={styles.notice}>
-            시행일: 2026년 7월 29일 · 서비스 제공자: 선배(Seonbae) · 문의:{" "}
+            시행일: 2026년 9월 7일 · 서비스 제공자: 선배(Seonbae) · 문의:{" "}
             <a href="mailto:admissions@seonbaetutor.com">admissions@seonbaetutor.com</a>
           </p>
 
@@ -115,11 +118,13 @@ export default function TermsPage() {
             <p>
               온라인 수업은 Zoom Meeting SDK를 통해 제공됩니다. 이용자는
               브라우저의 카메라·마이크 권한을 직접 선택하며, 계정과 수업 링크를
-              제3자와 공유해서는 안 됩니다. 선배는 기본적으로 수업을 녹화하지
-              않습니다. 녹화가 필요한 경우 시작 전에 목적, 이용 범위와 보유기간을
-              알리고 관계 법령상 필요한 동의를 받습니다. Zoom의 장애나 이용자의
-              네트워크·기기 문제로 연결이 중단될 수 있으며, 가능한 경우 선배가
-              일정 조정 또는 대체 접속을 안내합니다.
+              제3자와 공유해서는 안 됩니다. 선배는 복습과 안전한 학습 환경 조성을
+              위해 온라인 수업을 기본적으로 녹화합니다. 학생과 보호자에게 첫 수업
+              전에 녹화 목적, 이용 범위와 보유기간을 알리고 관계 법령상 필요한
+              동의를 받습니다. 녹화 영상은 수업 관계가 종료된 뒤 1년까지 보관하며,
+              고지한 복습·품질·안전 및 분쟁 대응 목적에만 이용합니다. Zoom의 장애나
+              이용자의 네트워크·기기 문제로 연결이 중단될 수 있으며, 가능한 경우
+              선배가 일정 조정 또는 대체 접속을 안내합니다.
             </p>
           </section>
 
@@ -185,58 +190,6 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <div className={styles.english} id="english">
-            <span className={styles.englishBadge}>ENGLISH VERSION</span>
-            <section>
-              <h2>Terms of Service</h2>
-              <p>
-                Effective July 29, 2026. These terms apply to Seonbae’s public
-                website, member accounts, learning portal, consultations, tutor
-                discovery and matching, and related services. Separate confirmed
-                terms for lesson subject, schedule, fees, cancellation and
-                refunds take priority for that engagement.
-              </p>
-              <h3>Accounts and security</h3>
-              <p>
-                You must provide accurate information, verify your email, keep
-                your credentials secure, and promptly report suspected misuse.
-                New passwords must be at least 12 characters and include
-                lowercase and uppercase letters, a number, and an allowed
-                symbol. ID recovery and password-reset links are sent to the
-                registered email after the submitted account details match.
-                The recovery screen does not disclose whether an account exists
-                or reveal its email address.
-              </p>
-              <h3>Minors, lessons and outcomes</h3>
-              <p>
-                An account for a student under 14 must be created and managed by
-                a legal guardian. Tutor recommendations depend on the
-                information and availability provided. Seonbae verifies displayed
-                tutor credentials through reasonable procedures but does not
-                guarantee a score increase, admission, or other academic result.
-              </p>
-              <h3>Acceptable use and intellectual property</h3>
-              <p>
-                Do not misuse another person’s account, attempt unauthorized
-                access, harass users, submit false information, disrupt the
-                service, or reproduce and commercially exploit the registry,
-                learning materials, brand, design or software without
-                permission. Embedded lessons use Zoom Meeting SDK. Participants
-                control browser camera and microphone permissions and must not
-                share account access or meeting credentials. Recording is off
-                by default; any recording requires advance notice and any
-                consent required by law.
-              </p>
-              <h3>Availability, liability and law</h3>
-              <p>
-                Services may change or pause for maintenance, security, legal
-                compliance or events beyond reasonable control. Nothing in
-                these terms excludes non-waivable consumer rights. Korean law
-                governs, and disputes are handled by the court with jurisdiction
-                under applicable Korean procedure after good-faith discussion.
-              </p>
-            </section>
-          </div>
         </article>
       </div>
       <LegalFooter />
@@ -251,7 +204,7 @@ function LegalHeader() {
         <img src="/logo.png" alt="" width="40" height="40" />
         <strong>선배</strong><span>SEONBAE · EST. 2026</span>
       </Link>
-      <nav><Link href="/privacy">개인정보 처리방침</Link><Link href="/">홈으로 ↗</Link></nav>
+      <nav><Link href="/privacy">개인정보 처리방침</Link><Link href="/en/terms">EN</Link><Link href="/">홈으로 ↗</Link></nav>
     </header>
   );
 }

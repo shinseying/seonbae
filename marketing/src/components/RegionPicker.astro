@@ -1,10 +1,12 @@
 ---
 import { regions, DEFAULT_REGION } from '../data/regions';
 import T from './T.astro';
+import { localeFromPath } from '../i18n/locale';
 
 const countryKo: Record<string, string> = {
   KR: '대한민국', US: '미국', CN: '중국', PH: '필리핀', MY: '말레이시아', ID: '인도네시아', GT: '과테말라', MX: '멕시코',
 };
+const isEnglish = localeFromPath(Astro.url.pathname) === 'en';
 
 // Lets a family abroad read prices in their own currency and see what a Seoul
 // lesson time means where they are. The choice is remembered and applies to
@@ -15,7 +17,7 @@ const countryKo: Record<string, string> = {
     <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7">
       <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18" />
     </svg>
-    <span data-rp-label data-country-en="South Korea" data-country-ko="대한민국"><T en="South Korea" ko="대한민국" /></span>
+    <span data-rp-label><T en="South Korea" ko="대한민국" /></span>
     <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
 
@@ -23,7 +25,7 @@ const countryKo: Record<string, string> = {
     <p class="rp__head"><T en="Where are you studying?" ko="어디에서 공부하고 있나요?" /></p>
     <div class="rp__grid">
       {regions.map((r) => (
-        <button type="button" role="menuitemradio" class="rp__opt" data-region={r.code} aria-checked={r.code === DEFAULT_REGION ? 'true' : 'false'}>
+        <button type="button" role="menuitemradio" class="rp__opt" data-region={r.code} data-country={isEnglish ? r.country : countryKo[r.code] ?? r.country} aria-checked={r.code === DEFAULT_REGION ? 'true' : 'false'}>
           <span class="rp__country"><T en={r.country} ko={countryKo[r.code] ?? r.country} /></span>
           <span class="rp__cur">{r.currency}</span>
         </button>
@@ -136,8 +138,8 @@ const countryKo: Record<string, string> = {
     });
 
     document.querySelectorAll<HTMLElement>('[data-rp-label]').forEach((el) => {
-      const selected = document.querySelector<HTMLElement>(`.rp__opt[data-region="${r.code}"] .rp__country [data-l="${language()}"]`);
-      el.textContent = selected?.textContent || r.country;
+      const selected = document.querySelector<HTMLElement>(`.rp__opt[data-region="${r.code}"]`);
+      el.textContent = selected?.dataset.country || r.country;
     });
     document.querySelectorAll<HTMLElement>('.rp__opt').forEach((b) => {
       b.setAttribute('aria-checked', String(b.dataset.region === code));
@@ -173,5 +175,4 @@ const countryKo: Record<string, string> = {
     });
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
   });
-  document.querySelectorAll('[data-set-lang]').forEach((button) => button.addEventListener('click', () => requestAnimationFrame(() => apply(read()))));
 </script>

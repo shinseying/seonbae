@@ -348,7 +348,7 @@ export default function LoginPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link className={styles.brand} href="/" aria-label="Seonbae home">
+        <Link className={styles.brand} href={locale === "en" ? "/en/" : "/"} aria-label="Seonbae home">
           <img src="/logo.png" alt="" />
           <span className={styles.brandKo}>Seonbae</span>
         </Link>
@@ -357,7 +357,7 @@ export default function LoginPage() {
             <button type="button" aria-pressed={locale === "ko"} onClick={() => changeLocale("ko")}>KO</button>
             <button type="button" aria-pressed={locale === "en"} onClick={() => changeLocale("en")}>EN</button>
           </div>
-          <Link className={styles.back} href="/">
+          <Link className={styles.back} href={locale === "en" ? "/en/" : "/"}>
             {l("홈으로 돌아가기", "Back to home")} <span aria-hidden="true">→</span>
           </Link>
         </div>

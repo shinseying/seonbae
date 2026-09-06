@@ -4,11 +4,12 @@ import MediaPanel from './MediaPanel.astro';
 import { formatDate } from '../lib/format';
 import T from './T.astro';
 import { resourceKo, resourceCategoryKo } from '../i18n/content';
+import { localeFromPath, localePath } from '../i18n/locale';
 
 interface Props { entry: CollectionEntry<'resources'>; variant?: 'featured' | 'standard' | 'compact'; }
 const { entry, variant = 'standard' } = Astro.props;
 const r = entry.data;
-const href = `/resources/${entry.id}`;
+const href = localePath(`/resources/${entry.id}`, localeFromPath(Astro.url.pathname));
 const ko = resourceKo[entry.id];
 const dateKo = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(r.date);
 

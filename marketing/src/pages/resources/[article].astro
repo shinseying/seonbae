@@ -8,6 +8,7 @@ import ResourceCard from '../../components/ResourceCard.astro';
 import { formatDate } from '../../lib/format';
 import T from '../../components/T.astro';
 import { resourceKo, resourceCategoryKo } from '../../i18n/content';
+import { localeFromPath, localePath } from '../../i18n/locale';
 
 export async function getStaticPaths() {
   const resources = await getCollection('resources');
@@ -24,12 +25,14 @@ const related = (await getCollection('resources'))
   .slice(0, 3);
 const ko = resourceKo[entry.id];
 const dateKo = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(r.date);
+const locale = localeFromPath(Astro.url.pathname);
+const link = (href: string) => localePath(href, locale);
 ---
-<Base title={`${r.title} — Seonbae`} description={r.excerpt} active="/resources">
+<Base title={`${r.title} | Seonbae`} titleKo={`${ko?.title ?? r.title} | 선배`} description={r.excerpt} descriptionKo={ko?.excerpt ?? r.excerpt} active="/resources">
   <article>
     <header class="article-head">
       <div class="container article-head__inner reveal is-in">
-        <a href="/resources" class="back-link">
+        <a href={link('/resources')} class="back-link">
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <T en="All resources" ko="전체 학습 자료" />
         </a>
@@ -48,8 +51,7 @@ const dateKo = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long'
 
     <div class="container">
       <div class="article-body prose reveal">
-        <div data-l="en"><Content /></div>
-        <div data-l="ko" class="kr">{(ko?.body ?? []).map((paragraph) => <p>{paragraph}</p>)}</div>
+        {locale === 'en' ? <Content /> : <div class="kr">{(ko?.body ?? []).map((paragraph) => <p>{paragraph}</p>)}</div>}
       </div>
     </div>
   </article>

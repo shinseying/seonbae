@@ -1,7 +1,7 @@
 ---
-// Bilingual text. Renders BOTH languages inline; global CSS (html[data-lang])
-// shows only the active one, so the header toggle switches language instantly
-// with no page reload. Korean automatically gets the hangul font (.kr).
+// Resolve bilingual copy on the server. Each locale URL contains only the
+// requested language, so crawlers, assistive technology and no-JS visitors all
+// receive the same text.
 //
 //   <h1 class="display"><T en="Hello" ko="안녕하세요" /></h1>
 //   <T en="Read" ko="읽기" tag="span" />
@@ -15,5 +15,8 @@ interface Props {
 }
 const { en, ko, tag = 'span', class: cls = '' } = Astro.props;
 const Tag = tag as any;
+import { localeFromPath, pick } from '../i18n/locale';
+const locale = localeFromPath(Astro.url.pathname);
+const value = pick(locale, en, ko);
 ---
-<Tag data-l="en" class={cls}>{en}</Tag><Tag data-l="ko" class:list={['kr', cls]}>{ko}</Tag>
+<Tag lang={locale} class:list={[{ kr: locale === 'ko' }, cls]}>{value}</Tag>

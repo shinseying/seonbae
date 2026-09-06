@@ -4,11 +4,13 @@ import Button from './Button.astro';
 import MediaPanel from './MediaPanel.astro';
 import T from './T.astro';
 import { planKo } from '../i18n/content';
+import { localeFromPath, localePath } from '../i18n/locale';
 
 interface Props { entry: CollectionEntry<'plans'>; }
 const { entry } = Astro.props;
 const p = entry.data;
 const ko = planKo[entry.id];
+const rateHref = localePath('/pricing#all-rates', localeFromPath(Astro.url.pathname));
 ---
 <article class:list={['plan', { 'plan--featured': p.featured, 'plan--wide': p.wide }]}>
   <div class="plan__main">
@@ -21,7 +23,7 @@ const ko = planKo[entry.id];
     <div class="plan__price">
       <span class="plan__from"><T en="Hourly rate" ko="시간당 요금" /></span>
       <span class="plan__amount"><T en="By subject" ko="과목별" /></span>
-      <span class="plan__unit"><T en="Each subject is priced on its own." ko="과목마다 요금이 다릅니다." /> <a href="/pricing#all-rates"><T en="See the rate card" ko="요금표 보기" /></a></span>
+      <span class="plan__unit"><T en="Each subject is priced on its own." ko="과목마다 요금이 다릅니다." /> <a href={rateHref}><T en="See the rate card" ko="요금표 보기" /></a></span>
     </div>
     <p class="plan__billing"><T en={p.billingMonthly} ko={ko?.billing ?? p.billingMonthly} /></p>
 

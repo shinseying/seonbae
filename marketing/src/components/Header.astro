@@ -6,10 +6,15 @@ import { getCollection } from 'astro:content';
 import { mainNav, exploreNav, tutorNav, subjectTitleKo } from '../lib/nav';
 import { ui } from '../i18n/home';
 import { subjectCount } from '../data/rates';
+import { localeFromPath, localePath, stripLocale } from '../i18n/locale';
 
 interface Props { heroDark?: boolean; active?: string; }
 const { heroDark = false, active = '' } = Astro.props;
-const isActive = (href: string) => active === href || (href !== '/' && active.startsWith(href));
+const locale = localeFromPath(Astro.url.pathname);
+const activePath = stripLocale(active);
+const link = (href: string) => localePath(href, locale);
+const loginHref = locale === 'en' ? '/login?lang=en' : '/login';
+const isActive = (href: string) => activePath === href || (href !== '/' && activePath.startsWith(href));
 
 const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order - b.data.order);
 ---
@@ -33,13 +38,13 @@ const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order -
               <div class="mega-menu" role="menu">
                 <div class="mega-grid">
                   {subjects.map((s) => (
-                    <a href={`/subjects/${s.id}`} role="menuitem" class="mega-item">
+                    <a href={link(`/subjects/${s.id}`)} role="menuitem" class="mega-item">
                       <span class="mega-item__title"><T en={s.data.title} ko={subjectTitleKo[s.id] ?? s.data.title} /></span>
                       <span class="mega-item__meta">{s.data.levels[0]} · <T en={`${subjectCount(s.id)} subjects`} ko={`${subjectCount(s.id)}개 과목`} /></span>
                     </a>
                   ))}
                 </div>
-                <a href="/subjects" class="mega-all"><T en={ui.seeAllSubjects.en} ko={ui.seeAllSubjects.ko} />
+                <a href={link('/subjects')} class="mega-all"><T en={ui.seeAllSubjects.en} ko={ui.seeAllSubjects.ko} />
                   <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </a>
               </div>
@@ -52,7 +57,7 @@ const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order -
               </button>
               <div class="drop-menu tutor-menu" role="menu">
                 {tutorNav.map((e) => (
-                  <a href={e.href} role="menuitem" class="drop-item"><T en={e.label} ko={e.labelKo} /></a>
+                  <a href={link(e.href)} role="menuitem" class="drop-item"><T en={e.label} ko={e.labelKo} /></a>
                 ))}
               </div>
             </li>
@@ -64,12 +69,12 @@ const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order -
               </button>
               <div class="drop-menu about-menu" role="menu">
                 {exploreNav.map((e) => (
-                  <a href={e.href} role="menuitem" class="drop-item"><T en={e.label} ko={e.labelKo} /></a>
+                  <a href={link(e.href)} role="menuitem" class="drop-item"><T en={e.label} ko={e.labelKo} /></a>
                 ))}
               </div>
             </li>
           ) : (
-            <li><a href={item.href} class:list={['nav-link', { 'is-current': isActive(item.href) }]}><T en={item.label} ko={item.labelKo} /></a></li>
+            <li><a href={link(item.href)} class:list={['nav-link', { 'is-current': isActive(item.href) }]}><T en={item.label} ko={item.labelKo} /></a></li>
           )
         ))}
       </ul>
@@ -77,10 +82,10 @@ const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order -
 
     <div class="header-actions">
       <LangToggle class="header-lang" />
-      <a href="/login" class="header-auth-link auth-pending" data-auth-primary aria-busy="true" aria-hidden="true" tabindex="-1">
+      <a href={loginHref} class="header-auth-link auth-pending" data-auth-primary aria-busy="true" aria-hidden="true" tabindex="-1">
         <span data-auth-primary-label></span>
       </a>
-      <a href="/get-matched" class="btn btn--primary header-cta" data-auth-portal>
+      <a href={link('/get-matched')} class="btn btn--primary header-cta" data-auth-portal>
         <span data-auth-portal-label><T en="Get started" ko="시작하기" /></span>
         <span class="btn__disc" aria-hidden="true">
           <svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -101,22 +106,22 @@ const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order -
   <nav aria-label="Mobile">
     <ul class="drawer-list">
       {mainNav.filter((i) => i.label !== 'About' && i.label !== 'Tutors').map((item) => (
-        <li><a href={item.href} class:list={['drawer-link', { 'is-current': isActive(item.href) }]}><T en={item.label} ko={item.labelKo} /></a></li>
+        <li><a href={link(item.href)} class:list={['drawer-link', { 'is-current': isActive(item.href) }]}><T en={item.label} ko={item.labelKo} /></a></li>
       ))}
       <li class="drawer-divider"><span><T en="Tutors" ko="튜터" /></span></li>
       {tutorNav.map((item) => (
-        <li><a href={item.href} class="drawer-link drawer-link--sub"><T en={item.label} ko={item.labelKo} /></a></li>
+        <li><a href={link(item.href)} class="drawer-link drawer-link--sub"><T en={item.label} ko={item.labelKo} /></a></li>
       ))}
       <li class="drawer-divider"><span><T en="Company" ko="회사" /></span></li>
       {exploreNav.map((item) => (
-        <li><a href={item.href} class="drawer-link drawer-link--sub"><T en={item.label} ko={item.labelKo} /></a></li>
+        <li><a href={link(item.href)} class="drawer-link drawer-link--sub"><T en={item.label} ko={item.labelKo} /></a></li>
       ))}
     </ul>
     <div class="drawer-cta">
-      <a href="/login" class="drawer-auth-link auth-pending" data-auth-primary aria-busy="true" aria-hidden="true" tabindex="-1">
+      <a href={loginHref} class="drawer-auth-link auth-pending" data-auth-primary aria-busy="true" aria-hidden="true" tabindex="-1">
         <span data-auth-primary-label></span>
       </a>
-      <a href="/get-matched" class="btn btn--primary btn--lg drawer-btn" data-auth-portal>
+      <a href={link('/get-matched')} class="btn btn--primary btn--lg drawer-btn" data-auth-portal>
         <span data-auth-portal-label><T en="Get started" ko="시작하기" /></span>
         <span class="btn__disc" aria-hidden="true">
           <svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>

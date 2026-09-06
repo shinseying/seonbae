@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { headers } from "next/headers";
 import CookieConsent from "./CookieConsent";
 import "./globals.css";
 
-const TITLE = "선배 Seonbae — 검증된 튜터를 찾는 가장 확실한 방법";
+const TITLE = "검증된 튜터를 찾는 가장 확실한 방법 | 선배";
 const DESCRIPTION =
   "서울대·고려대·연세대 재외국민 네트워크에서 직접 검증한 IB, AP, SAT, A-Level, IGCSE 튜터를 만나보세요.";
 
@@ -11,7 +12,7 @@ const DESCRIPTION =
 // the Astro build, so the icon and share card have to be declared in both places
 // or a link shared from /login previews differently from one shared from /.
 export const metadata: Metadata = {
-  metadataBase: new URL("https://seonbaetutor.com"),
+  metadataBase: new URL("https://www.seonbaetutor.com"),
   title: TITLE,
   description: DESCRIPTION,
   icons: {
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     title: TITLE,
     description: DESCRIPTION,
-    url: "https://seonbaetutor.com",
+    url: "https://www.seonbaetutor.com",
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Seonbae", type: "image/png" }],
   },
   twitter: {
@@ -47,15 +48,17 @@ export const viewport: Viewport = {
   themeColor: "#163a51",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const pathname = (await headers()).get("x-seonbae-pathname") || "/";
+  const locale = pathname === "/en" || pathname.startsWith("/en/") ? "en" : "ko";
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href="/cookie-consent.css" />
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var l=localStorage.getItem('seonbae-lang')==='en'?'en':'ko';document.documentElement.dataset.lang=l;document.documentElement.lang=l;document.documentElement.dataset.theme=localStorage.getItem('seonbae-theme')==='dark'?'dark':'light'}catch(e){}",
+              "try{var p=location.pathname;var q=new URLSearchParams(location.search).get('lang');var requested=q==='en'||q==='ko'?q:'';if(requested)localStorage.setItem('seonbae-lang',requested);var fixed=requested||(p==='/en'||p.indexOf('/en/')===0?'en':p==='/privacy'||p==='/terms'?'ko':'');var l=fixed||(localStorage.getItem('seonbae-lang')==='en'?'en':'ko');document.documentElement.dataset.lang=l;document.documentElement.lang=l;document.documentElement.dataset.theme=localStorage.getItem('seonbae-theme')==='dark'?'dark':'light'}catch(e){}",
           }}
         />
       </head>

@@ -21,6 +21,8 @@ const {
 
 const isText = variant === 'text' || variant === 'text-light';
 import T from './T.astro';
+import { localeFromPath, localePath } from '../i18n/locale';
+const resolvedHref = localePath(href, localeFromPath(Astro.url.pathname));
 const arrowPath =
   arrow === 'diag'
     ? 'M6 14L14 6M14 6H7M14 6V13'
@@ -28,7 +30,7 @@ const arrowPath =
 ---
 
 {isText ? (
-  <a href={href} class={`textlink ${variant === 'text-light' ? 'textlink--light' : ''} ${cls}`}>
+  <a href={resolvedHref} class={`textlink ${variant === 'text-light' ? 'textlink--light' : ''} ${cls}`}>
     <span>{labelKo ? <T en={label} ko={labelKo} /> : label}</span>
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <path d={arrowPath} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -36,7 +38,7 @@ const arrowPath =
   </a>
 ) : (
   <a
-    href={href}
+    href={resolvedHref}
     class={`btn btn--${variant} ${size === 'lg' ? 'btn--lg' : ''} ${cls}`}
   >
     <span>{labelKo ? <T en={label} ko={labelKo} /> : label}</span>

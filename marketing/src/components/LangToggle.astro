@@ -1,14 +1,25 @@
 ---
-// KO / EN language switch. Active state is driven entirely by html[data-lang]
-// (see global.css), so it stays correct across pages without JS re-render.
-// The click handler + no-flash default live in Base.astro.
+// Real locale links keep each language shareable, crawlable, and usable with
+// JavaScript disabled.
 interface Props { class?: string; }
 const { class: cls = '' } = Astro.props;
+import { localeFromPath, pathForLocale } from '../i18n/locale';
+const locale = localeFromPath(Astro.url.pathname);
 ---
 <div class:list={['langtoggle', cls]} role="group" aria-label="Language">
-  <button type="button" data-set-lang="ko" lang="ko" aria-label="한국어">KO</button>
-  <button type="button" data-set-lang="en" lang="en">EN</button>
+  <a href={pathForLocale(Astro.url.pathname, 'ko')} lang="ko" data-set-lang="ko" aria-label="한국어" aria-current={locale === 'ko' ? 'page' : undefined}>KO</a>
+  <a href={pathForLocale(Astro.url.pathname, 'en')} lang="en" data-set-lang="en" aria-label="English" aria-current={locale === 'en' ? 'page' : undefined}>EN</a>
 </div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-set-lang]').forEach((link) => {
+    if (link.dataset.localePreferenceBound) return;
+    link.dataset.localePreferenceBound = 'true';
+    link.addEventListener('click', () => {
+      try { localStorage.setItem('seonbae-lang', link.dataset.setLang === 'en' ? 'en' : 'ko'); } catch {}
+    });
+  });
+</script>
 
 <style>
   .langtoggle {
@@ -20,7 +31,7 @@ const { class: cls = '' } = Astro.props;
     gap: 2px;
     flex: none;
   }
-  .langtoggle button {
+  .langtoggle a {
     border: none;
     background: none;
     padding: 6px 11px;
@@ -34,12 +45,11 @@ const { class: cls = '' } = Astro.props;
     transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
     line-height: 1;
   }
-  .langtoggle button[lang='ko'] { font-family: var(--kr); }
-  .langtoggle button:hover { color: var(--ink); }
+  .langtoggle a[lang='ko'] { font-family: var(--kr); }
+  .langtoggle a:hover { color: var(--ink); }
 
   /* Active pill, chosen purely from the root language flag. Default = KO. */
-  html[data-lang='ko'] .langtoggle [data-set-lang='ko'],
-  html:not([data-lang='ko']) .langtoggle [data-set-lang='en'] {
+  .langtoggle [aria-current='page'] {
     background: var(--white);
     color: var(--violet);
     box-shadow: var(--shadow-sm);
@@ -49,10 +59,9 @@ const { class: cls = '' } = Astro.props;
   .site-header:not(.is-solid) .langtoggle {
     background: rgba(255, 255, 255, 0.12);
   }
-  .site-header:not(.is-solid) .langtoggle button { color: var(--on-dark-soft); }
-  .site-header:not(.is-solid) .langtoggle button:hover { color: #fff; }
-  html[data-lang='ko'] .site-header:not(.is-solid) .langtoggle [data-set-lang='ko'],
-  html:not([data-lang='ko']) .site-header:not(.is-solid) .langtoggle [data-set-lang='en'] {
+  .site-header:not(.is-solid) .langtoggle a { color: var(--on-dark-soft); }
+  .site-header:not(.is-solid) .langtoggle a:hover { color: #fff; }
+  .site-header:not(.is-solid) .langtoggle [aria-current='page'] {
     background: rgba(255, 255, 255, 0.92);
     color: var(--violet);
   }

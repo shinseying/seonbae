@@ -45,25 +45,27 @@ const resourcePages = [
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
+  const localizedEntries = (
+    path: string,
+    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"],
+    priority: number,
+  ): MetadataRoute.Sitemap => {
+    const koPath = path;
+    const enPath = path === "/" ? "/en/" : `/en${path}`;
+    const languages = {
+      ko: new URL(koPath, siteUrl).toString(),
+      en: new URL(enPath, siteUrl).toString(),
+      "x-default": new URL(koPath, siteUrl).toString(),
+    };
+    return [
+      { url: languages.ko, lastModified, changeFrequency, priority, alternates: { languages } },
+      { url: languages.en, lastModified, changeFrequency, priority, alternates: { languages } },
+    ];
+  };
 
   return [
-    ...publicPages.map(({ path, changeFrequency, priority }) => ({
-      url: new URL(path, siteUrl).toString(),
-      lastModified,
-      changeFrequency,
-      priority,
-    })),
-    ...subjectPages.map((slug) => ({
-      url: new URL(`/subjects/${slug}`, siteUrl).toString(),
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    })),
-    ...resourcePages.map((slug) => ({
-      url: new URL(`/resources/${slug}`, siteUrl).toString(),
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    })),
+    ...publicPages.flatMap(({ path, changeFrequency, priority }) => localizedEntries(path, changeFrequency, priority)),
+    ...subjectPages.flatMap((slug) => localizedEntries(`/subjects/${slug}`, "monthly", 0.7)),
+    ...resourcePages.flatMap((slug) => localizedEntries(`/resources/${slug}`, "monthly", 0.7)),
   ];
 }

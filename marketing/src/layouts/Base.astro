@@ -6,31 +6,42 @@ import Footer from '../components/Footer.astro';
 import ConversionPanel from '../components/ConversionPanel.astro';
 import T from '../components/T.astro';
 import CookieConsent from '../components/CookieConsent.astro';
+import { localeFromPath, pathForLocale, stripLocale } from '../i18n/locale';
+import { pageMeta } from '../i18n/seo';
 
 interface Props {
   title?: string;
+  titleKo?: string;
   description?: string;
+  descriptionKo?: string;
   heroDark?: boolean;
   showConversion?: boolean;
   active?: string;
 }
 const {
-  title = 'Seonbae — Verified tutors from Korea’s top universities',
-  description = 'Live online tutoring from verified Seoul National University, Korea University, and Yonsei University students. Built for Korean learners studying IB, AP, A Level, IGCSE, and tests abroad.',
+  title,
+  titleKo,
+  description,
+  descriptionKo,
   heroDark = false,
   showConversion = true,
   active = Astro.url.pathname,
 } = Astro.props;
+const locale = localeFromPath(Astro.url.pathname);
+const plainPath = stripLocale(Astro.url.pathname);
+const meta = pageMeta(plainPath, locale, { title, titleKo, description, descriptionKo });
 // Absolute URLs for share cards. KakaoTalk, Slack, and iMessage all refuse a
 // relative og:image, and Google needs a canonical to attribute the site icon.
-const site = Astro.site ?? new URL('https://seonbaetutor.com');
-const canonical = new URL(Astro.url.pathname, site).href;
+const site = Astro.site ?? new URL('https://www.seonbaetutor.com');
+const canonical = new URL(pathForLocale(Astro.url.pathname, locale), site).href;
+const koCanonical = new URL(pathForLocale(Astro.url.pathname, 'ko'), site).href;
+const enCanonical = new URL(pathForLocale(Astro.url.pathname, 'en'), site).href;
 const ogImage = new URL('/og-image.png', site).href;
 // `?still` renders reveal elements in their final state (used for headless capture).
 const still = Astro.url.searchParams.has('still');
 ---
 <!doctype html>
-<html lang="ko" data-lang="ko">
+<html lang={locale} data-lang={locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -48,16 +59,19 @@ const still = Astro.url.searchParams.has('still');
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#163a51" />
     <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="ko" href={koCanonical} />
+    <link rel="alternate" hreflang="en" href={enCanonical} />
+    <link rel="alternate" hreflang="x-default" href={koCanonical} />
     <link rel="stylesheet" href="/cookie-consent.css" />
-    <title>{title}</title>
-    <meta name="description" content={description} />
+    <title>{meta.title}</title>
+    <meta name="description" content={meta.description} />
     <meta property="og:site_name" content="Seonbae" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
+    <meta property="og:title" content={meta.title} />
+    <meta property="og:description" content={meta.description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
-    <meta property="og:locale" content="ko_KR" />
-    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale" content={locale === 'ko' ? 'ko_KR' : 'en_US'} />
+    <meta property="og:locale:alternate" content={locale === 'ko' ? 'en_US' : 'ko_KR'} />
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:secure_url" content={ogImage} />
     <meta property="og:image:type" content="image/png" />
@@ -65,27 +79,11 @@ const still = Astro.url.searchParams.has('still');
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Seonbae" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
+    <meta name="twitter:title" content={meta.title} />
+    <meta name="twitter:description" content={meta.description} />
     <meta name="twitter:image" content={ogImage} />
     <meta name="theme-color" content="#f2f0ea" />
     {still && <style is:global>.reveal{opacity:1 !important;transform:none !important;transition:none !important;} html{scroll-behavior:auto !important;}</style>}
-
-    <!-- Set language before paint so the toggle never flashes. Saved choice
-         wins; first-time visits open in Korean across every route. -->
-    <script is:inline>
-      (function () {
-        try {
-          var saved = localStorage.getItem('seonbae-lang');
-          var lang = saved || 'ko';
-          document.documentElement.setAttribute('data-lang', lang);
-          document.documentElement.setAttribute('lang', lang);
-        } catch (e) {
-          document.documentElement.setAttribute('data-lang', 'ko');
-          document.documentElement.setAttribute('lang', 'ko');
-        }
-      })();
-    </script>
 
     <!-- Start the session check before paint. Auth controls render as a fixed
          skeleton until this settles, so a returning user never sees a brief
@@ -104,7 +102,7 @@ const still = Astro.url.searchParams.has('still');
 
     <!-- Hanken Grotesk is self-hosted (see global.css) so nothing third-party
          blocks first paint. Preload the latin file the first screen needs. -->
-    <link rel="preload" href="/fonts/hanken-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+    {locale === 'en' && <link rel="preload" href="/fonts/hanken-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />}
 
     <!-- Pretendard (Korean) loads without blocking: the print media trick lets
          the browser paint first, then swaps the stylesheet in. -->
@@ -148,33 +146,6 @@ const still = Astro.url.searchParams.has('still');
     </style>
 
     <script>
-      // Language toggle: persist the choice and flip the root flag. All visible
-      // strings react through CSS (html[data-lang]), so no re-render is needed.
-      document.querySelectorAll('[data-set-lang]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const lang = btn.getAttribute('data-set-lang') || 'en';
-          document.documentElement.setAttribute('data-lang', lang);
-          document.documentElement.setAttribute('lang', lang);
-          try { localStorage.setItem('seonbae-lang', lang); } catch (e) {}
-          window.dispatchEvent(new CustomEvent('seonbae:language-change', { detail: { lang } }));
-        });
-      });
-
-      const syncLocalizedAttributes = () => {
-        const lang = document.documentElement.dataset.lang === 'en' ? 'en' : 'ko';
-        document.querySelectorAll<HTMLElement>('[data-placeholder-en]').forEach((node) => {
-          node.setAttribute('placeholder', node.dataset[lang === 'ko' ? 'placeholderKo' : 'placeholderEn'] ?? '');
-        });
-        document.querySelectorAll<HTMLElement>('[data-aria-en]').forEach((node) => {
-          node.setAttribute('aria-label', node.dataset[lang === 'ko' ? 'ariaKo' : 'ariaEn'] ?? '');
-        });
-        document.querySelectorAll<HTMLOptionElement>('[data-label-en]').forEach((option) => {
-          option.textContent = option.dataset[lang === 'ko' ? 'labelKo' : 'labelEn'] ?? option.value;
-        });
-      };
-      syncLocalizedAttributes();
-      window.addEventListener('seonbae:language-change', syncLocalizedAttributes);
-
       // Scroll reveal for .reveal elements.
       //
       // Content must never depend on an animation firing. A fractional

@@ -222,27 +222,17 @@ p a { color: var(--violet); text-decoration: underline; text-underline-offset: 3
 
 .kr { font-family: var(--kr); }
 
-/* ----- Bilingual toggle -------------------------------------------------- */
-/* Every translatable string is rendered twice (see components/T.astro); we
-   show only the active language. Default (no flag / English) hides Korean. */
-html[data-lang='en'] [data-l='ko'],
-html:not([data-lang='ko']) [data-l='ko'] { display: none !important; }
-html[data-lang='ko'] [data-l='en'] { display: none !important; }
-
-/* Legacy content in the supplied final design is still being translated page
-   by page. Never leak an English-only block into Korean while that work is in
-   progress; the English version remains complete and the Korean version only
-   shows localized surfaces. */
+/* ----- Locale typography ------------------------------------------------ */
 /* Korean sets its own breaking + a touch looser tracking on big display type,
    which is optimised for Latin. Keeps words whole (keep-all) rather than
    breaking mid-syllable-run. */
-:lang(ko), [data-l='ko'], .kr { word-break: keep-all; }
-.display [data-l='ko'],
-.h2 [data-l='ko'],
-.h3 [data-l='ko'],
-h1 [data-l='ko'],
-h2 [data-l='ko'],
-h3 [data-l='ko'] { letter-spacing: -0.01em; }
+:lang(ko), .kr { word-break: keep-all; }
+.display :lang(ko),
+.h2 :lang(ko),
+.h3 :lang(ko),
+h1:lang(ko),
+h2:lang(ko),
+h3:lang(ko) { letter-spacing: -0.01em; }
 
 /* ----- Eyebrow ----------------------------------------------------------- */
 .eyebrow {

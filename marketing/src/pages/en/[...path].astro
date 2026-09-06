@@ -1,0 +1,77 @@
+---
+import { getCollection } from 'astro:content';
+import Home from '../index.astro';
+import About from '../about.astro';
+import BecomeATutor from '../become-a-tutor.astro';
+import TutorThankYou from '../become-a-tutor/thank-you.astro';
+import Contact from '../contact.astro';
+import GetMatched from '../get-matched.astro';
+import HowItWorks from '../how-it-works.astro';
+import MockExams from '../mock-exams.astro';
+import Pricing from '../pricing.astro';
+import Resources from '../resources/index.astro';
+import ResourceArticle from '../resources/[article].astro';
+import Subjects from '../subjects/index.astro';
+import SubjectDetail from '../subjects/[subject].astro';
+import Tutors from '../tutors.astro';
+import Verification from '../verification.astro';
+import NotFound from '../404.astro';
+
+const staticPages = {
+  home: Home,
+  about: About,
+  'become-a-tutor': BecomeATutor,
+  'tutor-thank-you': TutorThankYou,
+  contact: Contact,
+  'get-matched': GetMatched,
+  'how-it-works': HowItWorks,
+  'mock-exams': MockExams,
+  pricing: Pricing,
+  resources: Resources,
+  subjects: Subjects,
+  tutors: Tutors,
+  verification: Verification,
+  'not-found': NotFound,
+} as const;
+
+export async function getStaticPaths() {
+  const [subjects, resources] = await Promise.all([
+    getCollection('subjects'),
+    getCollection('resources'),
+  ]);
+
+  return [
+    { params: { path: undefined }, props: { page: 'home' } },
+    { params: { path: 'about' }, props: { page: 'about' } },
+    { params: { path: 'become-a-tutor' }, props: { page: 'become-a-tutor' } },
+    { params: { path: 'become-a-tutor/thank-you' }, props: { page: 'tutor-thank-you' } },
+    { params: { path: 'contact' }, props: { page: 'contact' } },
+    { params: { path: 'get-matched' }, props: { page: 'get-matched' } },
+    { params: { path: 'how-it-works' }, props: { page: 'how-it-works' } },
+    { params: { path: 'mock-exams' }, props: { page: 'mock-exams' } },
+    { params: { path: 'pricing' }, props: { page: 'pricing' } },
+    { params: { path: 'resources' }, props: { page: 'resources' } },
+    { params: { path: 'subjects' }, props: { page: 'subjects' } },
+    { params: { path: 'tutors' }, props: { page: 'tutors' } },
+    { params: { path: 'verification' }, props: { page: 'verification' } },
+    { params: { path: '404' }, props: { page: 'not-found' } },
+    ...subjects.map((entry) => ({
+      params: { path: `subjects/${entry.id}` },
+      props: { page: 'subject-detail', entry },
+    })),
+    ...resources.map((entry) => ({
+      params: { path: `resources/${entry.id}` },
+      props: { page: 'resource-article', entry },
+    })),
+  ];
+}
+
+const { page, entry } = Astro.props;
+const Page = page === 'subject-detail'
+  ? SubjectDetail
+  : page === 'resource-article'
+    ? ResourceArticle
+    : staticPages[page as keyof typeof staticPages];
+---
+
+<Page entry={entry} />

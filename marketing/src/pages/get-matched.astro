@@ -1,6 +1,11 @@
 ---
 import Base from '../layouts/Base.astro';
 import T from '../components/T.astro';
+import { localeFromPath, localePath } from '../i18n/locale';
+
+const locale = localeFromPath(Astro.url.pathname);
+const link = (href: string) => localePath(href, locale);
+const isEnglish = locale === 'en';
 
 // Consultations run every evening between 17:00 and 20:00 KST.
 const slots = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'];
@@ -23,7 +28,7 @@ const stepLabels = [
   { en: 'Contact', ko: '연락처' },
 ];
 ---
-<Base title="Get matched — Seonbae" active="/get-matched" showConversion={false} heroDark={false}>
+<Base active="/get-matched" showConversion={false} heroDark={false}>
   <section class="match-section">
     <div class="container">
       <div class="match-wrap">
@@ -50,7 +55,7 @@ const stepLabels = [
               <legend class="step-legend"><T en="Who are the lessons for?" ko="누구를 위한 수업인가요?" /></legend>
               <div class="form-field">
                 <label for="m-student"><T en="Student name" ko="학생 이름" /> <span class="req">*</span></label>
-                <input class="form-control" id="m-student" name="student" type="text" required data-placeholder-en="First name is fine" data-placeholder-ko="이름만 적어도 괜찮아요" />
+                <input class="form-control" id="m-student" name="student" type="text" required placeholder={isEnglish ? 'First name is fine' : '이름만 적어도 괜찮아요'} />
               </div>
               <div class="form-field" style="margin-top:18px">
                 <span class="field-label"><T en="Level" ko="학년·과정" /></span>
@@ -67,7 +72,7 @@ const stepLabels = [
               <legend class="step-legend"><T en="What subject, and what for?" ko="어떤 과목을, 무엇을 위해 배우나요?" /></legend>
               <div class="form-field">
                 <label for="m-goal"><T en="Subject and goal" ko="과목과 학습 목표" /> <span class="req">*</span></label>
-                <textarea class="form-control" id="m-goal" name="goal" rows="4" required maxlength="1000" data-placeholder-en="IB Economics HL, aiming for a predicted 7 before the next session" data-placeholder-ko="IB 경제 HL, 다음 학기 전 예상 7점 목표"></textarea>
+                <textarea class="form-control" id="m-goal" name="goal" rows="4" required maxlength="1000" placeholder={isEnglish ? 'IB Economics HL, aiming for a predicted 7 before the next session' : 'IB 경제 HL, 다음 학기 전 예상 7점 목표'}></textarea>
                 <p class="field-hint"><T en="Tell us the subject and what you want to achieve." ko="어떤 과목을, 무엇을 위해 배우려는지 함께 적어 주세요." /></p>
               </div>
             </fieldset>
@@ -80,11 +85,11 @@ const stepLabels = [
                 <div class="tutor-picker" data-tutor-picker>
                   <input type="hidden" name="preferredTutor" value="Manager consultation" data-tutor-value />
                   <button type="button" class="form-control tutor-picker__trigger" id="m-tutor-search" aria-expanded="false" aria-controls="m-tutor-options">
-                    <span data-tutor-label data-label-en="Consult with the team" data-label-ko="매니저와 상담">매니저와 상담</span>
+                    <span data-tutor-label>{isEnglish ? 'Consult with the team' : '매니저와 상담'}</span>
                     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   </button>
                   <div class="tutor-picker__menu" id="m-tutor-options" hidden>
-                    <input class="form-control tutor-picker__search" type="search" data-placeholder-en="Search by name, university, or curriculum" data-placeholder-ko="이름, 대학 또는 커리큘럼으로 검색" aria-label="Search tutors" data-aria-en="Search tutors" data-aria-ko="튜터 검색" data-tutor-search />
+                    <input class="form-control tutor-picker__search" type="search" placeholder={isEnglish ? 'Search by name, university, or curriculum' : '이름, 대학 또는 커리큘럼으로 검색'} aria-label={isEnglish ? 'Search tutors' : '튜터 검색'} data-tutor-search />
                     <div class="tutor-picker__options" role="listbox" data-tutor-options>
                       <button type="button" class="tutor-option is-selected" role="option" aria-selected="true" data-value="Manager consultation" data-search="manager consultation team 매니저 상담">
                         <span class="tutor-option__avatar">S</span>
@@ -126,7 +131,7 @@ const stepLabels = [
               </div>
               <div class="form-field" style="margin-top:18px">
                 <label for="m-note"><T en="Anything else we should know?" ko="추가로 알려주실 내용이 있나요?" /></label>
-                <textarea class="form-control" id="m-note" name="note" data-placeholder-en="A deadline, a past struggle, or a tutor style that has worked before" data-placeholder-ko="시험 일정, 어려웠던 점, 잘 맞았던 수업 방식"></textarea>
+                <textarea class="form-control" id="m-note" name="note" placeholder={isEnglish ? 'A deadline, a past struggle, or a tutor style that has worked before' : '시험 일정, 어려웠던 점, 잘 맞았던 수업 방식'}></textarea>
               </div>
             </fieldset>
 
@@ -149,7 +154,7 @@ const stepLabels = [
             <h2 class="h3"><T en="Thank you. We are on it." ko="감사합니다. 바로 확인할게요." /></h2>
             <p class="body" id="match-done-note" data-default-en="A real person will read your answers and reply within one business day with a verified tutor who fits, plus a couple of times to book a first lesson. That first lesson comes with a rematch guarantee." data-default-ko="선배 팀이 답변을 직접 확인한 뒤 영업일 기준 하루 안에 잘 맞는 검증된 튜터와 첫 수업 가능한 시간을 안내해 드립니다. 첫 수업 후 맞지 않으면 다시 매칭해 드립니다." style="margin-top:12px; max-width:46ch; margin-inline:auto"></p>
             <div class="cta-row" style="justify-content:center; margin-top:24px">
-              <a href="/how-it-works" class="btn btn--secondary"><span><T en="See what happens next" ko="다음 과정 보기" /></span><span class="btn__disc" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
+              <a href={link('/how-it-works')} class="btn btn--secondary"><span><T en="See what happens next" ko="다음 과정 보기" /></span><span class="btn__disc" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M6 14L14 6M14 6H7M14 6V13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
             </div>
           </div>
         </div>
@@ -292,13 +297,6 @@ const stepLabels = [
   };
   const refreshDynamicLanguage = () => {
     const lang = language();
-    document.querySelectorAll<HTMLElement>('[data-placeholder-en]').forEach((node) => {
-      const control = node as HTMLInputElement | HTMLTextAreaElement;
-      control.placeholder = lang === 'en' ? (node.dataset.placeholderEn || '') : (node.dataset.placeholderKo || '');
-    });
-    document.querySelectorAll<HTMLElement>('[data-aria-en]').forEach((node) => {
-      node.setAttribute('aria-label', lang === 'en' ? (node.dataset.ariaEn || '') : (node.dataset.ariaKo || ''));
-    });
     if (pickerLabel?.dataset.manager === 'true' || pickerValue?.value === 'Manager consultation') {
       localize(pickerLabel, pickerLabel?.dataset.labelEn || 'Consult with the team', pickerLabel?.dataset.labelKo || '매니저와 상담');
     }
@@ -479,7 +477,6 @@ const stepLabels = [
     if (done) { done.hidden = false; done.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   });
   back?.addEventListener('click', () => { if (i > 0) show(i - 1); });
-  document.querySelectorAll('[data-set-lang]').forEach((button) => button.addEventListener('click', () => window.requestAnimationFrame(refreshDynamicLanguage)));
   if (pickerLabel) pickerLabel.dataset.manager = 'true';
   refreshDynamicLanguage();
 </script>
