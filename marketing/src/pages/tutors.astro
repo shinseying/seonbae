@@ -35,6 +35,15 @@ const filters = [
 
 const universities = [...new Set(withCats.map(({ entry }) => entry.university))];
 const roster = true;
+const timetableDays = [
+  { en: 'M', ko: '월' },
+  { en: 'T', ko: '화' },
+  { en: 'W', ko: '수' },
+  { en: 'T', ko: '목' },
+  { en: 'F', ko: '금' },
+  { en: 'S', ko: '토' },
+  { en: 'S', ko: '일' },
+];
 ---
 <Base title="Tutors | Seonbae" active="/tutors">
   <script is:inline>
@@ -126,6 +135,27 @@ const roster = true;
                   <ul class="tcardx__scores">
                     <li><b>{score}</b><span><T en={exam.en} ko={exam.ko} /></span></li>
                   </ul>
+                  <section class="tcardx__availability">
+                    <div class="tcardx__availability-head">
+                      <b><T en="Availability" ko="가능 시간" /></b>
+                      <span><T en="06–24" ko="06–24시" /></span>
+                    </div>
+                    <div class="weekgrid" role="img" aria-label="No published availability">
+                      <div class="weekgrid__head">
+                        <span aria-hidden="true"></span>
+                        {timetableDays.map((day) => <b><T en={day.en} ko={day.ko} /></b>)}
+                      </div>
+                      <div class="weekgrid__body">
+                        <div class="weekgrid__times" aria-hidden="true">
+                          <span style="--time-top:0">06</span>
+                          <span style="--time-top:33.333">12</span>
+                          <span style="--time-top:66.667">18</span>
+                          <span style="--time-top:100">24</span>
+                        </div>
+                        <div class="weekgrid__plot"></div>
+                      </div>
+                    </div>
+                  </section>
                   <div class="tcardx__foot">
                     <button type="button" class="tcardx__book" disabled>
                       <T en="Request a match" ko="매칭 요청하기" />
@@ -485,12 +515,59 @@ const roster = true;
   }
 
   .tcardx__meta {
-    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
     width: 100%; margin: 0; padding-top: 14px; border-top: 1px solid var(--line);
   }
   .tcardx__meta div { display: grid; gap: 3px; text-align: left; }
   .tcardx__meta dt { font-size: .72rem; color: var(--muted-soft); }
   .tcardx__meta dd { margin: 0; font-size: .84rem; font-weight: 600; color: var(--ink); line-height: 1.35; }
+
+  .tcardx__availability {
+    display: grid; gap: 8px; width: 100%; padding-top: 14px;
+    border-top: 1px solid var(--line); text-align: left;
+  }
+  .tcardx__availability-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .tcardx__availability-head b { color: var(--ink); font-size: .82rem; }
+  .tcardx__availability-head span { color: var(--muted-soft); font-size: .62rem; font-variant-numeric: tabular-nums; }
+  .weekgrid {
+    width: 100%; overflow: hidden; border: 1px solid var(--line);
+    border-radius: 9px; background: var(--white);
+  }
+  .weekgrid__head {
+    display: grid; grid-template-columns: 29px repeat(7, minmax(0, 1fr));
+    border-bottom: 1px solid var(--line);
+  }
+  .weekgrid__head b {
+    min-width: 0; padding: 6px 0; border-left: 1px solid var(--line-soft);
+    color: var(--muted); font-size: .57rem; font-weight: 750; text-align: center;
+  }
+  .weekgrid__head b:nth-last-child(-n + 2) { color: var(--coral); }
+  .weekgrid__body { height: 148px; display: grid; grid-template-columns: 29px minmax(0, 1fr); }
+  .weekgrid__times { position: relative; }
+  .weekgrid__times span {
+    position: absolute; top: calc(var(--time-top) * 1%); right: 4px;
+    color: var(--muted-soft); font-size: .47rem; font-variant-numeric: tabular-nums;
+    line-height: 1; transform: translateY(-50%);
+  }
+  .weekgrid__times span:first-child { transform: translateY(0); }
+  .weekgrid__times span:last-child { transform: translateY(-100%); }
+  .weekgrid__plot {
+    position: relative; min-width: 0;
+    background-image:
+      linear-gradient(to bottom, var(--line-soft) 1px, transparent 1px),
+      linear-gradient(to right, var(--line-soft) 1px, transparent 1px);
+    background-size: 100% calc(100% / 6), calc(100% / 7) 100%;
+  }
+  .weekgrid__slot {
+    position: absolute;
+    top: calc(var(--slot-top) * 1%);
+    left: calc((100% / 7) * var(--day-index) + 2px);
+    width: calc(100% / 7 - 4px);
+    height: max(4px, calc(var(--slot-height) * 1%));
+    border: 1px solid rgba(255,255,255,.55); border-radius: 3px;
+    background: var(--violet); box-shadow: 0 1px 4px rgba(22,48,69,.18);
+  }
+  .pf .weekgrid__body { height: 236px; }
 
   .tcardx__foot { width: 100%; margin-top: auto; padding-top: 16px; }
   .tcardx__book {
@@ -809,15 +886,51 @@ const roster = true;
     return source || tr('Online 1:1', '온라인 1:1');
   };
 
-  // Weekdays and weekends read better than a seven-day list on the card face.
-  const availabilitySummary = (tutor: Tutor) => {
+  const SCHEDULE_START = 6 * 60;
+  const SCHEDULE_END = 24 * 60;
+  const SCHEDULE_SPAN = SCHEDULE_END - SCHEDULE_START;
+  const parseAvailabilityRange = (value: string) => {
+    const match = value.match(/^\s*(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})\s*$/);
+    if (!match) return null;
+    const startHour = Number(match[1]);
+    const startMinute = Number(match[2]);
+    const endHour = Number(match[3]);
+    const endMinute = Number(match[4]);
+    if (startHour > 24 || endHour > 24 || startMinute > 59 || endMinute > 59) return null;
+    if ((startHour === 24 && startMinute !== 0) || (endHour === 24 && endMinute !== 0)) return null;
+    return { start: startHour * 60 + startMinute, end: endHour * 60 + endMinute };
+  };
+  const availabilityTimetable = (tutor: Tutor) => {
     const slots = slotsOf(tutor);
-    const week = ['mon', 'tue', 'wed', 'thu', 'fri'].some((d) => (slots[d] || []).length > 0);
-    const end = ['sat', 'sun'].some((d) => (slots[d] || []).length > 0);
-    if (week && end) return tr('Weekdays & Weekends', '평일·주말');
-    if (week) return tr('Weekdays', '평일');
-    if (end) return tr('Weekends', '주말');
-    return tr('On request', '문의');
+    const blocks = DAYS.flatMap((day, dayIndex) => {
+      const ranges = Array.isArray(slots[day.key]) ? slots[day.key] : [];
+      return ranges.flatMap((range, rangeIndex) => {
+      if (typeof range !== 'string') return [];
+      const parsed = parseAvailabilityRange(range);
+      if (!parsed) return [];
+      const start = Math.max(SCHEDULE_START, parsed.start);
+      const end = Math.min(SCHEDULE_END, parsed.end);
+      if (end <= start) return [];
+      return [{ day, dayIndex, rangeIndex, range, start, end }];
+      });
+    });
+    const aria = blocks.length
+      ? `${tr('Weekly availability timetable', '주간 가능 시간표')}: ${blocks.map((block) => `${tr(block.day.en, block.day.ko)} ${block.range}`).join(', ')}`
+      : tr('Empty weekly timetable; no availability has been published', '등록된 가능 시간이 없는 빈 주간 시간표');
+    return `<div class="weekgrid" role="img" aria-label="${escapeHtml(aria)}">
+      <div class="weekgrid__head"><span aria-hidden="true"></span>${DAYS.map((day) => `<b>${tr(day.en, day.ko)}</b>`).join('')}</div>
+      <div class="weekgrid__body">
+        <div class="weekgrid__times" aria-hidden="true">
+          <span style="--time-top:0">06</span><span style="--time-top:33.333">12</span><span style="--time-top:66.667">18</span><span style="--time-top:100">24</span>
+        </div>
+        <div class="weekgrid__plot">${blocks.map((block) => {
+          const label = `${tr(block.day.en, block.day.ko)} ${block.range}`;
+          const top = ((block.start - SCHEDULE_START) / SCHEDULE_SPAN) * 100;
+          const height = ((block.end - block.start) / SCHEDULE_SPAN) * 100;
+          return `<span class="weekgrid__slot" style="--day-index:${block.dayIndex};--slot-top:${top};--slot-height:${height}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+        }).join('')}</div>
+      </div>
+    </div>`;
   };
 
   const renderTutors = (tutors: Tutor[], states = new Map<string, PreviewState>()) => {
@@ -861,8 +974,11 @@ const roster = true;
         <dl class="tcardx__meta">
           <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(languagesOf(tutor))}</dd></div>
           <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(lessonFormatOf(tutor))}</dd></div>
-          <div><dt>${tr('Availability', '가능 시간')}</dt><dd>${availabilitySummary(tutor)}</dd></div>
-        </dl>`;
+        </dl>
+        <section class="tcardx__availability">
+          <div class="tcardx__availability-head"><b>${tr('Availability', '가능 시간')}</b><span>${tr('06–24', '06–24시')}</span></div>
+          ${availabilityTimetable(tutor)}
+        </section>`;
 
       return `<div class="tutor-cell" data-cats="${categoriesFor(tutor).join(' ')}" data-registry-id="${escapeHtml(tutor.registry_id)}"${previewState ? ` data-preview-state="${previewState}"` : ''}>
         <article class="tcardx card" data-profile="${escapeHtml(tutor.registry_id)}" tabindex="0" role="button" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')}">
@@ -1110,7 +1226,6 @@ const roster = true;
     const uni = escapeHtml(tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || ''));
     const bio = bioOf(tutor);
     const scores = scoresOf(tutor);
-    const slots = slotsOf(tutor);
     const video = embeddableVideo(safeAsset(tutor.video_url));
     const photo = safeAsset(tutor.photo_url) || cardPhoto;
 
@@ -1154,14 +1269,7 @@ const roster = true;
 
       <section class="pf__block">
         <h3 class="pf__sub">${tr('Available hours', '가능 시간')}</h3>
-        ${hasSlots(tutor)
-          ? `<div class="book__calendar">${DAYS.map((day) => {
-              const ranges = slots[day.key] || [];
-              return `<div class="book__day"><span class="book__dow">${tr(day.en, day.ko)}</span><div class="book__ranges">${
-                ranges.length ? ranges.map((range) => `<span class="book__fixed">${escapeHtml(range)}</span>`).join('') : `<span class="book__none">&mdash;</span>`
-              }</div></div>`;
-            }).join('')}</div>`
-          : `<p class="pf__empty">${tr('Hours are arranged with you after matching.', '가능 시간은 매칭 후 협의해 정합니다.')}</p>`}
+        ${availabilityTimetable(tutor)}
       </section>
 
       <div class="pf__foot">

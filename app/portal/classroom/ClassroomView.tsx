@@ -393,6 +393,7 @@ export default function ClassroomView({
 
 function homeworkLabel(status: string) {
   if (status === "submitted") return "제출 완료";
-  if (status === "graded") return "피드백 완료";
+  if (status === "graded") return "반환 완료";
+  if (status === "needs_revision") return "수정 필요";
   return "진행 중";
 }

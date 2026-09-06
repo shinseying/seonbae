@@ -47,7 +47,9 @@
 .item b{display:block;font-size:.88rem}
 .item small{color:var(--muted);font-size:.72rem}
 .item span{padding:3px 10px;border-radius:999px;font-size:.68rem;font-weight:800;background:rgba(22,58,81,.08);color:var(--blue)}
+.item span[data-status="submitted"]{background:#e6eef5;color:#315777}
 .item span[data-status="graded"]{background:rgba(79,124,82,.12);color:#4f7c52}
+.item span[data-status="needs_revision"]{background:#f7e6e1;color:#963b32}
 .item a{color:#c1663a;font-weight:700;font-size:.78rem;text-decoration:none}
 .feedback{grid-column:1/-1;margin:6px 0 0;padding:10px 12px;border-radius:9px;background:rgba(0,0,0,.03);font-size:.8rem;line-height:1.55;white-space:pre-wrap}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:.86rem;background:var(--card);border:1px solid var(--line);border-radius:16px}
@@ -71,7 +73,58 @@
 .toolForm button:disabled{opacity:.6;cursor:default}
 .toolMessage{margin:10px 0 0;padding:10px 13px;border-radius:9px;font-size:.8rem;background:rgba(19,42,75,.06)}
 .toolMessage[data-tone="error"]{background:#fbeee9;color:#8f302b}
+
+/* A compact review queue follows the same list → work → return rhythm tutors
+   already know from classroom tools, while retaining Seonbae's paper palette. */
+.reviewBoard{margin-top:16px;border:1px solid var(--line);border-radius:13px;background:var(--card);overflow:hidden}
+.reviewHead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:18px;border-bottom:1px solid var(--line)}
+.reviewHead>b,.reviewHead>div>b{display:block;font-size:.94rem}
+.reviewHead p{margin:4px 0 0;color:var(--muted);font-size:.72rem;line-height:1.5}
+.reviewTabs{display:flex;gap:5px;overflow-x:auto}
+.reviewTabs button{min-height:40px;display:inline-flex;align-items:center;gap:7px;padding:0 12px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--muted);font:inherit;font-size:.68rem;font-weight:750;white-space:nowrap;cursor:pointer}
+.reviewTabs button[data-active="true"]{border-color:#163a51;background:#163a51;color:#fff}
+.reviewTabs button span{min-width:19px;height:19px;display:grid;place-items:center;border-radius:50%;background:rgba(22,58,81,.08);font-size:.58rem}
+.reviewTabs button[data-active="true"] span{background:rgba(255,255,255,.16)}
+.reviewTabs button:focus-visible,.reviewList>button:focus-visible,.returnActions button:focus-visible,.studentWork a:focus-visible{outline:3px solid #2d789c;outline-offset:2px}
+.reviewWorkspace{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.45fr);min-height:390px}
+.reviewList{border-right:1px solid var(--line)}
+.reviewList>button{width:100%;min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.reviewList>button:hover{background:rgba(22,58,81,.035)}
+.reviewList>button[data-active="true"]{background:#f0f3ed;box-shadow:inset 4px 0 #477653}
+.reviewList>button>span{min-width:0;display:grid;gap:4px}
+.reviewList b{overflow:hidden;font-size:.76rem;text-overflow:ellipsis;white-space:nowrap}
+.reviewList small{color:var(--muted);font-size:.62rem}
+.reviewList i,.reviewTitle i{flex:none;padding:4px 7px;border-radius:99px;background:#f2ead6;color:#765a1b;font-size:.56rem;font-style:normal;font-weight:800}
+.reviewList i[data-status="submitted"],.reviewTitle i[data-status="submitted"]{background:#e6eef5;color:#315777}
+.reviewList i[data-status="graded"],.reviewTitle i[data-status="graded"]{background:#e4efe5;color:#315f3f}
+.reviewList i[data-status="needs_revision"],.reviewTitle i[data-status="needs_revision"]{background:#f7e6e1;color:#963b32}
+.reviewDetail{min-width:0;padding:20px}
+.reviewTitle{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.reviewTitle span{color:#c1663a;font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.reviewTitle h4{margin:4px 0 0;font-size:1.08rem}
+.reviewInstructions{margin:14px 0 0;color:#505861;font-size:.73rem;line-height:1.65;white-space:pre-wrap}
+.reviewMeta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin:17px 0 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--line)}
+.reviewMeta div{padding:10px 12px;background:var(--card)}
+.reviewMeta dt{color:var(--muted);font-size:.58rem}
+.reviewMeta dd{margin:4px 0 0;font-size:.66rem;font-weight:700}
+.studentWork{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:17px;padding:12px 13px;border-radius:8px;background:#eef2f3}
+.studentWork>span{font-size:.64rem;font-weight:800}
+.studentWork a{max-width:65%;color:#163a51;font-size:.65rem;font-weight:750;text-align:right;overflow-wrap:anywhere}
+.studentWork small{color:var(--muted);font-size:.63rem;text-align:right}
+.reviewFeedback{display:grid;gap:7px;margin-top:17px;color:var(--muted);font-size:.65rem;font-weight:750}
+.reviewFeedback textarea{width:100%;resize:vertical;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:.73rem;line-height:1.55}
+.returnActions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.returnActions button{min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;border:0;border-radius:7px;background:#163a51;color:#fff;font:inherit;font-size:.68rem;font-weight:800;cursor:pointer}
+.returnActions button:disabled{opacity:.55;cursor:wait}
+.returnActions .revisionButton{border:1px solid rgba(150,59,50,.3);background:#fff;color:#963b32}
+.returnedFeedback{margin-top:17px;padding:13px 14px;border-left:4px solid #477653;border-radius:7px;background:#edf4ed}
+.returnedFeedback b{font-size:.63rem;color:#315f3f}
+.returnedFeedback p{margin:6px 0 0;font-size:.7rem;line-height:1.6;white-space:pre-wrap}
+.reviewEmpty{min-height:190px;display:grid;place-items:center;margin:0;color:var(--muted);font-size:.76rem}
 @media(max-width:760px){.toolForm{grid-template-columns:1fr}}
+
+@media(max-width:900px){.reviewHead{align-items:flex-start;flex-direction:column}.reviewTabs{width:100%}.reviewWorkspace{grid-template-columns:1fr}.reviewList{border-right:0;border-bottom:1px solid var(--line)}}
+@media(max-width:560px){.reviewMeta{grid-template-columns:1fr}.studentWork,.returnActions{align-items:stretch;flex-direction:column}.studentWork a,.studentWork small{max-width:100%;text-align:left}.returnActions button{width:100%}.reviewFeedback textarea{font-size:16px}}
 
 /* The rail is fixed, so the page carries its width as padding and follows it
    when the sidebar folds — same rule the other portal tabs use. */

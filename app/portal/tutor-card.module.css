@@ -122,3 +122,76 @@
   margin: 0;
   font-weight: 600;
 }
+
+.availability {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(19, 24, 27, 0.08);
+}
+.availabilityHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+.availabilityHead b { font-size: 0.82rem; }
+.availabilityHead span { color: rgba(32, 30, 25, 0.5); font-size: 0.62rem; font-variant-numeric: tabular-nums; }
+.weekGrid {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(19, 24, 27, 0.12);
+  border-radius: 8px;
+  background: #fffdf9;
+}
+.weekHead {
+  display: grid;
+  grid-template-columns: 28px repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid rgba(19, 24, 27, 0.12);
+}
+.weekHead b {
+  min-width: 0;
+  padding: 6px 0;
+  border-left: 1px solid rgba(19, 24, 27, 0.08);
+  color: rgba(32, 30, 25, 0.66);
+  font-size: 0.58rem;
+  font-weight: 750;
+  text-align: center;
+}
+.weekHead b:nth-last-child(-n + 2) { color: #b0523b; }
+.weekBody { height: 145px; display: grid; grid-template-columns: 28px minmax(0, 1fr); }
+.timeRail { position: relative; }
+.timeRail span {
+  position: absolute;
+  top: calc(var(--time-top) * 1%);
+  right: 4px;
+  color: rgba(32, 30, 25, 0.42);
+  font-size: 0.48rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+.timeRail span:first-child { transform: translateY(0); }
+.timeRail span:last-child { transform: translateY(-100%); }
+.weekPlot {
+  position: relative;
+  min-width: 0;
+  background-image:
+    linear-gradient(to bottom, rgba(19, 24, 27, 0.08) 1px, transparent 1px),
+    linear-gradient(to right, rgba(19, 24, 27, 0.08) 1px, transparent 1px);
+  background-size: 100% calc(100% / 6), calc(100% / 7) 100%;
+}
+.timeBlock {
+  position: absolute;
+  top: calc(var(--slot-top) * 1%);
+  left: calc((100% / 7) * var(--day-index) + 2px);
+  width: calc(100% / 7 - 4px);
+  height: max(4px, calc(var(--slot-height) * 1%));
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 3px;
+  background: #527f94;
+  box-shadow: 0 1px 3px rgba(22, 58, 81, 0.18);
+}

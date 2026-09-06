@@ -4,6 +4,7 @@ import { classroomStudentIds } from "../../../utils/classrooms/students";
 import HomeworkList, { type HomeworkItem } from "./HomeworkList";
 import { PortalText } from "../PortalLocale";
 import styles from "./homework.module.css";
+import { homeworkGroup, type HomeworkStatus } from "../../../utils/homework/workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function HomeworkPage() {
   const { data: rows } = studentIds.length
     ? await supabase
         .from("portal_assignments")
-        .select("id,student_id,subject,title,instructions,due_date,attachment_name,status,submitted_at,feedback,graded_at,created_at,tutors(name)")
+        .select("id,student_id,subject,title,instructions,due_date,attachment_name,student_attachment_name,status,submitted_at,feedback,graded_at,created_at,tutors(name)")
         .in("student_id", studentIds)
         .order("due_date", { ascending: true })
         .order("created_at", { ascending: false })
@@ -59,7 +60,8 @@ export default async function HomeworkPage() {
       instructions: row.instructions,
       dueDate: row.due_date,
       attachmentName: row.attachment_name,
-      status: row.status,
+      studentAttachmentName: row.student_attachment_name,
+      status: row.status as HomeworkStatus,
       submittedAt: row.submitted_at,
       feedback: row.feedback,
       gradedAt: row.graded_at,
@@ -67,8 +69,9 @@ export default async function HomeworkPage() {
     };
   });
 
-  const openCount = assignments.filter((item) => item.status === "todo").length;
-  const reviewCount = assignments.filter((item) => item.status === "submitted").length;
+  const openCount = assignments.filter((item) => homeworkGroup(item.status) === "assigned").length;
+  const reviewCount = assignments.filter((item) => homeworkGroup(item.status) === "submitted").length;
+  const returnedCount = assignments.filter((item) => homeworkGroup(item.status) === "returned").length;
 
   return (
     <main className={styles.page}>
@@ -80,13 +83,13 @@ export default async function HomeworkPage() {
             <span>
               {isParent
                 ? <PortalText ko="연결된 학생의 과제, 제출 상태와 튜터 피드백을 한곳에서 확인합니다." en="Review linked students' assignments, submission status, and tutor feedback in one place." />
-                : <PortalText ko="튜터가 등록한 과제를 확인하고 완료하면 제출 상태로 바꾸세요." en="Review assignments from your tutor and submit them when complete." />}
+                : <PortalText ko="마감일별 과제를 확인하고, 작업 파일을 제출한 뒤 튜터의 피드백까지 이어서 확인하세요." en="Review work by due date, turn in your files, and follow tutor feedback through to completion." />}
             </span>
           </div>
           <dl>
-            <div><dt><PortalText ko="할 일" en="To do" /></dt><dd>{openCount}</dd></div>
-            <div><dt><PortalText ko="검토 중" en="In review" /></dt><dd>{reviewCount}</dd></div>
-            <div><dt><PortalText ko="피드백 완료" en="Feedback received" /></dt><dd>{assignments.length - openCount - reviewCount}</dd></div>
+            <div><dt><PortalText ko="할 일" en="Assigned" /></dt><dd>{openCount}</dd></div>
+            <div><dt><PortalText ko="제출됨" en="Turned in" /></dt><dd>{reviewCount}</dd></div>
+            <div><dt><PortalText ko="반환됨" en="Returned" /></dt><dd>{returnedCount}</dd></div>
           </dl>
         </header>
         <HomeworkList assignments={assignments} role={isParent ? "parent" : "student"} />

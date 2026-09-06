@@ -96,7 +96,7 @@ export default async function ClassroomDetailPage({
     room.student_id
       ? admin
           .from("portal_assignments")
-          .select("id,title,due_date,status,feedback,instructions")
+          .select("id,title,due_date,status,feedback,instructions,student_attachment_name,submitted_at")
           .eq("student_id", room.student_id)
           .eq("tutor_registry_id", room.tutor_registry_id)
           .order("due_date", { ascending: false })
@@ -131,7 +131,12 @@ export default async function ClassroomDetailPage({
             assignments={(homework ?? []).map((item) => ({
               id: item.id,
               title: item.title,
+              instructions: item.instructions,
+              dueDate: item.due_date,
+              status: item.status,
               feedback: item.feedback,
+              studentAttachmentName: item.student_attachment_name,
+              submittedAt: item.submitted_at,
             }))}
           />
         )}
@@ -182,7 +187,7 @@ export default async function ClassroomDetailPage({
                 <small>{item.due_date ? `마감 ${item.due_date}` : "마감 없음"}</small>
               </div>
               <span data-status={item.status}>
-                {item.status === "graded" ? "피드백 완료" : item.status === "submitted" ? "제출 완료" : "진행 중"}
+                {item.status === "graded" ? "반환 완료" : item.status === "submitted" ? "제출 완료" : item.status === "needs_revision" ? "수정 필요" : "진행 중"}
               </span>
               {item.instructions && <p className={styles.feedback}>{item.instructions}</p>}
               {item.feedback && <p className={styles.feedback}>{item.feedback}</p>}

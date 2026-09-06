@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import styles from "./tutor-card.module.css";
 
 // A React reproduction of the public tutor card (tcardx) so the tutor's own
@@ -19,18 +20,18 @@ export type TutorCardData = {
   lessonFormat?: string | null;
 };
 
-const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri"];
-const WEEKEND = ["sat", "sun"];
-
-function availabilitySummary(availability?: Record<string, string[]> | null) {
-  const slots = availability || {};
-  const week = WEEKDAYS.some((day) => (slots[day] || []).length > 0);
-  const end = WEEKEND.some((day) => (slots[day] || []).length > 0);
-  if (week && end) return "평일·주말";
-  if (week) return "평일";
-  if (end) return "주말";
-  return "문의";
-}
+const SCHEDULE_START = 6 * 60;
+const SCHEDULE_END = 24 * 60;
+const SCHEDULE_SPAN = SCHEDULE_END - SCHEDULE_START;
+const TIMETABLE_DAYS = [
+  { key: "mon", label: "월" },
+  { key: "tue", label: "화" },
+  { key: "wed", label: "수" },
+  { key: "thu", label: "목" },
+  { key: "fri", label: "금" },
+  { key: "sat", label: "토" },
+  { key: "sun", label: "일" },
+] as const;
 
 function initials(value: string) {
   const clean = value.trim();
@@ -71,8 +72,76 @@ export default function TutorCard({ tutor }: { tutor: TutorCardData }) {
       <dl className={styles.meta}>
         <div><dt>언어</dt><dd>{tutor.languages || "한국어, 영어"}</dd></div>
         <div><dt>형식</dt><dd>{tutor.lessonFormat || "온라인 1:1"}</dd></div>
-        <div><dt>가능 시간</dt><dd>{availabilitySummary(tutor.availability)}</dd></div>
       </dl>
+      <AvailabilityTimetable availability={tutor.availability} />
     </article>
   );
+}
+
+function AvailabilityTimetable({ availability }: { availability?: Record<string, string[]> | null }) {
+  const slots = availability || {};
+  const blocks = TIMETABLE_DAYS.flatMap((day, dayIndex) => {
+    const ranges = Array.isArray(slots[day.key]) ? slots[day.key] : [];
+    return ranges.flatMap((range, rangeIndex) => {
+      const parsed = parseRange(range);
+      if (!parsed) return [];
+      const start = Math.max(SCHEDULE_START, parsed.start);
+      const end = Math.min(SCHEDULE_END, parsed.end);
+      if (end <= start) return [];
+      return [{ dayIndex, rangeIndex, range, start, end }];
+    });
+  });
+
+  return (
+    <section className={styles.availability}>
+      <div className={styles.availabilityHead}>
+        <b>가능 시간</b>
+        <span>06–24시</span>
+      </div>
+      <div className={styles.weekGrid} role="img" aria-label={blocks.length
+        ? `튜터의 주간 가능 시간표: ${blocks.map((block) => `${TIMETABLE_DAYS[block.dayIndex].label}요일 ${block.range}`).join(", ")}`
+        : "등록된 가능 시간이 없는 빈 주간 시간표"}>
+        <div className={styles.weekHead}>
+          <span aria-hidden="true" />
+          {TIMETABLE_DAYS.map((day) => <b key={day.key}>{day.label}</b>)}
+        </div>
+        <div className={styles.weekBody}>
+          <div className={styles.timeRail} aria-hidden="true">
+            {[6, 12, 18, 24].map((hour) => (
+              <span key={hour} style={{ "--time-top": ((hour * 60 - SCHEDULE_START) / SCHEDULE_SPAN) * 100 } as CSSProperties}>
+                {String(hour).padStart(2, "0")}
+              </span>
+            ))}
+          </div>
+          <div className={styles.weekPlot}>
+            {blocks.map((block) => (
+              <span
+                className={styles.timeBlock}
+                key={`${block.dayIndex}-${block.rangeIndex}-${block.range}`}
+                title={`${TIMETABLE_DAYS[block.dayIndex].label} ${block.range}`}
+                aria-label={`${TIMETABLE_DAYS[block.dayIndex].label}요일 ${block.range}`}
+                style={{
+                  "--day-index": block.dayIndex,
+                  "--slot-top": ((block.start - SCHEDULE_START) / SCHEDULE_SPAN) * 100,
+                  "--slot-height": ((block.end - block.start) / SCHEDULE_SPAN) * 100,
+                } as CSSProperties}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function parseRange(value: string) {
+  const match = value.match(/^\s*(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})\s*$/);
+  if (!match) return null;
+  const startHour = Number(match[1]);
+  const startMinute = Number(match[2]);
+  const endHour = Number(match[3]);
+  const endMinute = Number(match[4]);
+  if (startHour > 24 || endHour > 24 || startMinute > 59 || endMinute > 59) return null;
+  if ((startHour === 24 && startMinute !== 0) || (endHour === 24 && endMinute !== 0)) return null;
+  return { start: startHour * 60 + startMinute, end: endHour * 60 + endMinute };
 }
