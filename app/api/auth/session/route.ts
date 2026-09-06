@@ -3,7 +3,6 @@ import { createClient } from "../../../../utils/supabase/server";
 import { resolvePortalDestination } from "../../../../utils/auth/portal-destination";
 import { cookies } from "next/headers";
 import {
-  ADMIN_ENTRY_COOKIE,
   ADMIN_STEP_COOKIE,
   decodeJwtClaims,
   readAccessGate,
@@ -64,18 +63,7 @@ export async function GET() {
       "admin-step",
       identity,
     );
-    const entryVerified = phraseVerified
-      ? await readAccessGate(
-          cookieStore.get(ADMIN_ENTRY_COOKIE)?.value,
-          "admin-entry",
-          identity,
-        )
-      : null;
-    destination = !phraseVerified
-      ? "/admin-verify"
-      : entryVerified
-        ? "/admin"
-        : "/admin-shell";
+    destination = phraseVerified ? "/admin" : "/admin-verify";
   } else {
     const verified = await readAccessGate(
       cookieStore.get(USER_VERIFIED_COOKIE)?.value,

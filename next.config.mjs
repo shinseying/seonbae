@@ -95,10 +95,6 @@ const nextConfig = {
         headers: privateNoStoreHeaders,
       },
       {
-        source: "/admin-shell",
-        headers: privateNoStoreHeaders,
-      },
-      {
         source: "/portal/tutor/contract",
         headers: [
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'" },

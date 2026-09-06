@@ -2,7 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import {
   ADMIN_AUTH_EMAIL,
-  ADMIN_ENTRY_COOKIE,
   ADMIN_STEP_COOKIE,
   claimsIdentity,
   readAccessGate,
@@ -54,7 +53,6 @@ export const updateSession = async (request: NextRequest) => {
     || pathname === "/my-page"
     || pathname.startsWith("/my-page/")
     || pathname === "/admin-verify"
-    || pathname === "/admin-shell"
     || adminPath;
 
   if (!identity.userId || !identity.sessionId) {
@@ -69,7 +67,7 @@ export const updateSession = async (request: NextRequest) => {
   }
 
   let isAdmin = identity.email === ADMIN_AUTH_EMAIL;
-  if (adminPath || adminApi || pathname === "/admin-verify" || pathname === "/admin-shell") {
+  if (adminPath || adminApi || pathname === "/admin-verify") {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -78,7 +76,7 @@ export const updateSession = async (request: NextRequest) => {
     isAdmin = profile?.role === "admin";
   }
 
-  if (adminPath || adminApi || pathname === "/admin-verify" || pathname === "/admin-shell") {
+  if (adminPath || adminApi || pathname === "/admin-verify") {
     if (!isAdmin) {
       if (isApi) return preserveCookies(jsonError("관리자 권한이 필요합니다.", 403), supabaseResponse);
       const portal = request.nextUrl.clone();
@@ -101,22 +99,6 @@ export const updateSession = async (request: NextRequest) => {
       return preserveCookies(NextResponse.redirect(verify), supabaseResponse);
     }
 
-    if (pathname === "/admin-shell" || pathname === "/admin/entry") {
-      return supabaseResponse;
-    }
-
-    const entryVerified = await readAccessGate(
-      request.cookies.get(ADMIN_ENTRY_COOKIE)?.value,
-      "admin-entry",
-      identity,
-    );
-    if (!entryVerified) {
-      if (isApi) return preserveCookies(jsonError("관리자 진입 확인이 필요합니다.", 403, "/admin-shell"), supabaseResponse);
-      const shell = request.nextUrl.clone();
-      shell.pathname = "/admin-shell";
-      shell.search = "";
-      return preserveCookies(NextResponse.redirect(shell), supabaseResponse);
-    }
     return supabaseResponse;
   }
 

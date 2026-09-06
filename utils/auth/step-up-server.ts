@@ -2,7 +2,6 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import {
-  ADMIN_ENTRY_COOKIE,
   ADMIN_STEP_COOKIE,
   createVerificationCode,
   signAccessGate,
@@ -92,21 +91,6 @@ export async function setAdminPhraseVerified(input: {
   });
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_STEP_COOKIE, token, cookieOptions(ADMIN_GATE_SECONDS));
-  cookieStore.delete(ADMIN_ENTRY_COOKIE);
-}
-
-export async function setAdminEntryVerified(input: {
-  userId: string;
-  sessionId: string;
-}) {
-  const token = await signAccessGate({
-    kind: "admin-entry",
-    userId: input.userId,
-    sessionId: input.sessionId,
-    expiresAt: Date.now() + ADMIN_GATE_SECONDS * 1000,
-  });
-  const cookieStore = await cookies();
-  cookieStore.set(ADMIN_ENTRY_COOKIE, token, cookieOptions(ADMIN_GATE_SECONDS));
 }
 
 export function clearAccessGateCookies(cookieStore: {
@@ -115,7 +99,6 @@ export function clearAccessGateCookies(cookieStore: {
   cookieStore.delete(USER_CHALLENGE_COOKIE);
   cookieStore.delete(USER_VERIFIED_COOKIE);
   cookieStore.delete(ADMIN_STEP_COOKIE);
-  cookieStore.delete(ADMIN_ENTRY_COOKIE);
 }
 
 function cookieOptions(maxAge?: number) {

@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   await setAdminPhraseVerified({ userId: userData.user.id, sessionId });
   return NextResponse.json(
-    { verified: true, destination: "/admin-shell" },
+    { verified: true, destination: "/admin" },
     { headers: { "Cache-Control": "private, no-store, max-age=0" } },
   );
 }

@@ -21,7 +21,7 @@ export default function AdminVerifyPage() {
           return;
         }
         if (session.destination !== "/admin-verify") {
-          router.replace(session.destination || "/admin-shell");
+          router.replace(session.destination || "/admin");
           return;
         }
         setChecking(false);
@@ -44,7 +44,7 @@ export default function AdminVerifyPage() {
         setMessage(result.error || "보안 문구를 확인하지 못했습니다.");
         return;
       }
-      router.replace(result.destination || "/admin-shell");
+      router.replace(result.destination || "/admin");
       router.refresh();
     } catch {
       setMessage("네트워크 연결을 확인해 주세요.");
