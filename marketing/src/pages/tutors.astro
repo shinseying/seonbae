@@ -2,33 +2,12 @@
 import Base from '../layouts/Base.astro';
 import PageHero from '../components/PageHero.astro';
 import T from '../components/T.astro';
-import Icon from '../components/Icon.astro';
-import { leadership, TUTOR_CARD_PHOTO } from '../data/people';
 import { localeFromPath, localePath } from '../i18n/locale';
 
 const locale = localeFromPath(Astro.url.pathname);
 const link = (href: string) => localePath(href, locale);
 const isEnglish = locale === 'en';
 
-const ianTutor = {
-  name: 'Ian Bae',
-  hangul: '배이안',
-  university: 'Korea University',
-  universityKo: '고려대학교',
-  photo: '/images/ian-bae-placeholder.png',
-};
-
-// Keep the server-rendered directory identical to the registry order. This
-// prevents Ian from being the only tutor added later by the client request.
-const withCats = [
-  { registryId: 'P-001', entry: ianTutor, cats: ['ib'], score: '43/45', exam: { en: 'IB', ko: 'IB' } },
-  { registryId: 'P-002', entry: leadership[2], cats: ['alevel'], score: 'A*A*A*A*', exam: { en: 'A Level', ko: 'A레벨' } },
-  { registryId: 'P-003', entry: leadership[1], cats: ['tests'], score: '1510', exam: { en: 'SAT', ko: 'SAT' } },
-];
-
-// Counts drive the rail, so a family can see how deep each curriculum runs
-// before they click anything.
-const count = (key: string) => (key === 'all' ? withCats.length : withCats.filter((t) => t.cats.includes(key)).length);
 const filters = [
   { key: 'all', label: 'All tutors' },
   { key: 'ib', label: 'IB Diploma' },
@@ -36,30 +15,6 @@ const filters = [
   { key: 'alevel', label: 'A Level' },
   { key: 'igcse', label: 'IGCSE' },
   { key: 'tests', label: 'Tests & English' },
-].map((f) => ({ ...f, n: count(f.key) }));
-
-const universityKey = (value: string) => {
-  if (/Seoul National|서울(?:대학교|대)/i.test(value)) return 'snu';
-  if (/Korea University|고려(?:대학교|대)/i.test(value)) return 'korea';
-  if (/Yonsei|연세(?:대학교|대)/i.test(value)) return 'yonsei';
-  return null;
-};
-const universityLabels = locale === 'en'
-  ? { snu: 'Seoul National University', korea: 'Korea University', yonsei: 'Yonsei University' }
-  : { snu: '서울대학교', korea: '고려대학교', yonsei: '연세대학교' };
-const presentUniversities = new Set(withCats.map(({ entry }) => universityKey(`${entry.university} ${entry.universityKo}`)).filter(Boolean));
-const universities = (['snu', 'korea', 'yonsei'] as const)
-  .filter((key) => presentUniversities.has(key))
-  .map((key) => universityLabels[key]);
-const roster = true;
-const timetableDays = [
-  { en: 'M', ko: '월' },
-  { en: 'T', ko: '화' },
-  { en: 'W', ko: '수' },
-  { en: 'T', ko: '목' },
-  { en: 'F', ko: '금' },
-  { en: 'S', ko: '토' },
-  { en: 'S', ko: '일' },
 ];
 ---
 <Base active="/tutors">
@@ -117,7 +72,7 @@ const timetableDays = [
             {filters.map((f, i) => (
               <button type="button" class="rail__btn" data-filter={f.key} aria-pressed={i === 0 ? 'true' : 'false'}>
                 <span class="rail__label" data-filter-label={f.key}><T en={f.label} ko={f.key === 'all' ? '전체 튜터' : f.key === 'ap' ? 'AP' : f.key === 'alevel' ? 'A레벨' : f.key === 'tests' ? 'SAT·ACT·영어 시험' : f.label} /></span>
-                {roster && <span class="rail__n">{f.n}</span>}
+                <span class="rail__n rail__n--loading" aria-hidden="true"></span>
               </button>
             ))}
           </div>
@@ -136,55 +91,53 @@ const timetableDays = [
         </aside>
 
         <div class="roster__main">
+          <div class="directory-tools reveal is-in">
+            <label class="directory-search" for="tutor-search">
+              <span><T en="Search tutors or subjects" ko="튜터 또는 과목 검색" /></span>
+              <span class="directory-search__control">
+                <input id="tutor-search" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder={isEnglish ? 'Try IB Chemistry, calculus, or a tutor name' : 'IB 화학, 미적분 또는 튜터 이름을 검색하세요'} />
+                <button type="button" data-clear-search hidden aria-label={isEnglish ? 'Clear search' : '검색어 지우기'}>×</button>
+              </span>
+            </label>
+            <label class="directory-sort" for="tutor-sort">
+              <span><T en="Sort by" ko="정렬" /></span>
+              <select id="tutor-sort">
+                <option value="default"><T en="Recommended" ko="추천순" /></option>
+                <option value="curriculum"><T en="Curriculum" ko="커리큘럼순" /></option>
+                <option value="university"><T en="University" ko="대학교순" /></option>
+                <option value="recent"><T en="Recently added" ko="최근 등록순" /></option>
+              </select>
+            </label>
+          </div>
+
           <div class="roster__bar reveal is-in">
-            <p class="roster__count"><strong id="tutor-count">{roster ? withCats.length : 6}</strong> <span data-count-label><T en={roster ? 'tutors listed' : 'places in the founding cohort'} ko={roster ? '명의 튜터' : '개의 초기 모집 자리'} /></span></p>
-            <p class="roster__unis">{roster ? universities.join(' · ') : 'Seoul National University · Korea University · Yonsei University'}</p>
+            <div class="roster__state">
+              <p class="roster__count"><strong id="tutor-count" class="count-skeleton" aria-hidden="true"></strong> <span data-count-label><T en="tutors listed" ko="명의 튜터" /></span></p>
+              <div class="active-filters" data-active-filters aria-label={isEnglish ? 'Active filters' : '적용된 필터'}></div>
+            </div>
+            <p class="roster__unis" aria-hidden="true"><span class="unis-skeleton"></span></p>
           </div>
 
           <div class="tutor-grid is-loading" id="tutor-grid" aria-busy="true">
-            {withCats.map(({ registryId, entry: tutor, cats, score, exam }) => (
-              <div class="tutor-cell reveal is-in" data-cats={cats.join(' ')} data-registry-id={registryId}>
-                <article class="tcardx card">
-                  <span class="tcardx__verified"><Icon name="verify" size={15} /> <T en="Verified Tutor" ko="검증 완료" /></span>
-                  <img class="tcardx__avatar" src={TUTOR_CARD_PHOTO} alt={tutor.name} width="320" height="320" loading="lazy" decoding="async" />
-                  <h3 class="tcardx__name"><T en={tutor.name} ko={tutor.hangul} /><small><T en={tutor.hangul} ko={tutor.name} /></small></h3>
-                  <p class="tcardx__uni"><T en={tutor.university} ko={tutor.universityKo} /></p>
-                  <ul class="tcardx__scores">
-                    <li><b>{score}</b><span><T en={exam.en} ko={exam.ko} /></span></li>
-                  </ul>
-                  <section class="tcardx__availability">
-                    <div class="tcardx__availability-head">
-                      <b><T en="Availability" ko="가능 시간" /></b>
-                      <span><T en="06:00 to 24:00" ko="06시부터 24시" /></span>
-                    </div>
-                    <div class="weekgrid" role="img" aria-label="No published availability">
-                      <div class="weekgrid__head">
-                        <span aria-hidden="true"></span>
-                        {timetableDays.map((day) => <b><T en={day.en} ko={day.ko} /></b>)}
-                      </div>
-                      <div class="weekgrid__body">
-                        <div class="weekgrid__times" aria-hidden="true">
-                          <span style="--time-top:0">06</span>
-                          <span style="--time-top:33.333">12</span>
-                          <span style="--time-top:66.667">18</span>
-                          <span style="--time-top:100">24</span>
-                        </div>
-                        <div class="weekgrid__plot"></div>
-                      </div>
-                    </div>
-                  </section>
-                  <div class="tcardx__foot">
-                    <button type="button" class="tcardx__book" disabled>
-                      <T en="Request a match" ko="매칭 요청하기" />
-                    </button>
-                  </div>
+            {Array.from({ length: 6 }).map(() => (
+              <div class="tutor-cell tutor-cell--skeleton" aria-hidden="true">
+                <article class="tcardx tcardx--skeleton card">
+                  <span class="skeleton-line skeleton-line--credential"></span>
+                  <span class="skeleton-line skeleton-line--label"></span>
+                  <span class="skeleton-identity"><i></i><b><span></span><span></span></b></span>
+                  <span class="skeleton-tags"><i></i><i></i><i></i></span>
+                  <span class="skeleton-line skeleton-line--bio"></span>
+                  <span class="skeleton-line skeleton-line--button"></span>
                 </article>
               </div>
             ))}
           </div>
 
           <p class="roster__note" id="roster-note" hidden><T en="Only active, verified records from the Seonbae registry appear here." ko="선배 명부에서 활성화된 검증 완료 튜터만 표시됩니다." /> <a href={link('/verification')}><T en="See the standard" ko="검증 기준 보기" /></a></p>
-          <p class="no-match" hidden><T en="No tutors in that category yet. Try another, or tell us what you need." ko="이 분류의 튜터가 아직 없습니다. 다른 분류를 보거나 필요한 내용을 알려주세요." /></p>
+          <div class="no-match" hidden>
+            <p data-no-match-copy><T en="No tutor matches those filters. Try a broader subject or clear the filters." ko="조건에 맞는 튜터가 없습니다. 더 넓은 과목명으로 검색하거나 필터를 지워보세요." /></p>
+            <button type="button" data-clear-filters><T en="Clear filters" ko="필터 지우기" /></button>
+          </div>
           <p class="sr-only" role="status" aria-live="polite" id="tutor-live"></p>
         </div>
       </div>
@@ -317,11 +270,11 @@ const timetableDays = [
   }
   .roster {
     display: grid;
-    grid-template-columns: 250px minmax(0, 1fr);
-    gap: clamp(32px, 3.5vw, 56px);
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: clamp(24px, 2.5vw, 40px);
     align-items: start;
   }
-  .rail { position: sticky; top: 104px; }
+  .rail { position: sticky; top: var(--header-h); }
   .rail__title {
     font-size: 0.78rem;
     font-weight: 600;
@@ -374,6 +327,33 @@ const timetableDays = [
   .rail__link { margin-top: 16px; font-size: 0.9rem; }
 
   /* ----- Roster ----------------------------------------------------------- */
+  .directory-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px;
+    gap: 14px;
+    align-items: end;
+    margin-bottom: 20px;
+  }
+  .directory-search,
+  .directory-sort { display: grid; gap: 8px; color: var(--ink); font-size: .78rem; font-weight: 750; }
+  .directory-search__control { position: relative; display: block; }
+  .directory-search input,
+  .directory-sort select {
+    width: 100%; min-height: 50px; border: 1px solid var(--line); border-radius: 14px;
+    background: var(--white); color: var(--ink); font: inherit; font-size: 1rem;
+    transition: border-color .16s ease, box-shadow .16s ease;
+  }
+  .directory-search input { padding: 0 48px 0 16px; }
+  .directory-sort select { padding: 0 38px 0 14px; cursor: pointer; }
+  .directory-search input:focus,
+  .directory-sort select:focus { outline: 0; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-soft); }
+  .directory-search__control button {
+    position: absolute; top: 50%; right: 3px; width: 44px; height: 44px; transform: translateY(-50%);
+    border: 0; border-radius: 10px; background: transparent; color: var(--muted); font: inherit; font-size: 1.35rem; cursor: pointer;
+  }
+  .directory-search input::-webkit-search-cancel-button { appearance: none; }
+  .directory-search__control button:hover { background: var(--violet-soft); color: var(--violet); }
+  .directory-search__control button:focus-visible { outline: 3px solid var(--mint); outline-offset: 1px; }
   .roster__bar {
     display: flex;
     flex-wrap: wrap;
@@ -384,14 +364,22 @@ const timetableDays = [
     margin-bottom: clamp(18px, 2vw, 26px);
     border-bottom: 2px solid var(--ink);
   }
+  .roster__state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
   .roster__count { font-size: 0.95rem; color: var(--muted); }
   .roster__count strong { font-family: var(--display); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); margin-right: 4px; font-variant-numeric: tabular-nums; }
   .roster__unis { font-size: 0.85rem; color: var(--muted); }
   .roster__main, .tutor-grid, .tutor-cell, .live-tutor-card { min-width: 0; }
   .roster__unis { overflow-wrap: anywhere; }
+  .active-filters { display: flex; flex-wrap: wrap; gap: 7px; }
+  .active-filter {
+    min-height: 44px; display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px 5px 12px;
+    border: 1px solid rgba(52, 63, 114, .24); border-radius: var(--r-pill);
+    background: var(--violet-soft); color: var(--violet); font: inherit; font-size: .78rem; font-weight: 750; cursor: pointer;
+  }
+  .active-filter:hover { border-color: var(--violet); }
+  .active-filter:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
 
-  .tutor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 1.6vw, 22px); }
-  .tutor-grid.is-loading { opacity: 0.72; }
+  .tutor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); grid-auto-rows: 1fr; gap: clamp(16px, 1.6vw, 22px); }
   .tutor-cell.is-hidden { display: none; }
   .live-tutor-card { display: flex; flex-direction: column; min-height: 100%; overflow: hidden; border-radius: 28px; border: 1px solid rgba(22, 48, 69, .12); box-shadow: 0 14px 36px rgba(22, 48, 69, .08); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
   .live-tutor-card:hover { transform: translateY(-4px); border-color: rgba(22, 48, 69, .2); box-shadow: 0 22px 48px rgba(22, 48, 69, .13); }
@@ -417,8 +405,37 @@ const timetableDays = [
   .live-tutor-card__action { margin-top: 22px; white-space: normal; }
   .roster__note { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 0.95rem; line-height: 1.55; max-width: 68ch; }
   .roster__note a { color: var(--violet); text-decoration: underline; text-underline-offset: 3px; }
-  .no-match { margin-top: 24px; color: var(--muted); }
-  .no-match a { color: var(--violet); text-decoration: underline; }
+  .no-match { margin-top: 24px; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--canvas); color: var(--muted); }
+  .no-match p { max-width: 58ch; }
+  .no-match button { min-height: 44px; margin-top: 12px; padding: 0; border: 0; background: none; color: var(--violet); font: inherit; font-weight: 750; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+
+  .rail__n--loading,
+  .count-skeleton,
+  .unis-skeleton,
+  .skeleton-line,
+  .skeleton-identity i,
+  .skeleton-identity b span,
+  .skeleton-tags i {
+    display: block; border-radius: 7px;
+    background: linear-gradient(100deg, var(--line-soft) 25%, rgba(255,255,255,.72) 45%, var(--line-soft) 65%);
+    background-size: 220% 100%; animation: tutor-skeleton 1.25s ease-in-out infinite;
+  }
+  .rail__n--loading { width: 22px; height: 12px; }
+  .count-skeleton { display: inline-block; width: 28px; height: 24px; vertical-align: -3px; }
+  .unis-skeleton { width: 270px; max-width: 42vw; height: 14px; }
+  .tcardx--skeleton { pointer-events: none; }
+  .skeleton-line--credential { width: 42%; height: 40px; }
+  .skeleton-line--label { width: 58%; height: 12px; margin-top: 8px; }
+  .skeleton-identity { display: flex; align-items: center; gap: 12px; margin-top: 22px; }
+  .skeleton-identity i { width: 52px; height: 52px; flex: none; border-radius: 50%; }
+  .skeleton-identity b { display: grid; flex: 1; gap: 8px; }
+  .skeleton-identity b span:first-child { width: 66%; height: 17px; }
+  .skeleton-identity b span:last-child { width: 82%; height: 12px; }
+  .skeleton-tags { display: flex; gap: 7px; margin-top: 20px; }
+  .skeleton-tags i { width: 30%; height: 30px; border-radius: var(--r-pill); }
+  .skeleton-line--bio { width: 100%; height: 34px; margin-top: 20px; }
+  .skeleton-line--button { width: 100%; height: 50px; margin-top: auto; border-radius: 14px; }
+  @keyframes tutor-skeleton { to { background-position: -120% 0; } }
 
   /* ----- Closing band ----------------------------------------------------- */
   .closing {
@@ -431,16 +448,19 @@ const timetableDays = [
   }
   .closing__do { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 
-  @media (max-width: 1340px) {
-    .tutor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-
   @media (max-width: 1000px) {
     .roster { grid-template-columns: 1fr; }
-    .rail { position: static; }
-    .rail__list { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+    .rail {
+      position: sticky; top: var(--header-h); z-index: 18;
+      margin-inline: calc(clamp(20px, 3vw, 48px) * -1); padding: 9px clamp(20px, 3vw, 48px);
+      border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--white) 94%, transparent);
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    }
+    .rail__title { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .rail__list { flex-direction: row; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
+    .rail__list::-webkit-scrollbar { display: none; }
     .rail__btn {
-      width: auto;
+      width: auto; min-height: 44px; flex: none; scroll-snap-align: start;
       padding: 9px 16px;
       border: 1px solid var(--line);
       border-radius: var(--r-pill);
@@ -454,33 +474,34 @@ const timetableDays = [
     .sandbox-bar__actions,.sandbox-bar__status { grid-column: 1/-1; }
     .sandbox-bar__actions { align-items: stretch; }
     .sandbox-bar__actions a,.sandbox-bar__actions button { flex: 1; }
-    .tutor-grid { grid-template-columns: 1fr; }
+    .directory-tools { grid-template-columns: 1fr; }
+    .directory-sort { width: min(100%, 230px); }
     .closing { grid-template-columns: 1fr; align-items: start; }
+  }
+  @media (max-width: 700px) {
+    .tutor-grid { grid-template-columns: minmax(0, 1fr); }
   }
 
   /* ----- Tutor card ------------------------------------------------------- */
   .tcardx {
+    position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    height: 100%;
-    padding: clamp(22px, 2.6vw, 30px) clamp(18px, 2.2vw, 26px) clamp(18px, 2.2vw, 24px);
-    border-radius: 22px;
+    align-items: stretch;
+    height: 378px;
+    padding: 22px;
+    border-radius: 16px;
     border: 1px solid var(--line-soft);
     background: var(--white);
     box-shadow: 0 14px 36px rgba(22, 48, 69, .07);
-    text-align: center;
     transition: transform .24s ease, box-shadow .24s ease;
   }
   .tcardx:hover { transform: translateY(-3px); box-shadow: 0 22px 48px rgba(22, 48, 69, .12); }
 
   .tcardx__verified {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 7px 15px; border-radius: var(--r-pill);
-    border: 1px solid var(--line); background: var(--white);
-    color: var(--violet); font-size: .78rem; font-weight: 700;
-    box-shadow: var(--shadow-sm);
+    position: absolute; top: 18px; right: 18px;
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--violet); font-size: .7rem; font-weight: 750;
   }
   /* Sandbox cards retain the public layout; a restrained outline and a named
      badge expose what will change without making colour carry the meaning. */
@@ -490,62 +511,57 @@ const timetableDays = [
   .tutor-cell[data-preview-state='existing'] .tcardx__verified { border-color: #9fc2df; background: #eaf3fb; color: #24527a; }
   .tutor-cell[data-preview-state='new'] .tcardx__verified { border-color: #9fcbae; background: #e7f4eb; color: #245f3c; }
   .tutor-cell[data-preview-state='update'] .tcardx__verified { border-color: #e3bd7e; background: #fff2d6; color: #7a460d; }
+  .tcardx__credential { min-height: 66px; padding-right: 88px; }
+  .tcardx__credential strong {
+    display: block; font-family: var(--display); font-size: clamp(2rem, 3vw, 2.65rem);
+    font-weight: 850; letter-spacing: -.045em; line-height: .95; color: var(--violet); font-variant-numeric: tabular-nums;
+  }
+  .tcardx__credential > span:not(.tcardx__video-available) { display: block; margin-top: 7px; color: var(--muted); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  .tcardx__credential .tcardx__video-available { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; color: var(--muted); font-size: .69rem; font-weight: 650; letter-spacing: 0; text-transform: none; }
+  .tcardx__video-available i { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: var(--violet-soft); color: var(--violet); font-style: normal; font-size: .52rem; }
+  .tcardx__identity { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; align-items: center; margin-top: 8px; }
   .tcardx__avatar {
-    width: 118px; height: 118px; border-radius: 50%;
+    width: 52px; height: 52px; border-radius: 50%;
     object-fit: contain; background: var(--violet-soft);
-    border: 5px solid var(--canvas);
+    border: 3px solid var(--canvas);
   }
-  .tcardx__name {
-    font-family: var(--display); font-weight: 800; font-size: 1.7rem;
-    letter-spacing: -.03em; line-height: 1.1; color: var(--violet);
-    display: flex; align-items: baseline; justify-content: center; gap: 9px; flex-wrap: wrap;
+  .tcardx__identity-copy { min-width: 0; }
+  .tcardx__name { margin: 0; font-size: inherit; }
+  .tcardx__profile {
+    min-height: 44px; max-width: 100%; display: flex; align-items: center; gap: 7px;
+    padding: 0; border: 0; background: none; color: var(--violet); font: inherit; text-align: left; cursor: pointer;
   }
-  .tcardx__name small { font-size: .95rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
-  .tcardx__uni { font-size: 1.02rem; font-weight: 600; color: var(--ink); margin-top: -6px; }
+  .tcardx__profile > span { font-family: var(--display); font-weight: 820; font-size: 1.28rem; letter-spacing: -.025em; line-height: 1.1; }
+  .tcardx__profile small { overflow: hidden; color: var(--muted); font-size: .78rem; font-weight: 600; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
+  .tcardx__profile:hover > span { text-decoration: underline; text-underline-offset: 4px; }
+  .tcardx__profile:focus-visible { outline: 3px solid var(--mint); outline-offset: 4px; border-radius: 4px; }
+  .tcardx__uni { overflow: hidden; margin-top: 5px; color: var(--ink); font-size: .82rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 
-  .tcardx__scores { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .tcardx__scores { display: flex; flex-wrap: nowrap; gap: 6px; min-height: 32px; margin: 10px 0 0; padding: 0; list-style: none; }
   .tcardx__scores li {
-    display: inline-flex; align-items: baseline; gap: 7px;
-    padding: 7px 14px; border-radius: var(--r-pill);
-    background: var(--violet-soft);
+    display: inline-flex; flex: 1 1 0; align-items: baseline; justify-content: center; gap: 5px;
+    min-width: 0; max-width: 100%; padding: 6px 8px; border: 1px solid transparent; border-radius: var(--r-pill);
+    background: var(--canvas);
   }
-  .tcardx__scores b { font-family: var(--display); font-weight: 800; font-size: .98rem; color: var(--violet); }
-  .tcardx__scores span { font-size: .82rem; color: var(--muted); }
+  .tcardx__scores b { flex: none; font-family: var(--display); font-weight: 800; font-size: .84rem; color: var(--violet); }
+  .tcardx__scores span { overflow: hidden; color: var(--muted); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+  .tcardx__scores li.is-match { border-color: var(--violet); background: var(--violet); box-shadow: 0 5px 14px rgba(52,63,114,.16); }
+  .tcardx__scores li.is-match b,
+  .tcardx__scores li.is-match span { color: #fff; }
   .tcardx__scores .tcardx__more { color: var(--muted); font-size: .76rem; font-weight: 750; }
+  .tcardx__scores--empty { visibility: hidden; }
 
   .tcardx__bio {
-    width: 100%; padding-top: 14px; border-top: 1px solid var(--line);
-    color: var(--muted); font-size: .94rem; line-height: 1.6; text-align: left;
+    display: -webkit-box; width: 100%; min-height: 45px; max-height: 45px; margin-top: 8px; padding-top: 8px; overflow: hidden;
+    border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; line-height: 1.45;
+    -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  }
+  .tcardx__bio-space { min-height: 45px; margin-top: 8px; border-top: 1px solid var(--line); }
+  .tcardx__meta-line {
+    overflow: hidden; margin-top: 6px; color: var(--muted-soft); font-size: .68rem;
+    line-height: 1.35; text-overflow: ellipsis; white-space: nowrap;
   }
 
-  .tcardx__video {
-    display: inline-flex; align-items: center; gap: 9px;
-    padding: 9px 16px; border: 1px solid var(--line); border-radius: var(--r-pill);
-    background: var(--white); color: var(--ink);
-    font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer;
-    transition: border-color .16s ease, background .16s ease;
-  }
-  .tcardx__video:hover { border-color: var(--violet); background: var(--violet-soft); }
-  .tcardx__play {
-    display: grid; place-items: center; width: 22px; height: 22px; flex: none;
-    border-radius: 50%; background: var(--violet); color: #fff; font-size: .6rem; padding-left: 2px;
-  }
-
-  .tcardx__meta {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
-    width: 100%; margin: 0; padding-top: 14px; border-top: 1px solid var(--line);
-  }
-  .tcardx__meta div { display: grid; gap: 3px; text-align: left; }
-  .tcardx__meta dt { font-size: .72rem; color: var(--muted-soft); }
-  .tcardx__meta dd { margin: 0; font-size: .84rem; font-weight: 600; color: var(--ink); line-height: 1.35; }
-
-  .tcardx__availability {
-    display: grid; gap: 8px; width: 100%; padding-top: 14px;
-    border-top: 1px solid var(--line); text-align: left;
-  }
-  .tcardx__availability-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  .tcardx__availability-head b { color: var(--ink); font-size: .82rem; }
-  .tcardx__availability-head span { color: var(--muted-soft); font-size: .62rem; font-variant-numeric: tabular-nums; }
   .weekgrid {
     width: 100%; overflow: visible; border: 1px solid var(--line);
     border-radius: 9px; background: var(--white);
@@ -602,10 +618,10 @@ const timetableDays = [
   .weekgrid__slot:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
   .pf .weekgrid__body { height: 236px; }
 
-  .tcardx__foot { width: 100%; margin-top: auto; padding-top: 16px; }
+  .tcardx__foot { width: 100%; margin-top: auto; padding-top: 10px; }
   .tcardx__book {
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; min-height: 54px; padding: 0 20px;
+    width: 100%; min-height: 50px; padding: 0 20px;
     border: 0; border-radius: 14px;
     background: var(--violet); color: #fff;
     font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer;
@@ -630,7 +646,7 @@ const timetableDays = [
   }
   .book__close {
     position: absolute; top: 14px; right: 14px; display: grid; place-items: center;
-    width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 50%;
+    width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%;
     background: var(--white); color: var(--ink); font-size: 1.5rem; line-height: 1; cursor: pointer;
   }
   .book__close:hover { background: var(--ink); color: var(--white); }
@@ -659,11 +675,7 @@ const timetableDays = [
   .book__status[data-tone='ok'] { background: var(--sage); color: var(--sage-ink); }
   .book__status[data-tone='error'] { background: #fbeeea; color: #8f302b; }
 
-  .tcardx { cursor: pointer; }
-  .tcardx:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; }
-  .tcardx__bio.is-empty, .tcardx__video.is-empty { color: var(--muted-soft); }
-  .tcardx__video.is-empty { cursor: default; border-style: dashed; }
-  .tcardx__video.is-empty .tcardx__play { background: var(--line); color: var(--muted-soft); }
+  .tcardx__bio.is-empty { color: var(--muted-soft); }
   .tcardx__book { cursor: pointer; }
 
   .book__gate { margin-top: 14px; padding: 13px 16px; border-radius: var(--r-sm); background: var(--yellow-soft); color: var(--ink); font-size: .92rem; line-height: 1.55; }
@@ -700,7 +712,8 @@ const timetableDays = [
     letter-spacing: -.03em; line-height: 1.12; color: var(--violet);
   }
   .pf__uni { margin-top: 5px; font-size: 1rem; font-weight: 600; color: var(--ink); }
-  .pf__ident .tcardx__scores { justify-content: flex-start; margin-top: 14px; }
+  .pf__ident .tcardx__scores { flex-wrap: wrap; justify-content: flex-start; margin-top: 14px; }
+  .pf__ident .tcardx__scores li { flex: 0 1 auto; }
 
   .pf__meta {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
@@ -741,27 +754,42 @@ const timetableDays = [
   @media (max-width: 560px) {
     .sandbox-bar__actions { flex-direction: column; }
     .sandbox-legend { gap: 7px 10px; }
-    .tcardx__meta { grid-template-columns: 1fr; }
     .book, .vid { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .sandbox-bar__actions a,.sandbox-bar__actions button { transition: none; }
+    .sandbox-bar__actions a,.sandbox-bar__actions button,.tcardx { transition: none; }
+    .rail__n--loading,.count-skeleton,.unis-skeleton,.skeleton-line,.skeleton-identity i,.skeleton-identity b span,.skeleton-tags i { animation: none; }
   }
 </style>
 
 <script>
+  import { rates } from '../data/rates';
+
   const PREVIEW_STORAGE_KEY = 'seonbae:tutor-import-preview:v1';
   const PREVIEW_MAX_AGE_MS = 2 * 60 * 60 * 1000;
   const sandboxMode = new URLSearchParams(location.search).get('sandbox') === '1';
   const cardPhoto = '/images/ian-bae-placeholder.png';
   const buttons = [...document.querySelectorAll('.rail__btn')] as HTMLButtonElement[];
   const noMatch = document.querySelector('.no-match') as HTMLElement | null;
+  const noMatchCopy = noMatch?.querySelector('[data-no-match-copy]') as HTMLElement | null;
+  const clearFiltersButton = noMatch?.querySelector('[data-clear-filters]') as HTMLButtonElement | null;
   const countEl = document.getElementById('tutor-count');
+  const countLabel = document.querySelector('[data-count-label]') as HTMLElement | null;
+  const searchInput = document.getElementById('tutor-search') as HTMLInputElement | null;
+  const clearSearchButton = document.querySelector('[data-clear-search]') as HTMLButtonElement | null;
+  const sortSelect = document.getElementById('tutor-sort') as HTMLSelectElement | null;
+  const activeFiltersEl = document.querySelector('[data-active-filters]') as HTMLElement | null;
+  const universityLine = document.querySelector('.roster__unis') as HTMLElement | null;
   const staticFilterCounts: Record<string, number> = { all: 0, ib: 0, ap: 0, alevel: 0, igcse: 0, tests: 0 };
   const filterKeys = new Set(Object.keys(staticFilterCounts));
-  const initialFilter = new URLSearchParams(location.search).get('c');
+  const sortKeys = new Set(['default', 'curriculum', 'university', 'recent']);
+  const initialParams = new URLSearchParams(location.search);
+  const initialFilter = initialParams.get('c');
   let activeTutorFilter = initialFilter && filterKeys.has(initialFilter) ? initialFilter : 'all';
-  let hasTutorFilterHistory = false;
+  let activeSearch = (initialParams.get('q') || '').trim().slice(0, 100);
+  const requestedSort = initialParams.get('sort');
+  let activeSort = requestedSort && sortKeys.has(requestedSort) ? requestedSort : 'default';
+  let hasDirectoryHistory = initialParams.has('c') || initialParams.has('q') || initialParams.has('sort');
 
   type Tutor = {
     registry_id: string;
@@ -782,6 +810,7 @@ const timetableDays = [
     languages?: string | null;
     lesson_format?: string | null;
     display_order?: number;
+    created_at?: string | null;
     active?: boolean;
   };
   type PreviewState = 'existing' | 'new' | 'update';
@@ -812,7 +841,10 @@ const timetableDays = [
   };
 
   const categoriesFor = (tutor: Tutor) => {
-    const value = `${tutor.exam} ${tutor.category || ''}`.toUpperCase();
+    const subjects = Array.isArray(tutor.subject_scores)
+      ? tutor.subject_scores.map((row) => row?.subject || '').join(' ')
+      : '';
+    const value = `${tutor.exam} ${tutor.category || ''} ${subjects}`.toUpperCase();
     const categories = new Set<string>();
     if (/\bIB\b/.test(value)) categories.add('ib');
     if (/\bAP\b|ADVANCED PLACEMENT/.test(value)) categories.add('ap');
@@ -880,43 +912,89 @@ const timetableDays = [
     activeTutorFilter = filterKeys.has(filter) ? filter : 'all';
     const btn = buttons.find((button) => button.dataset.filter === activeTutorFilter) || buttons[0];
     buttons.forEach((button) => button.setAttribute('aria-pressed', String(button === btn)));
-    let shown = 0;
-    cells.forEach((cell) => {
-      const cats = cell.dataset.cats ?? '';
-      const match = activeTutorFilter === 'all' || cats.split(' ').includes(activeTutorFilter);
-      cell.classList.toggle('is-hidden', !match);
-      if (match) shown++;
-    });
-    if (countEl) countEl.textContent = String(shown);
-    if (noMatch) noMatch.hidden = shown > 0;
-    const live = document.getElementById('tutor-live');
-    if (announce && live) live.textContent = language() === 'en'
-      ? `${shown} tutor${shown === 1 ? '' : 's'} listed in ${btn?.querySelector('.rail__label')?.textContent ?? 'this category'}`
-      : `${btn?.querySelector('.rail__label')?.textContent ?? '이 분류'}에 ${shown}명의 튜터가 있습니다`;
+    renderDirectory(announce);
   };
-  const writeTutorFilterUrl = () => {
-    const before = new URLSearchParams(location.search);
-    const baseline = !before.has('c');
+  const writeDirectoryUrl = () => {
     const url = new URL(location.href);
     if (activeTutorFilter === 'all') url.searchParams.delete('c');
     else url.searchParams.set('c', activeTutorFilter);
+    if (activeSearch.trim()) url.searchParams.set('q', activeSearch.trim());
+    else url.searchParams.delete('q');
+    if (activeSort === 'default') url.searchParams.delete('sort');
+    else url.searchParams.set('sort', activeSort);
     const clean = `${url.pathname}${url.search}${url.hash}`;
-    if (!hasTutorFilterHistory && baseline && activeTutorFilter !== 'all') {
-      history.pushState({ seonbaeTutorFilter: true }, '', clean);
-      hasTutorFilterHistory = true;
+    if (!hasDirectoryHistory) {
+      history.pushState({ seonbaeTutorDirectory: true }, '', clean);
+      hasDirectoryHistory = true;
     } else {
-      history.replaceState({ ...(history.state || {}), seonbaeTutorFilter: true }, '', clean);
+      history.replaceState({ ...(history.state || {}), seonbaeTutorDirectory: true }, '', clean);
     }
   };
   buttons.forEach((btn) => btn.addEventListener('click', () => {
     applyTutorFilter(btn.dataset.filter || 'all');
-    writeTutorFilterUrl();
+    writeDirectoryUrl();
   }));
-  window.addEventListener('popstate', () => {
-    const requested = new URLSearchParams(location.search).get('c');
-    applyTutorFilter(requested && filterKeys.has(requested) ? requested : 'all');
+  searchInput?.addEventListener('input', () => {
+    activeSearch = searchInput.value.slice(0, 100);
+    if (clearSearchButton) clearSearchButton.hidden = !activeSearch;
+    renderDirectory(true);
+    writeDirectoryUrl();
   });
-  applyTutorFilter(activeTutorFilter, false);
+  clearSearchButton?.addEventListener('click', () => {
+    activeSearch = '';
+    if (searchInput) { searchInput.value = ''; searchInput.focus(); }
+    clearSearchButton.hidden = true;
+    renderDirectory(true);
+    writeDirectoryUrl();
+  });
+  sortSelect?.addEventListener('change', () => {
+    activeSort = sortKeys.has(sortSelect.value) ? sortSelect.value : 'default';
+    renderDirectory(true);
+    writeDirectoryUrl();
+  });
+  clearFiltersButton?.addEventListener('click', () => {
+    activeTutorFilter = 'all';
+    activeSearch = '';
+    if (searchInput) searchInput.value = '';
+    if (clearSearchButton) clearSearchButton.hidden = true;
+    buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.filter === 'all')));
+    renderDirectory(true);
+    writeDirectoryUrl();
+    searchInput?.focus();
+  });
+  activeFiltersEl?.addEventListener('click', (event) => {
+    const chip = (event.target as HTMLElement).closest('[data-remove-filter]') as HTMLButtonElement | null;
+    if (!chip) return;
+    if (chip.dataset.removeFilter === 'curriculum') {
+      activeTutorFilter = 'all';
+      buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.filter === 'all')));
+    }
+    if (chip.dataset.removeFilter === 'search') {
+      activeSearch = '';
+      if (searchInput) searchInput.value = '';
+      if (clearSearchButton) clearSearchButton.hidden = true;
+    }
+    renderDirectory(true);
+    writeDirectoryUrl();
+    if (chip.dataset.removeFilter === 'search') searchInput?.focus();
+  });
+  window.addEventListener('popstate', () => {
+    const params = new URLSearchParams(location.search);
+    const requested = params.get('c');
+    activeTutorFilter = requested && filterKeys.has(requested) ? requested : 'all';
+    activeSearch = (params.get('q') || '').trim().slice(0, 100);
+    const sort = params.get('sort');
+    activeSort = sort && sortKeys.has(sort) ? sort : 'default';
+    if (searchInput) searchInput.value = activeSearch;
+    if (clearSearchButton) clearSearchButton.hidden = !activeSearch;
+    if (sortSelect) sortSelect.value = activeSort;
+    buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.filter === activeTutorFilter)));
+    renderDirectory(true);
+  });
+  if (searchInput) searchInput.value = activeSearch;
+  if (clearSearchButton) clearSearchButton.hidden = !activeSearch;
+  if (sortSelect) sortSelect.value = activeSort;
+  buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.filter === activeTutorFilter)));
 
   const DAYS: Array<{ key: string; en: string; ko: string }> = [
     { key: 'mon', en: 'Mon', ko: '월' },
@@ -931,7 +1009,7 @@ const timetableDays = [
   // A subject with no score yet (carried over from the application) would
   // render an empty badge, so only complete pairs reach the card.
   const scoresOf = (tutor: Tutor) => Array.isArray(tutor.subject_scores)
-    ? tutor.subject_scores.filter((row) => (row?.subject || '').trim() && (row?.score || '').trim())
+    ? tutor.subject_scores.filter((row) => (row?.subject || '').trim() && (row?.score || '').trim() !== '.')
     : [];
   const slotsOf = (tutor: Tutor) => (tutor.availability && typeof tutor.availability === 'object') ? tutor.availability : {};
   const hasSlots = (tutor: Tutor) => DAYS.some((day) => (slotsOf(tutor)[day.key] || []).length > 0);
@@ -958,6 +1036,121 @@ const timetableDays = [
     const imported = /^온라인 1:1 · 주당 (.+)시간 가능$/.exec(source);
     if (imported) return tr(`Online 1:1 · ${imported[1]} hours/week available`, source);
     return source || tr('Online 1:1', '온라인 1:1');
+  };
+
+  type SubjectScore = { subject: string; score: string };
+  type CurriculumKey = 'ib' | 'ap' | 'alevel' | 'igcse' | 'tests';
+  const curriculumOrder: CurriculumKey[] = ['ib', 'ap', 'alevel', 'igcse', 'tests'];
+  const curriculumNames: Record<CurriculumKey, { en: string; ko: string }> = {
+    ib: { en: 'IB Diploma', ko: 'IB 디플로마' },
+    ap: { en: 'Advanced Placement', ko: 'AP' },
+    alevel: { en: 'A Level', ko: 'A레벨' },
+    igcse: { en: 'IGCSE', ko: 'IGCSE' },
+    tests: { en: 'Tests & English', ko: 'SAT·ACT·영어 시험' },
+  };
+  const curriculumTerms: Record<CurriculumKey, string[]> = {
+    ib: ['ib', 'ib diploma', 'international baccalaureate', '아이비', '디플로마'],
+    ap: ['ap', 'advanced placement', '에이피'],
+    alevel: ['a level', 'a-level', 'alevel', 'a 레벨', '에이레벨'],
+    igcse: ['igcse', 'gcse'],
+    tests: ['sat', 'act', 'ielts', 'toefl', 'english', '영어', '공인 시험', '공인시험'],
+  };
+  const curriculumSlugToKey: Record<string, CurriculumKey> = {
+    'ib-diploma': 'ib',
+    'advanced-placement': 'ap',
+    'a-level': 'alevel',
+    igcse: 'igcse',
+    'standardized-tests': 'tests',
+    'english-writing': 'tests',
+  };
+  const normalizeSearch = (value: unknown) => String(value ?? '')
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replace(/[–—]/g, '-')
+    .replace(/[^a-z0-9가-힣*+/.\-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const queryTokens = (value = activeSearch) => normalizeSearch(value).split(' ').filter(Boolean);
+  const directCurricula = (value: string) => {
+    const normalized = normalizeSearch(value);
+    const found = new Set<CurriculumKey>();
+    if (/(^|\s)ib($|\s)|international baccalaureate|아이비|디플로마/.test(normalized)) found.add('ib');
+    if (/(^|\s)ap($|\s)|advanced placement|에이피/.test(normalized)) found.add('ap');
+    if (/a[ -]?level|alevel|a 레벨|에이레벨/.test(normalized)) found.add('alevel');
+    if (/igcse|(^|\s)gcse($|\s)/.test(normalized)) found.add('igcse');
+    if (/sat|(^|\s)act($|\s)|ielts|toefl|english|영어/.test(normalized)) found.add('tests');
+    return found;
+  };
+  const subjectCoreTokens = (value: string) => normalizeSearch(value)
+    .split(' ')
+    .filter((token) => token.length > 1 && !new Set([
+      'ib', 'ap', 'hl', 'sl', 'as', 'a', 'level', 'igcse', 'gcse', 'and', 'or', 'the',
+      'language', 'exam', 'diploma', 'advanced', 'placement',
+    ]).has(token));
+  const curriculaForScore = (tutor: Tutor, row: SubjectScore) => {
+    const direct = directCurricula(row.subject);
+    if (direct.size) return direct;
+    const tutorCurricula = categoriesFor(tutor) as CurriculumKey[];
+    return new Set<CurriculumKey>(tutorCurricula.length === 1 ? tutorCurricula : []);
+  };
+  const aliasesForScore = (tutor: Tutor, row: SubjectScore) => {
+    const aliases = new Set<string>();
+    const rowTokens = subjectCoreTokens(row.subject);
+    const curricula = curriculaForScore(tutor, row);
+    rates.forEach((rate) => {
+      const rateKey = curriculumSlugToKey[rate.curriculum];
+      if (!rateKey || (curricula.size && !curricula.has(rateKey))) return;
+      const rateTokens = [rate.name, rate.nameKo || '', ...rate.aliases].flatMap(subjectCoreTokens);
+      const related = rowTokens.some((token) => rateTokens.includes(token))
+        || rateTokens.some((token) => rowTokens.includes(token));
+      if (!related) return;
+      aliases.add(rate.name);
+      if (rate.nameKo) aliases.add(rate.nameKo);
+      rate.aliases.forEach((alias) => aliases.add(alias));
+    });
+    return [...aliases];
+  };
+  const scoreSearchText = (tutor: Tutor, row: SubjectScore) => {
+    const curricula = curriculaForScore(tutor, row);
+    const terms = [...curricula].flatMap((key) => [curriculumNames[key].en, curriculumNames[key].ko, ...curriculumTerms[key]]);
+    return normalizeSearch([row.subject, row.score, ...terms, ...aliasesForScore(tutor, row)].join(' '));
+  };
+  const tutorSearchText = (tutor: Tutor) => normalizeSearch([
+    tutor.name,
+    tutor.name_en,
+    tutor.university,
+    tutor.university_en,
+    tutor.exam,
+    tutor.category,
+    ...categoriesFor(tutor).flatMap((key) => curriculumTerms[key as CurriculumKey] || []),
+    ...scoresOf(tutor).flatMap((row) => [row.subject, row.score, scoreSearchText(tutor, row)]),
+  ].join(' '));
+  const matchesTokens = (haystack: string, tokens: string[]) => tokens.every((token) => haystack.includes(token));
+  const matchingScores = (tutor: Tutor, tokens = queryTokens()) => tokens.length
+    ? scoresOf(tutor).filter((row) => matchesTokens(scoreSearchText(tutor, row), tokens))
+    : [];
+  const validTopLevelScore = (tutor: Tutor) => {
+    const score = String(tutor.score || '').trim();
+    const label = String(tutor.exam || '').trim();
+    return score && score !== '.' ? { score, subject: label } : null;
+  };
+  const scoreValue = (row: SubjectScore) => {
+    const raw = row.score.trim().toUpperCase();
+    const fraction = raw.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+    if (fraction && Number(fraction[2])) return Number(fraction[1]) / Number(fraction[2]);
+    const stars = (raw.match(/A\*/g) || []).length;
+    if (stars) return 1 + stars / 100;
+    const numeric = Number(raw.match(/\d+(?:\.\d+)?/)?.[0]);
+    if (!Number.isFinite(numeric)) return 0;
+    if (numeric <= 9) return numeric / 9;
+    if (numeric <= 100) return numeric / 100;
+    return numeric / 1600;
+  };
+  const bestScore = (rows: SubjectScore[]) => [...rows].sort((a, b) => scoreValue(b) - scoreValue(a))[0] || null;
+  const headlineCredential = (tutor: Tutor, tokens = queryTokens()) => {
+    const matched = matchingScores(tutor, tokens);
+    if (matched.length) return bestScore(matched);
+    return validTopLevelScore(tutor) || bestScore(scoresOf(tutor));
   };
 
   const SCHEDULE_START = 6 * 60;
@@ -1007,91 +1200,152 @@ const timetableDays = [
     </div>`;
   };
 
-  const renderTutors = (tutors: Tutor[], states = new Map<string, PreviewState>()) => {
+  const displayOrderOf = (tutor: Tutor) => Number.isFinite(Number(tutor.display_order))
+    ? Number(tutor.display_order)
+    : Number.MAX_SAFE_INTEGER;
+  const defaultTutorSort = (a: Tutor, b: Tutor) => displayOrderOf(a) - displayOrderOf(b)
+    || a.registry_id.localeCompare(b.registry_id);
+  const sortedTutors = (tutors: Tutor[]) => [...tutors].sort((a, b) => {
+    if (activeSort === 'curriculum') {
+      const aKey = curriculumOrder.indexOf(categoriesFor(a)[0] as CurriculumKey);
+      const bKey = curriculumOrder.indexOf(categoriesFor(b)[0] as CurriculumKey);
+      return aKey - bKey || defaultTutorSort(a, b);
+    }
+    if (activeSort === 'university') {
+      return cleanUniversity(a).localeCompare(cleanUniversity(b), language() === 'en' ? 'en' : 'ko')
+        || defaultTutorSort(a, b);
+    }
+    if (activeSort === 'recent') {
+      const aTime = Date.parse(a.created_at || '') || 0;
+      const bTime = Date.parse(b.created_at || '') || 0;
+      return bTime - aTime || displayOrderOf(b) - displayOrderOf(a) || a.registry_id.localeCompare(b.registry_id);
+    }
+    return defaultTutorSort(a, b);
+  });
+  const scoreSignature = (row: SubjectScore) => `${row.subject}\u0000${row.score}`;
+  const profileCard = (tutor: Tutor, state: PreviewState | null, tokens: string[]) => {
+    const displayName = tr(tutor.name_en || tutor.name, tutor.name);
+    const altName = tr(tutor.name, tutor.name_en || tutor.name);
+    const uni = escapeHtml(cleanUniversity(tutor));
+    const bio = bioOf(tutor);
+    const photo = safeAsset(tutor.photo_url) || cardPhoto;
+    const previewLabel = state === 'existing'
+      ? tr('Existing card', '현재 카드')
+      : state === 'update'
+        ? tr('Proposed update', '수정 카드')
+        : tr('New draft', '새 카드');
+    const matched = matchingScores(tutor, tokens);
+    const matchedKeys = new Set(matched.map(scoreSignature));
+    const rawScores = scoresOf(tutor);
+    const fallback = validTopLevelScore(tutor);
+    const tagSource = rawScores.length ? rawScores : fallback ? [fallback] : [];
+    const orderedScores = [...tagSource].sort((a, b) => {
+      const aMatch = matchedKeys.has(scoreSignature(a)) ? 1 : 0;
+      const bMatch = matchedKeys.has(scoreSignature(b)) ? 1 : 0;
+      return bMatch - aMatch;
+    });
+    const visibleScores = orderedScores.slice(0, 3);
+    const scoreList = visibleScores.map((row) => {
+      const fallbackMatches = !rawScores.length && tokens.length && matchesTokens(scoreSearchText(tutor, row), tokens);
+      const isMatch = matchedKeys.has(scoreSignature(row)) || fallbackMatches;
+      return `<li${isMatch ? ' class="is-match"' : ''} title="${escapeHtml(`${row.subject}: ${row.score}`)}"><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`;
+    }).join('');
+    const videoAvailable = safeAsset(tutor.video_url)
+      ? `<span class="tcardx__video-available"><i aria-hidden="true">&#9658;</i>${tr('Sample lesson available', '샘플 수업 있음')}</span>`
+      : '';
+    const credential = headlineCredential(tutor, tokens);
+    const credentialBlock = credential
+      ? `<div class="tcardx__credential"><strong>${escapeHtml(credential.score)}</strong><span>${escapeHtml(credential.subject)}</span>${videoAvailable}</div>`
+      : `<div class="tcardx__credential tcardx__credential--empty" aria-hidden="true"></div>`;
+    const metaParts = [
+      tutor.languages ? languagesOf(tutor) : '',
+      tutor.lesson_format ? lessonFormatOf(tutor) : '',
+    ].filter(Boolean);
+    const previewState = sandboxMode ? state || 'new' : null;
+
+    return `<div class="tutor-cell" data-cats="${categoriesFor(tutor).join(' ')}" data-registry-id="${escapeHtml(tutor.registry_id)}"${previewState ? ` data-preview-state="${previewState}"` : ''}>
+      <article class="tcardx card">
+        <span class="tcardx__verified">${verifyIcon}${sandboxMode ? previewLabel : tr('Verified Tutor', '검증 완료')}</span>
+        ${credentialBlock}
+        <div class="tcardx__identity">
+          <img class="tcardx__avatar" src="${photo}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="96" height="96" loading="lazy" decoding="async" />
+          <div class="tcardx__identity-copy">
+            <h3 class="tcardx__name"><button type="button" class="tcardx__profile" data-profile="${escapeHtml(tutor.registry_id)}" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')}"><span>${escapeHtml(displayName)}</span>${altName && altName !== displayName ? `<small>${escapeHtml(altName)}</small>` : ''}</button></h3>
+            ${uni ? `<p class="tcardx__uni">${uni}</p>` : ''}
+          </div>
+        </div>
+        ${scoreList ? `<ul class="tcardx__scores">${scoreList}</ul>` : '<div class="tcardx__scores tcardx__scores--empty" aria-hidden="true"></div>'}
+        ${bio ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>` : '<div class="tcardx__bio-space" aria-hidden="true"></div>'}
+        ${metaParts.length ? `<p class="tcardx__meta-line">${metaParts.map(escapeHtml).join(' · ')}</p>` : ''}
+        <div class="tcardx__foot">
+          ${sandboxMode
+            ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
+            : `<a class="tcardx__book" href="${language() === 'en' ? '/en' : ''}/get-matched?tutor=${encodeURIComponent(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</a>`}
+        </div>
+      </article>
+    </div>`;
+  };
+  const filterLabel = (key: string) => buttons
+    .find((button) => button.dataset.filter === key)
+    ?.querySelector('[data-filter-label]')?.textContent?.trim() || key;
+  const renderActiveFilters = () => {
+    if (!activeFiltersEl) return;
+    const chips: string[] = [];
+    if (activeTutorFilter !== 'all') {
+      chips.push(`<button type="button" class="active-filter" data-remove-filter="curriculum"><span>${escapeHtml(filterLabel(activeTutorFilter))}</span><b aria-hidden="true">×</b><span class="sr-only">${tr('Remove curriculum filter', '커리큘럼 필터 지우기')}</span></button>`);
+    }
+    if (activeSearch.trim()) {
+      chips.push(`<button type="button" class="active-filter" data-remove-filter="search"><span>“${escapeHtml(activeSearch.trim())}”</span><b aria-hidden="true">×</b><span class="sr-only">${tr('Clear search', '검색어 지우기')}</span></button>`);
+    }
+    activeFiltersEl.innerHTML = chips.join('');
+    applyScope(activeFiltersEl);
+  };
+  function renderDirectory(announce = true) {
     const grid = document.getElementById('tutor-grid');
-    if (!grid) return;
+    if (!grid || !roster.length) return;
+    const tokens = queryTokens();
+    const filtered = roster.filter((tutor) => {
+      const curriculumMatches = activeTutorFilter === 'all' || categoriesFor(tutor).includes(activeTutorFilter);
+      const searchMatches = !tokens.length || matchesTokens(tutorSearchText(tutor), tokens);
+      return curriculumMatches && searchMatches;
+    });
+    const visible = sortedTutors(filtered);
     grid.classList.remove('is-loading');
     grid.removeAttribute('aria-busy');
-    grid.innerHTML = tutors.map((tutor) => {
-      const displayName = tr(tutor.name_en || tutor.name, tutor.name);
-      const altName = tr(tutor.name, tutor.name_en || tutor.name);
-      const uni = escapeHtml(cleanUniversity(tutor));
-      const bio = bioOf(tutor);
-      const photo = safeAsset(tutor.photo_url) || cardPhoto;
-      const previewState = sandboxMode ? states.get(tutor.registry_id) || 'new' : null;
-      const previewLabel = previewState === 'existing'
-        ? tr('Existing card', '현재 카드')
-        : previewState === 'update'
-          ? tr('Proposed update', '수정 카드')
-          : tr('New draft', '새 카드');
-
-      const scores = scoresOf(tutor);
-      const scoreList = scores.length
-        ? `${scores.slice(0, 3).map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')}${
-            scores.length > 3 ? `<li class="tcardx__more">+${scores.length - 3} ${tr('more', '개 더보기')}</li>` : ''
-          }`
-        : `<li><b>${escapeHtml(tutor.score)}</b><span>${escapeHtml(tutor.exam)}</span></li>`;
-
-      // Placeholders keep every card the same shape, so a card without a
-      // description or a video does not look like a rendering fault.
-      const bioBlock = bio
-        ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>`
-        : `<p class="tcardx__bio is-empty">${tr('Introduction coming soon.', '소개글 준비 중입니다.')}</p>`;
-
-      const videoBlock = safeAsset(tutor.video_url)
-        ? `<button type="button" class="tcardx__video" data-video="${embeddableVideo(safeAsset(tutor.video_url))}" data-name="${escapeHtml(displayName)}">
-             <span class="tcardx__play" aria-hidden="true">&#9658;</span>${tr('Watch sample lesson', '샘플 수업 보기')}
-           </button>`
-        : `<span class="tcardx__video is-empty"><span class="tcardx__play" aria-hidden="true">&#9658;</span>${tr('Sample lesson coming soon', '샘플 수업 준비 중')}</span>`;
-
-      const meta = `
-        <dl class="tcardx__meta">
-          <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(languagesOf(tutor))}</dd></div>
-          <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(lessonFormatOf(tutor))}</dd></div>
-        </dl>
-        <section class="tcardx__availability">
-          <div class="tcardx__availability-head"><b>${tr('Availability', '가능 시간')}</b><span>${tr('06:00 to 24:00', '06시부터 24시')}</span></div>
-          ${availabilityTimetable(tutor)}
-        </section>`;
-
-      return `<div class="tutor-cell" data-cats="${categoriesFor(tutor).join(' ')}" data-registry-id="${escapeHtml(tutor.registry_id)}"${previewState ? ` data-preview-state="${previewState}"` : ''}>
-        <article class="tcardx card" data-profile="${escapeHtml(tutor.registry_id)}" tabindex="0" role="button" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')}">
-          <span class="tcardx__verified">${verifyIcon}${sandboxMode ? previewLabel : tr('Verified Tutor', '검증 완료')}</span>
-          <img class="tcardx__avatar" src="${photo}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="320" height="320" loading="lazy" decoding="async" />
-          <h3 class="tcardx__name">${escapeHtml(displayName)}<small>${escapeHtml(altName)}</small></h3>
-          <p class="tcardx__uni">${uni}</p>
-          <ul class="tcardx__scores">${scoreList}</ul>
-          ${bioBlock}
-          ${videoBlock}
-          ${meta}
-          <div class="tcardx__foot">
-            ${sandboxMode
-              ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
-              : `<a class="tcardx__book" href="${language() === 'en' ? '/en' : ''}/get-matched?tutor=${encodeURIComponent(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</a>`}
-          </div>
-        </article>
-      </div>`;
-    }).join('');
-
+    grid.innerHTML = visible.map((tutor) => profileCard(
+      tutor,
+      sandboxMode ? previewStates.get(tutor.registry_id) || 'new' : null,
+      tokens,
+    )).join('');
     applyScope(grid);
     cells = [...grid.querySelectorAll('.tutor-cell')] as HTMLElement[];
+    if (countEl) countEl.textContent = String(visible.length);
+    renderActiveFilters();
+    if (noMatch) noMatch.hidden = visible.length > 0;
+    if (clearFiltersButton) clearFiltersButton.hidden = visible.length > 0;
+    const live = document.getElementById('tutor-live');
+    if (announce && live) live.textContent = tr(
+      `${visible.length} tutor${visible.length === 1 ? '' : 's'} found.`,
+      `튜터 ${visible.length}명이 검색되었습니다.`,
+    );
+  }
+  const renderTutors = (tutors: Tutor[], states = new Map<string, PreviewState>()) => {
     roster = tutors;
+    previewStates = states;
     Object.keys(staticFilterCounts).forEach((key) => { staticFilterCounts[key] = 0; });
     staticFilterCounts.all = tutors.length;
     tutors.forEach((tutor) => {
       categoriesFor(tutor).forEach((category) => { staticFilterCounts[category] += 1; });
     });
     buttons.forEach((button) => {
-      let badge = button.querySelector('.rail__n') as HTMLElement | null;
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'rail__n';
-        button.append(badge);
-      }
+      const badge = button.querySelector('.rail__n') as HTMLElement | null;
+      if (!badge) return;
       badge.textContent = String(staticFilterCounts[button.dataset.filter || 'all'] || 0);
+      badge.classList.remove('rail__n--loading');
+      badge.removeAttribute('aria-hidden');
     });
-    applyTutorFilter(activeTutorFilter, false);
-    const countLabel = document.querySelector('.roster__count span');
+    countEl?.classList.remove('count-skeleton');
+    countEl?.removeAttribute('aria-hidden');
     if (countLabel) countLabel.textContent = tr('tutors listed', '명의 튜터');
     const universityKeys = new Set(tutors
       .map((tutor) => universityKeyOf(`${tutor.university_en || ''} ${tutor.university || ''}`))
@@ -1099,11 +1353,10 @@ const timetableDays = [
     const universities = (['snu', 'korea', 'yonsei'] as UniversityKey[])
       .filter((key) => universityKeys.has(key))
       .map(universityLabel);
-    const universityLine = document.querySelector('.roster__unis');
-    if (universityLine && universities.length) universityLine.textContent = universities.join(' · ');
+    if (universityLine) universityLine.textContent = universities.join(' · ');
     const note = document.getElementById('roster-note');
     if (note) note.hidden = tutors.length > 0;
-    if (noMatch) noMatch.hidden = tutors.length > 0;
+    renderDirectory(false);
   };
 
   const normalizePreviewRow = (raw: Record<string, unknown>): Tutor | null => {
@@ -1138,14 +1391,37 @@ const timetableDays = [
       languages: text(raw.languages) || null,
       lesson_format: text(raw.lessonFormat ?? raw.lesson_format) || null,
       display_order: Number.isFinite(Number(raw.display_order)) ? Number(raw.display_order) : 0,
+      created_at: text(raw.created_at) || null,
       active: raw.active === true,
     };
   };
 
-  const finishGridLoading = () => {
+  const finishGridLoading = (error?: unknown) => {
     const grid = document.getElementById('tutor-grid');
-    grid?.classList.remove('is-loading');
-    grid?.removeAttribute('aria-busy');
+    if (grid) {
+      grid.innerHTML = '';
+      grid.classList.remove('is-loading');
+      grid.removeAttribute('aria-busy');
+    }
+    roster = [];
+    if (countEl) {
+      countEl.textContent = '0';
+      countEl.classList.remove('count-skeleton');
+      countEl.removeAttribute('aria-hidden');
+    }
+    buttons.forEach((button) => {
+      const badge = button.querySelector('.rail__n');
+      if (!badge) return;
+      badge.textContent = '0';
+      badge.classList.remove('rail__n--loading');
+      badge.removeAttribute('aria-hidden');
+    });
+    if (universityLine) universityLine.textContent = '';
+    if (noMatchCopy) noMatchCopy.textContent = error
+      ? tr('We could not load the tutor directory. Please refresh and try again.', '튜터 명부를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.')
+      : tr('No tutors are listed yet.', '아직 등록된 튜터가 없습니다.');
+    if (noMatch) noMatch.hidden = false;
+    if (clearFiltersButton) clearFiltersButton.hidden = true;
   };
 
   if (sandboxMode) {
@@ -1294,10 +1570,12 @@ const timetableDays = [
   // ----- Profile dialog ----------------------------------------------------
   const profileDialog = document.querySelector('#profile-dialog') as HTMLDialogElement | null;
   const profileBody = profileDialog?.querySelector('[data-profile-body]') as HTMLElement | null;
+  let profileReturnFocus: HTMLElement | null = null;
 
-  const openProfile = (registryId: string) => {
+  const openProfile = (registryId: string, trigger?: HTMLElement | null) => {
     const tutor = roster.find((row) => row.registry_id === registryId);
     if (!tutor || !profileDialog || !profileBody) return;
+    profileReturnFocus = trigger || null;
 
     const name = tr(tutor.name_en || tutor.name, tutor.name);
     const uni = escapeHtml(cleanUniversity(tutor));
@@ -1315,11 +1593,13 @@ const timetableDays = [
         <div class="pf__ident">
           <h2 class="pf__name" id="profile-name">${escapeHtml(name)}</h2>
           ${uni ? `<p class="pf__uni">${uni}</p>` : ''}
-          <ul class="tcardx__scores">${
-            scores.length
-              ? scores.map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')
-              : `<li><b>${escapeHtml(tutor.score)}</b><span>${escapeHtml(tutor.exam)}</span></li>`
-          }</ul>
+          ${(() => {
+            const fallback = validTopLevelScore(tutor);
+            const rows = scores.length ? scores : fallback ? [fallback] : [];
+            return rows.length
+              ? `<ul class="tcardx__scores">${rows.map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')}</ul>`
+              : '';
+          })()}
         </div>
       </header>
 
@@ -1439,21 +1719,17 @@ const timetableDays = [
       return;
     }
 
-    const card = target.closest('[data-profile]') as HTMLElement | null;
-    if (card) openProfile(card.dataset.profile || '');
-  });
-
-  // Keyboard parity for the card, which is a button in all but element name.
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    const card = (event.target as HTMLElement).closest('[data-profile]') as HTMLElement | null;
-    if (!card || card !== document.activeElement) return;
-    event.preventDefault();
-    openProfile(card.dataset.profile || '');
+    const profileTrigger = target.closest('[data-profile]') as HTMLButtonElement | null;
+    if (profileTrigger) openProfile(profileTrigger.dataset.profile || '', profileTrigger);
   });
 
   dialog?.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
   profileDialog?.addEventListener('click', (event) => { if (event.target === profileDialog) profileDialog.close(); });
+  profileDialog?.addEventListener('close', () => {
+    const target = profileReturnFocus;
+    profileReturnFocus = null;
+    if (target?.isConnected) target.focus({ preventScroll: true });
+  });
 
   bookForm?.addEventListener('submit', async (event) => {
     event.preventDefault();

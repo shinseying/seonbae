@@ -98,12 +98,46 @@ const mockTutors = [
   {
     registry_id: 'P-QA1', name: '김아이비', name_en: 'Ivy Kim', exam: 'IB', score: '44/45',
     category: 'IB', university: '고려대학교', university_en: 'Korea University',
-    availability: { mon: ['09:00-10:30', '17:00-18:00'], wed: ['12:00-13:00'] }, active: true,
+    subject_scores: [
+      { subject: 'IB Chemistry HL', score: '7' },
+      { subject: 'IB Mathematics AA HL', score: '7' },
+      { subject: 'IB Physics HL', score: '6' },
+    ],
+    bio: '학생이 스스로 풀이의 논리를 설명할 수 있도록 개념과 기출을 연결합니다. 긴 소개글도 카드에서는 두 줄까지만 보여야 합니다. 이 문장은 줄임 처리를 검증하기 위해 일부러 더 길게 작성했습니다.',
+    bio_en: 'I connect concepts with past-paper reasoning until students can explain each step independently. This deliberately long biography must stay clamped to two lines on the directory card.',
+    video_url: '/sample.mp4', languages: 'Korean, English', lesson_format: 'Online 1:1',
+    availability: { mon: ['09:00-10:30', '17:00-18:00'], wed: ['12:00-13:00'] },
+    display_order: 1, created_at: '2026-08-01T00:00:00Z', active: true,
   },
   {
-    registry_id: 'P-QA2', name: '박에이레벨', name_en: 'Alex Park', exam: 'A Level', score: 'A*A*A*',
+    registry_id: 'P-QA2', name: '박에이레벨', name_en: 'Alex Park', exam: 'A Level', score: '.',
     category: 'A Level', university: '서울대학교', university_en: 'Seoul National University',
-    availability: {}, active: true,
+    subject_scores: [{ subject: 'A Level Mathematics', score: 'A*' }, { subject: 'A Level Chemistry', score: 'A*' }],
+    availability: {}, display_order: 2, created_at: '2026-08-03T00:00:00Z', active: true,
+  },
+  {
+    registry_id: 'P-QA3', name: '최에이피', name_en: 'April Choi', exam: 'AP', score: '.',
+    category: 'AP', university: '연세대학교', university_en: 'Yonsei University',
+    subject_scores: [{ subject: 'AP Calculus BC', score: '5/5' }, { subject: 'AP Chemistry', score: '5/5' }],
+    availability: {}, display_order: 3, created_at: '2026-08-04T00:00:00Z', active: true,
+  },
+  {
+    registry_id: 'P-QA4', name: '정경제', name_en: 'Econ Jung', exam: 'IB', score: '42/45',
+    category: 'IB', university: '서울대학교', university_en: 'Seoul National University',
+    subject_scores: [{ subject: 'IB Economics HL', score: '7' }],
+    availability: {}, display_order: 4, created_at: '2026-08-05T00:00:00Z', active: true,
+  },
+  {
+    registry_id: 'P-QA5', name: '한테스트', name_en: 'Test Han', exam: 'SAT', score: '1540',
+    category: 'SAT', university: '고려대학교', university_en: 'Korea University',
+    subject_scores: [{ subject: 'SAT Math', score: '790' }, { subject: 'SAT Reading and Writing', score: '750' }],
+    availability: {}, display_order: 5, created_at: '2026-08-06T00:00:00Z', active: true,
+  },
+  {
+    registry_id: 'P-QA6', name: '윤생물', name_en: 'Bio Yoon', exam: 'AP', score: '5/5',
+    category: 'AP', university: '고려대학교', university_en: 'Korea University',
+    subject_scores: [{ subject: 'AP Biology', score: '5/5' }],
+    availability: {}, display_order: 6, created_at: '2026-08-07T00:00:00Z', active: true,
   },
 ];
 
@@ -273,20 +307,118 @@ try {
   assert.ok(subjectLinks.length >= 2);
   assert.ok(subjectLinks.every((href) => href.includes('curriculum=ib-diploma')));
 
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate(cdp, '/tutors/');
-  await sleep(350);
+  await cdp.evaluate(`(async () => {
+    for (let i = 0; i < 80 && document.querySelectorAll('.tcardx:not(.tcardx--skeleton)').length < ${mockTutors.length}; i++) {
+      await new Promise(r => setTimeout(r, 50));
+    }
+  })()`);
+  const desktopDirectory = await cdp.evaluate(`(() => {
+    const cards = [...document.querySelectorAll('.tcardx:not(.tcardx--skeleton)')];
+    const cells = [...document.querySelectorAll('.tutor-cell:not(.tutor-cell--skeleton)')];
+    const heights = cards.map(card => card.getBoundingClientRect().height);
+    const rowTops = [...new Set(cells.map(cell => Math.round(cell.getBoundingClientRect().top)))];
+    const firstRowTop = Math.round(cells[0].getBoundingClientRect().top);
+    return {
+      count: Number(document.querySelector('#tutor-count').textContent),
+      columns: cells.filter(cell => Math.round(cell.getBoundingClientRect().top) === firstRowTop).length,
+      rowsForFirstSix: new Set(cells.slice(0, 6).map(cell => Math.round(cell.getBoundingClientRect().top))).size,
+      minHeight: Math.min(...heights), maxHeight: Math.max(...heights),
+      overflows: cards.map(card => card.scrollHeight - card.clientHeight),
+      roles: cards.map(card => [card.getAttribute('role'), card.getAttribute('tabindex')]),
+      controls: cards.map(card => card.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])').length),
+      periods: [...document.querySelectorAll('.tcardx__credential strong, .tcardx__scores b')].map(node => node.textContent.trim()).filter(value => value === '.'),
+      cardTimetables: document.querySelectorAll('.tcardx .weekgrid').length,
+      videoAffordances: document.querySelectorAll('.tcardx__video-available').length,
+      bioClamp: getComputedStyle(document.querySelector('.tcardx__bio')).webkitLineClamp,
+      igcsePresent: Boolean(document.querySelector('[data-filter="igcse"]')),
+      igcseCount: document.querySelector('[data-filter="igcse"] .rail__n').textContent,
+    };
+  })()`);
+  assert.equal(desktopDirectory.count, mockTutors.length);
+  assert.equal(desktopDirectory.columns, 3, JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.rowsForFirstSix <= 2, JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.minHeight >= 340 && desktopDirectory.maxHeight <= 380, JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.maxHeight - desktopDirectory.minHeight < 40, JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.overflows.every(value => value <= 1), JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.roles.every(([role, tabIndex]) => role === null && tabIndex === null));
+  assert.ok(desktopDirectory.controls.every(count => count === 2), JSON.stringify(desktopDirectory));
+  assert.deepEqual(desktopDirectory.periods, []);
+  assert.equal(desktopDirectory.cardTimetables, 0);
+  assert.equal(desktopDirectory.videoAffordances, 1);
+  assert.equal(desktopDirectory.bioClamp, '2');
+  assert.equal(desktopDirectory.igcsePresent, true);
+  assert.equal(desktopDirectory.igcseCount, '0');
+
+  const searchResult = async (query) => cdp.evaluate(`(() => {
+    const input = document.querySelector('#tutor-search');
+    input.value = ${JSON.stringify(query)};
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    return {
+      count: Number(document.querySelector('#tutor-count').textContent),
+      names: [...document.querySelectorAll('.tcardx__profile > span')].map(node => node.textContent.trim()),
+      highlighted: [...document.querySelectorAll('.tcardx__scores .is-match span')].map(node => node.textContent.trim()),
+      headlines: [...document.querySelectorAll('.tcardx__credential span:first-of-type')].map(node => node.textContent.trim()),
+      headlineScores: [...document.querySelectorAll('.tcardx__credential strong')].map(node => node.textContent.trim()),
+    };
+  })()`);
+  const chemistry = await searchResult('chemistry');
+  assert.equal(chemistry.count, 3, JSON.stringify(chemistry));
+  assert.ok(chemistry.highlighted.every(subject => /chemistry/i.test(subject)), JSON.stringify(chemistry));
+  assert.ok(chemistry.headlines.every(subject => /chemistry/i.test(subject)), JSON.stringify(chemistry));
+  const koreanChemistry = await searchResult('화학');
+  assert.equal(koreanChemistry.count, 3, JSON.stringify(koreanChemistry));
+  const ibCurriculum = await searchResult('IB');
+  assert.equal(ibCurriculum.count, 2, JSON.stringify(ibCurriculum));
+  assert.ok(ibCurriculum.highlighted.length > 0 && ibCurriculum.highlighted.every(subject => /^IB\b/i.test(subject)), JSON.stringify(ibCurriculum));
+  assert.ok(ibCurriculum.headlineScores.every(score => score === '7'), JSON.stringify(ibCurriculum));
+  const calculus = await searchResult('calculus');
+  assert.deepEqual(calculus.names, ['최에이피']);
+  assert.deepEqual(calculus.highlighted, ['AP Calculus BC']);
+  const tutorName = await searchResult('Ivy Kim');
+  assert.deepEqual(tutorName.names, ['김아이비']);
+  assert.deepEqual(tutorName.highlighted, []);
+
+  await searchResult('');
+  const recentlyAdded = await cdp.evaluate(`(() => {
+    const select = document.querySelector('#tutor-sort');
+    select.value = 'recent';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return [...document.querySelectorAll('.tcardx__profile > span')].map(node => node.textContent.trim());
+  })()`);
+  assert.equal(recentlyAdded[0], '윤생물');
+
+  await searchResult('chemistry');
+  await cdp.evaluate(`document.querySelector('[data-filter="ap"]').click()`);
+  const composed = await cdp.evaluate(`({
+    count: Number(document.querySelector('#tutor-count').textContent),
+    chips: [...document.querySelectorAll('[data-active-filters] button')].map(node => node.textContent.replace('×', '').trim()),
+    names: [...document.querySelectorAll('.tcardx__profile > span')].map(node => node.textContent.trim()),
+  })`);
+  assert.equal(composed.count, 1, JSON.stringify(composed));
+  assert.equal(composed.chips.length, 2, JSON.stringify(composed));
+  assert.deepEqual(composed.names, ['최에이피']);
+  await cdp.evaluate(`document.querySelector('[data-remove-filter="search"]').click()`);
+  assert.equal(await cdp.evaluate(`Number(document.querySelector('#tutor-count').textContent)`), 2);
+
+  await navigate(cdp, '/tutors/');
+  await sleep(250);
   await cdp.evaluate(`document.querySelector('[data-filter="ib"]').click()`);
   assert.match(await cdp.evaluate(`location.search`), /c=ib/);
   await cdp.evaluate(`history.back()`);
   await sleep(100);
   assert.equal(await cdp.evaluate(`document.querySelector('[data-filter="all"]').getAttribute('aria-pressed')`), 'true');
   await navigate(cdp, '/tutors/?c=ib');
-  await sleep(350);
+  await sleep(250);
   const tutors = await cdp.evaluate(`(async () => {
-    const blocks=[...document.querySelectorAll('.weekgrid__slot')];
+    const profileButton = document.querySelector('.tcardx__profile');
+    profileButton.click();
+    await new Promise(r => setTimeout(r, 50));
+    const blocks=[...document.querySelectorAll('#profile-dialog .weekgrid__slot')];
     const first=blocks[0]; first?.focus();
     await new Promise(r => setTimeout(r, 160));
-    return {
+    const result = {
       active: document.querySelector('[data-filter="ib"]').getAttribute('aria-pressed'),
       count: Number(document.querySelector('#tutor-count').textContent),
       totalCards: document.querySelectorAll('.tutor-cell').length,
@@ -294,19 +426,74 @@ try {
       colors: new Set(blocks.map(b => getComputedStyle(b).backgroundColor)).size,
       tooltip: first ? getComputedStyle(first, '::after').content : '',
       tooltipVisible: first ? getComputedStyle(first, '::after').opacity : '0',
-      focused: first ? first.matches(':focus') : false,
       tabIndex: first?.tabIndex,
       tutorHref: document.querySelector('.tcardx__book[href]')?.getAttribute('href') || '',
     };
+    document.querySelector('[data-close-profile]').click();
+    await new Promise(requestAnimationFrame);
+    result.focusRestored = document.activeElement === profileButton;
+    return result;
   })()`);
   assert.equal(tutors.active, 'true');
-  assert.equal(tutors.count, 1);
+  assert.equal(tutors.count, 2);
   assert.equal(tutors.totalCards, 2);
   assert.ok(tutors.blockCount >= 3);
   assert.ok(tutors.colors > 1);
   assert.match(tutors.tooltip, /09:00-10:30/);
-  assert.equal(tutors.tooltipVisible, '1', JSON.stringify(tutors));
+  assert.ok(Number(tutors.tooltipVisible) > 0.9, JSON.stringify(tutors));
+  assert.equal(tutors.tabIndex, 0);
+  assert.equal(tutors.focusRestored, true);
   assert.match(tutors.tutorHref, /get-matched\?tutor=P-QA1/);
+
+  await cdp.send('Emulation.clearDeviceMetricsOverride');
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 3, mobile: true });
+  await navigate(cdp, '/tutors/');
+  await sleep(250);
+  const mobileDirectory = await cdp.evaluate(`(() => {
+    const cards = [...document.querySelectorAll('.tcardx:not(.tcardx--skeleton)')];
+    const heights = cards.map(card => card.getBoundingClientRect().height);
+    const rail = document.querySelector('.rail');
+    const list = document.querySelector('.rail__list');
+    const cells = [...document.querySelectorAll('.tutor-cell')];
+    const firstRowTop = Math.round(cells[0].getBoundingClientRect().top);
+    return {
+      columns: cells.filter(cell => Math.round(cell.getBoundingClientRect().top) === firstRowTop).length,
+      minHeight: Math.min(...heights), maxHeight: Math.max(...heights),
+      railPosition: getComputedStyle(rail).position,
+      railWrap: getComputedStyle(list).flexWrap,
+      chipMinHeight: Math.min(...[...document.querySelectorAll('.rail__btn')].map(button => button.getBoundingClientRect().height)),
+      bodyFits: document.documentElement.scrollWidth <= innerWidth,
+      innerWidth,
+      gridWidth: document.querySelector('#tutor-grid').getBoundingClientRect().width,
+      gridTemplate: getComputedStyle(document.querySelector('#tutor-grid')).gridTemplateColumns,
+      positions: cells.slice(0, 3).map(cell => ({ left: cell.getBoundingClientRect().left, top: cell.getBoundingClientRect().top })),
+    };
+  })()`);
+  assert.equal(mobileDirectory.columns, 1, JSON.stringify(mobileDirectory));
+  assert.ok(mobileDirectory.maxHeight - mobileDirectory.minHeight < 40, JSON.stringify(mobileDirectory));
+  assert.equal(mobileDirectory.railPosition, 'sticky');
+  assert.equal(mobileDirectory.railWrap, 'nowrap');
+  assert.ok(mobileDirectory.chipMinHeight >= 44);
+  assert.equal(mobileDirectory.bodyFits, true);
+
+  await cdp.send('Emulation.setEmulatedMedia', {
+    media: '',
+    features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+  });
+  assert.ok(await cdp.evaluate(`parseFloat(getComputedStyle(document.querySelector('.tcardx')).transitionDuration) < 0.001`));
+  await cdp.send('Emulation.setEmulatedMedia', { media: '', features: [] });
+
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 812, height: 375, deviceScaleFactor: 2, mobile: true });
+  await navigate(cdp, '/tutors/');
+  await sleep(250);
+  const landscapeDirectory = await cdp.evaluate(`({
+    bodyFits: document.documentElement.scrollWidth <= innerWidth,
+    searchVisible: document.querySelector('#tutor-search').getBoundingClientRect().width > 0,
+    railPosition: getComputedStyle(document.querySelector('.rail')).position,
+  })`);
+  assert.equal(landscapeDirectory.bodyFits, true, JSON.stringify(landscapeDirectory));
+  assert.equal(landscapeDirectory.searchVisible, true);
+  assert.equal(landscapeDirectory.railPosition, 'sticky');
 
   await cdp.evaluate(`sessionStorage.removeItem('seonbae-match-draft')`);
   await navigate(cdp, '/get-matched/?tutor=P-QA1');

@@ -117,6 +117,10 @@
   --serif: 'Hanken Grotesk', 'Pretendard Variable', system-ui, sans-serif;
 }
 
+@media (min-width: 1241px) {
+  :root { --header-h: 76px; }
+}
+
 /* ----- Reset ------------------------------------------------------------- */
 *,
 *::before,
