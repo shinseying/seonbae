@@ -497,6 +497,13 @@ const filters = [
     transition: transform .24s ease, box-shadow .24s ease;
   }
   .tcardx:hover { transform: translateY(-3px); box-shadow: 0 22px 48px rgba(22, 48, 69, .12); }
+  .tcardx__surface {
+    position: absolute; inset: -1px; z-index: 1; padding: 0;
+    border: 0; border-radius: inherit; background: transparent; cursor: pointer;
+  }
+  .tcardx__surface:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+  .tcardx > :not(.tcardx__surface) { z-index: 2; pointer-events: none; }
+  .tcardx__book,.weekgrid__slot { pointer-events: auto; }
 
   .tcardx__verified {
     position: absolute; top: 18px; right: 18px;
@@ -527,14 +534,12 @@ const filters = [
   }
   .tcardx__identity-copy { min-width: 0; }
   .tcardx__name { margin: 0; font-size: inherit; }
-  .tcardx__profile {
+  .tcardx__profile-label {
     min-height: 44px; max-width: 100%; display: flex; align-items: center; gap: 7px;
-    padding: 0; border: 0; background: none; color: var(--violet); font: inherit; text-align: left; cursor: pointer;
+    color: var(--violet); text-align: left;
   }
-  .tcardx__profile > span { font-family: var(--display); font-weight: 820; font-size: 1.28rem; letter-spacing: -.025em; line-height: 1.1; }
-  .tcardx__profile small { overflow: hidden; color: var(--muted); font-size: .78rem; font-weight: 600; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
-  .tcardx__profile:hover > span { text-decoration: underline; text-underline-offset: 4px; }
-  .tcardx__profile:focus-visible { outline: 3px solid var(--mint); outline-offset: 4px; border-radius: 4px; }
+  .tcardx__profile-label > span { font-family: var(--display); font-weight: 820; font-size: 1.28rem; letter-spacing: -.025em; line-height: 1.1; }
+  .tcardx__profile-label small { overflow: hidden; color: var(--muted); font-size: .78rem; font-weight: 600; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
   .tcardx__uni { overflow: hidden; margin-top: 5px; color: var(--ink); font-size: .82rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 
   .tcardx__scores { display: flex; flex-wrap: nowrap; gap: 6px; min-height: 32px; margin: 10px 0 0; padding: 0; list-style: none; }
@@ -697,7 +702,10 @@ const filters = [
   .pf::backdrop { background: rgba(19, 24, 27, .56); backdrop-filter: blur(4px); }
   /* The panel scrolls under a pinned footer, so the match CTA stays reachable
      however long the profile runs. */
-  .pf .book__panel { display: flex; flex-direction: column; padding-bottom: 0; }
+  .pf .book__panel {
+    display: flex; flex-direction: column; padding-bottom: 0;
+    isolation: isolate; scroll-padding-bottom: 108px;
+  }
 
   .pf__head {
     display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 24px; align-items: center;
@@ -744,7 +752,7 @@ const filters = [
   .pf__block .book__calendar { margin-top: 14px; }
 
   .pf__foot {
-    position: sticky; bottom: 0; margin-top: 26px;
+    position: sticky; bottom: 0; z-index: 30; margin-top: 26px;
     padding: 16px 0 clamp(24px, 4vw, 40px);
     background: linear-gradient(to bottom, transparent, var(--white) 18%);
   }
@@ -1273,12 +1281,13 @@ const filters = [
 
     return `<div class="tutor-cell" data-cats="${categoriesFor(tutor).join(' ')}" data-registry-id="${escapeHtml(tutor.registry_id)}"${previewState ? ` data-preview-state="${previewState}"` : ''}>
       <article class="tcardx card">
+        <button type="button" class="tcardx__surface" data-profile="${escapeHtml(tutor.registry_id)}" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')} ${tr('open', '열기')}"></button>
         <span class="tcardx__verified">${verifyIcon}${sandboxMode ? previewLabel : tr('Verified Tutor', '검증 완료')}</span>
         ${credentialBlock}
         <div class="tcardx__identity">
           <img class="tcardx__avatar" src="${photo}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="96" height="96" loading="lazy" decoding="async" />
           <div class="tcardx__identity-copy">
-            <h3 class="tcardx__name"><button type="button" class="tcardx__profile" data-profile="${escapeHtml(tutor.registry_id)}" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')}"><span>${escapeHtml(displayName)}</span>${altName && altName !== displayName ? `<small>${escapeHtml(altName)}</small>` : ''}</button></h3>
+            <h3 class="tcardx__name"><span class="tcardx__profile-label"><span>${escapeHtml(displayName)}</span>${altName && altName !== displayName ? `<small>${escapeHtml(altName)}</small>` : ''}</span></h3>
             ${uni ? `<p class="tcardx__uni">${uni}</p>` : ''}
           </div>
         </div>

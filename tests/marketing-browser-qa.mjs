@@ -333,6 +333,16 @@ try {
       minHeight: Math.min(...heights), maxHeight: Math.max(...heights),
       overflows: cards.map(card => card.scrollHeight - card.clientHeight),
       roles: cards.map(card => [card.getAttribute('role'), card.getAttribute('tabindex')]),
+      cardSurfaces: cards.map(card => {
+        const surface = card.querySelector('.tcardx__surface');
+        const cardBox = card.getBoundingClientRect();
+        const surfaceBox = surface.getBoundingClientRect();
+        return {
+          tag: surface.tagName,
+          widthDelta: Math.abs(cardBox.width - surfaceBox.width),
+          heightDelta: Math.abs(cardBox.height - surfaceBox.height),
+        };
+      }),
       controls: cards.map(card => card.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])').length),
       periods: [...document.querySelectorAll('.tcardx__credential strong, .tcardx__scores b')].map(node => node.textContent.trim()).filter(value => value === '.'),
       cardTimetables: document.querySelectorAll('.tcardx .weekgrid').length,
@@ -350,6 +360,7 @@ try {
   assert.ok(desktopDirectory.maxHeight - desktopDirectory.minHeight < 40, JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.overflows.every(value => value <= 1), JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.roles.every(([role, tabIndex]) => role === null && tabIndex === null));
+  assert.ok(desktopDirectory.cardSurfaces.every(({ tag, widthDelta, heightDelta }) => tag === 'BUTTON' && widthDelta <= 1 && heightDelta <= 1), JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.controls.every(count => count >= 2), JSON.stringify(desktopDirectory));
   assert.deepEqual(desktopDirectory.periods, []);
   assert.equal(desktopDirectory.cardTimetables, mockTutors.length);
@@ -365,7 +376,7 @@ try {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     return {
       count: Number(document.querySelector('#tutor-count').textContent),
-      names: [...document.querySelectorAll('.tcardx__profile > span')].map(node => node.textContent.trim()),
+      names: [...document.querySelectorAll('.tcardx__profile-label > span')].map(node => node.textContent.trim()),
       highlighted: [...document.querySelectorAll('.tcardx__scores .is-match span')].map(node => node.textContent.trim()),
       headlines: [...document.querySelectorAll('.tcardx__credential span:first-of-type')].map(node => node.textContent.trim()),
       headlineScores: [...document.querySelectorAll('.tcardx__credential strong')].map(node => node.textContent.trim()),
@@ -393,7 +404,7 @@ try {
     const select = document.querySelector('#tutor-sort');
     select.value = 'recent';
     select.dispatchEvent(new Event('change', { bubbles: true }));
-    return [...document.querySelectorAll('.tcardx__profile > span')].map(node => node.textContent.trim());
+    return [...document.querySelectorAll('.tcardx__profile-label > span')].map(node => node.textContent.trim());
   })()`);
   assert.equal(recentlyAdded[0], '윤생물');
 
@@ -402,7 +413,7 @@ try {
   const composed = await cdp.evaluate(`({
     count: Number(document.querySelector('#tutor-count').textContent),
     chips: [...document.querySelectorAll('[data-active-filters] button')].map(node => node.textContent.replace('×', '').trim()),
-    names: [...document.querySelectorAll('.tcardx__profile > span')].map(node => node.textContent.trim()),
+    names: [...document.querySelectorAll('.tcardx__profile-label > span')].map(node => node.textContent.trim()),
   })`);
   assert.equal(composed.count, 1, JSON.stringify(composed));
   assert.equal(composed.chips.length, 2, JSON.stringify(composed));
@@ -420,12 +431,15 @@ try {
   await navigate(cdp, '/tutors/?c=ib');
   await sleep(250);
   const tutors = await cdp.evaluate(`(async () => {
-    const profileButton = document.querySelector('.tcardx__profile');
+    const profileButton = document.querySelector('.tcardx__surface');
     profileButton.click();
     await new Promise(r => setTimeout(r, 50));
     const blocks=[...document.querySelectorAll('#profile-dialog .weekgrid__slot')];
     const first=blocks[0]; first?.focus();
     await new Promise(r => setTimeout(r, 160));
+    const profileFooter = document.querySelector('#profile-dialog .pf__foot');
+    const profileMatchButton = profileFooter?.querySelector('.tcardx__book');
+    const matchButtonBox = profileMatchButton?.getBoundingClientRect();
     const result = {
       active: document.querySelector('[data-filter="ib"]').getAttribute('aria-pressed'),
       count: Number(document.querySelector('#tutor-count').textContent),
@@ -437,6 +451,11 @@ try {
       tabIndex: first?.tabIndex,
       cardMatchButtons: document.querySelectorAll('.tcardx .tcardx__book[data-book]').length,
       consultationLinks: document.querySelectorAll('.tcardx .tcardx__book[href*="get-matched"]').length,
+      footerZ: Number(getComputedStyle(profileFooter).zIndex),
+      focusedBlockZ: Number(getComputedStyle(first).zIndex),
+      matchButtonOnTop: matchButtonBox
+        ? document.elementFromPoint(matchButtonBox.left + matchButtonBox.width / 2, matchButtonBox.top + matchButtonBox.height / 2)?.closest('.tcardx__book') === profileMatchButton
+        : false,
     };
     document.querySelector('[data-close-profile]').click();
     await new Promise(requestAnimationFrame);
@@ -454,6 +473,8 @@ try {
   assert.equal(tutors.focusRestored, true);
   assert.equal(tutors.cardMatchButtons, 2);
   assert.equal(tutors.consultationLinks, 0);
+  assert.ok(tutors.footerZ > tutors.focusedBlockZ, JSON.stringify(tutors));
+  assert.equal(tutors.matchButtonOnTop, true, JSON.stringify(tutors));
 
   const matchRequest = await cdp.evaluate(`(async () => {
     const button = document.querySelector('.tcardx__book[data-book="P-QA1"]');
