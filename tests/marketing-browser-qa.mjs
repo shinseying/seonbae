@@ -143,7 +143,8 @@ const mockTutors = [
 
 try {
   chrome = spawn(chromePath, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    '--headless=new', '--disable-gpu', '--disable-gpu-sandbox', '--no-sandbox',
+    '--no-first-run', '--no-default-browser-check',
     '--remote-allow-origins=*',
     `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, 'about:blank',
   ], { stdio: 'ignore', windowsHide: true });
@@ -159,10 +160,15 @@ try {
     source: `{
       const nativeFetch = window.fetch.bind(window);
       const tutors = ${JSON.stringify(mockTutors)};
+      window.__bookingRequests = [];
       window.fetch = (input, init) => {
         const url = typeof input === 'string' ? input : input.url;
         if (url === '/api/tutors') return Promise.resolve(new Response(JSON.stringify(tutors), { status: 200, headers: { 'Content-Type': 'application/json' } }));
-        if (url === '/api/auth/session') return Promise.resolve(new Response(JSON.stringify({ authenticated: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        if (url === '/api/auth/session') return Promise.resolve(new Response(JSON.stringify({ authenticated: true, role: 'student' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        if (url === '/api/bookings') {
+          window.__bookingRequests.push(JSON.parse(init?.body || '{}'));
+          return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        }
         if (url === '/api/consultations') return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
         return nativeFetch(input, init);
       };
@@ -330,6 +336,7 @@ try {
       controls: cards.map(card => card.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])').length),
       periods: [...document.querySelectorAll('.tcardx__credential strong, .tcardx__scores b')].map(node => node.textContent.trim()).filter(value => value === '.'),
       cardTimetables: document.querySelectorAll('.tcardx .weekgrid').length,
+      emptyTimetableSlots: document.querySelectorAll('[data-registry-id="P-QA2"] .weekgrid__slot').length,
       videoAffordances: document.querySelectorAll('.tcardx__video-available').length,
       bioClamp: getComputedStyle(document.querySelector('.tcardx__bio')).webkitLineClamp,
       igcsePresent: Boolean(document.querySelector('[data-filter="igcse"]')),
@@ -339,13 +346,14 @@ try {
   assert.equal(desktopDirectory.count, mockTutors.length);
   assert.equal(desktopDirectory.columns, 3, JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.rowsForFirstSix <= 2, JSON.stringify(desktopDirectory));
-  assert.ok(desktopDirectory.minHeight >= 340 && desktopDirectory.maxHeight <= 380, JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.minHeight >= 520 && desktopDirectory.maxHeight <= 720, JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.maxHeight - desktopDirectory.minHeight < 40, JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.overflows.every(value => value <= 1), JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.roles.every(([role, tabIndex]) => role === null && tabIndex === null));
-  assert.ok(desktopDirectory.controls.every(count => count === 2), JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.controls.every(count => count >= 2), JSON.stringify(desktopDirectory));
   assert.deepEqual(desktopDirectory.periods, []);
-  assert.equal(desktopDirectory.cardTimetables, 0);
+  assert.equal(desktopDirectory.cardTimetables, mockTutors.length);
+  assert.equal(desktopDirectory.emptyTimetableSlots, 0);
   assert.equal(desktopDirectory.videoAffordances, 1);
   assert.equal(desktopDirectory.bioClamp, '2');
   assert.equal(desktopDirectory.igcsePresent, true);
@@ -427,7 +435,8 @@ try {
       tooltip: first ? getComputedStyle(first, '::after').content : '',
       tooltipVisible: first ? getComputedStyle(first, '::after').opacity : '0',
       tabIndex: first?.tabIndex,
-      tutorHref: document.querySelector('.tcardx__book[href]')?.getAttribute('href') || '',
+      cardMatchButtons: document.querySelectorAll('.tcardx .tcardx__book[data-book]').length,
+      consultationLinks: document.querySelectorAll('.tcardx .tcardx__book[href*="get-matched"]').length,
     };
     document.querySelector('[data-close-profile]').click();
     await new Promise(requestAnimationFrame);
@@ -443,7 +452,40 @@ try {
   assert.ok(Number(tutors.tooltipVisible) > 0.9, JSON.stringify(tutors));
   assert.equal(tutors.tabIndex, 0);
   assert.equal(tutors.focusRestored, true);
-  assert.match(tutors.tutorHref, /get-matched\?tutor=P-QA1/);
+  assert.equal(tutors.cardMatchButtons, 2);
+  assert.equal(tutors.consultationLinks, 0);
+
+  const matchRequest = await cdp.evaluate(`(async () => {
+    const button = document.querySelector('.tcardx__book[data-book="P-QA1"]');
+    button.click();
+    await new Promise(r => setTimeout(r, 40));
+    const dialog = document.querySelector('#book-dialog');
+    const form = dialog.querySelector('.book__form');
+    form.querySelector('[name="subject"]').value = 'IB Chemistry HL';
+    form.querySelector('[name="preferredDay"]').value = 'mon';
+    form.querySelector('[name="preferredTime"]').value = '09:00';
+    form.querySelector('[name="note"]').value = 'QA match request';
+    form.requestSubmit();
+    const status = dialog.querySelector('[data-book-status]');
+    for (let i = 0; i < 30 && (!window.__bookingRequests.length || !status.textContent.trim()); i++) await new Promise(r => setTimeout(r, 20));
+    return {
+      open: dialog.open,
+      hidden: form.hidden,
+      requests: window.__bookingRequests,
+      success: status.textContent,
+    };
+  })()`);
+  assert.equal(matchRequest.open, true);
+  assert.equal(matchRequest.hidden, false);
+  assert.equal(matchRequest.requests.length, 1);
+  assert.deepEqual(matchRequest.requests[0], {
+    tutorRegistryId: 'P-QA1',
+    subject: 'IB Chemistry HL',
+    preferredDay: 'mon',
+    preferredTime: '09:00',
+    note: 'QA match request',
+  });
+  assert.match(matchRequest.success, /Match requested|매칭 요청/);
 
   await cdp.send('Emulation.clearDeviceMetricsOverride');
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 3, mobile: true });
@@ -509,7 +551,7 @@ try {
   assert.equal(tutorCarry.value, '김아이비');
   assert.equal(tutorCarry.options, mockTutors.length);
 
-  console.log('Marketing browser QA passed: mobile layout, search/deep links, form history/draft, timezone, roster, and timetable tooltips.');
+  console.log('Marketing browser QA passed: mobile layout, search/deep links, form history/draft, timezone, roster, timetable tooltips, and match requests.');
 } finally {
   try { await cdp?.send('Browser.close'); } catch {}
   if (chrome && chrome.exitCode === null) {

@@ -488,7 +488,7 @@ const filters = [
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    height: 378px;
+    height: 100%;
     padding: 22px;
     border-radius: 16px;
     border: 1px solid var(--line-soft);
@@ -561,6 +561,14 @@ const filters = [
     overflow: hidden; margin-top: 6px; color: var(--muted-soft); font-size: .68rem;
     line-height: 1.35; text-overflow: ellipsis; white-space: nowrap;
   }
+
+  .tcardx__availability {
+    display: grid; gap: 8px; width: 100%; margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--line); text-align: left;
+  }
+  .tcardx__availability-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .tcardx__availability-head b { color: var(--ink); font-size: .82rem; }
+  .tcardx__availability-head span { color: var(--muted-soft); font-size: .62rem; font-variant-numeric: tabular-nums; }
 
   .weekgrid {
     width: 100%; overflow: visible; border: 1px solid var(--line);
@@ -1277,10 +1285,14 @@ const filters = [
         ${scoreList ? `<ul class="tcardx__scores">${scoreList}</ul>` : '<div class="tcardx__scores tcardx__scores--empty" aria-hidden="true"></div>'}
         ${bio ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>` : '<div class="tcardx__bio-space" aria-hidden="true"></div>'}
         ${metaParts.length ? `<p class="tcardx__meta-line">${metaParts.map(escapeHtml).join(' · ')}</p>` : ''}
+        <section class="tcardx__availability">
+          <div class="tcardx__availability-head"><b>${tr('Availability', '가능 시간')}</b><span>${tr('06:00 to 24:00', '06시부터 24시')}</span></div>
+          ${availabilityTimetable(tutor)}
+        </section>
         <div class="tcardx__foot">
           ${sandboxMode
             ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
-            : `<a class="tcardx__book" href="${language() === 'en' ? '/en' : ''}/get-matched?tutor=${encodeURIComponent(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</a>`}
+            : `<button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}" data-tutor-name="${escapeHtml(displayName)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</button>`}
         </div>
       </article>
     </div>`;
@@ -1632,7 +1644,7 @@ const filters = [
       <div class="pf__foot">
         ${sandboxMode
           ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
-          : `<a class="tcardx__book" href="${language() === 'en' ? '/en' : ''}/get-matched?tutor=${encodeURIComponent(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</a>`}
+          : `<button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</button>`}
       </div>`;
 
     // Injected markup carries no data-astro-cid-*, so every scoped rule in this
