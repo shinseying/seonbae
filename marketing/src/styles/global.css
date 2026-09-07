@@ -107,6 +107,7 @@
   --container: 1280px;
   --gutter: clamp(20px, 5vw, 64px);
   --section-y: clamp(64px, 9vw, 132px);
+  --header-h: 87px;
 
   /* Type — DM Sans (friendly-but-professional), Newsreader italic for
      editorial accents, Pretendard for Korean. */
@@ -122,6 +123,8 @@
 *::after { box-sizing: border-box; }
 
 * { margin: 0; }
+
+[id] { scroll-margin-top: calc(var(--header-h) + 16px); }
 
 html {
   -webkit-text-size-adjust: 100%;
@@ -613,7 +616,7 @@ h3:lang(ko) { letter-spacing: -0.01em; }
   border: 1px solid var(--line);
   background: var(--white);
   font-family: var(--body);
-  font-size: 0.96rem;
+  font-size: 1rem;
   color: var(--ink);
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
@@ -633,6 +636,7 @@ select.form-control {
   background-size: 11px 11px;
   padding-right: 38px;
 }
+@media (min-width: 768px) { .form-control { font-size: .96rem; } }
 .field-hint { margin-top: 7px; font-size: 0.84rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }

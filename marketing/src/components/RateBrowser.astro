@@ -3,7 +3,7 @@ import { groupedRatesFor, ratesFor, type CurriculumSlug } from '../data/rates';
 import { won } from '../lib/format';
 import T from './T.astro';
 import { subjectsKo } from '../i18n/content';
-import { localeFromPath } from '../i18n/locale';
+import { localeFromPath, localePath } from '../i18n/locale';
 
 // A searchable, per-subject rate table. Prices are set per subject, never per
 // curriculum, so this is the only place a family ever reads a price.
@@ -18,7 +18,9 @@ interface Props {
 }
 const { curricula, showTabs = false, showCurriculumHeadings = false, id = 'rates', surface = 'white' } = Astro.props;
 const surfaceVar = surface === 'cream' ? 'var(--canvas)' : 'var(--white)';
-const isEnglish = localeFromPath(Astro.url.pathname) === 'en';
+const locale = localeFromPath(Astro.url.pathname);
+const isEnglish = locale === 'en';
+const link = (href: string) => localePath(href, locale);
 
 const total = curricula.reduce((n, c) => n + ratesFor(c.slug).length, 0);
 const groupKo: Record<string, string> = {
@@ -30,12 +32,12 @@ const groupKo: Record<string, string> = {
   SAT: 'SAT', ACT: 'ACT', 'English proficiency': '영어 능력 시험',
 };
 ---
-<div class="rb" id={id} data-total={total} style={`--rb-bg:${surfaceVar}`}>
+<div class="rb" id={id} data-total={total} data-has-tabs={showTabs ? 'true' : 'false'} style={`--rb-bg:${surfaceVar}`}>
   <div class="rb__head">
   <div class="rb__bar">
     <label class="rb__search">
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.7"/><path d="M13.2 13.2L17 17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      <input type="search" class="rb__input" placeholder={isEnglish ? 'Search by subject name. E.g. Physics or Calculus' : '과목명으로 검색하세요. 예: Physics, Calculus'} aria-label={isEnglish ? 'Search subjects' : '과목 검색'} />
+      <input type="search" class="rb__input" placeholder={isEnglish ? 'Search by subject name. E.g. Physics or Calculus' : '과목명으로 검색하세요. 예: 물리, 수학, 미적분'} aria-label={isEnglish ? 'Search subjects' : '과목 검색'} />
     </label>
     <p class="rb__count"><span class="rb__n">{total}</span> <T en="subjects" ko="개 과목" /></p>
   </div>
@@ -59,10 +61,13 @@ const groupKo: Record<string, string> = {
             <h4 class="rb__group-h"><T en={g.group} ko={groupKo[g.group] ?? g.group} /></h4>
             <ul class="rb__rows">
               {g.items.map((r) => (
-                <li class="rb__row" data-name={`${r.name} ${r.nameKo ?? ''}`.toLowerCase()}>
-                  <span class="rb__name"><T en={r.name} ko={r.nameKo ?? r.name} /></span>
-                  <span class="rb__dots" aria-hidden="true"></span>
-                  <span class="rb__price" data-krw={r.price}>{won(r.price)}<span class="rb__unit"><T en="/ hr" ko="/ 시간" /></span></span>
+                <li class="rb__row" data-name={`${r.name} ${r.nameKo ?? ''} ${r.aliases.join(' ')}`.toLowerCase()}>
+                  <a class="rb__row-link" href={link(`/get-matched?subject=${encodeURIComponent(r.slug)}`)}>
+                    <span class="rb__name"><T en={r.name} ko={r.nameKo ?? r.name} /></span>
+                    <span class="rb__dots" aria-hidden="true"></span>
+                    <span class="rb__price" data-krw={r.price}>{won(r.price)}<span class="rb__unit"><T en="/ hr" ko="/ 시간" /></span></span>
+                    <svg class="rb__chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m8 5 5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -82,7 +87,7 @@ const groupKo: Record<string, string> = {
   /* Search and curriculum tabs stay reachable while a long rate sheet scrolls. */
   .rb__head {
     position: sticky;
-    top: 76px;
+    top: var(--header-h);
     z-index: 2;
     padding-block: 14px;
     background: var(--rb-bg);
@@ -111,7 +116,7 @@ const groupKo: Record<string, string> = {
     background: none;
     outline: none;
     padding: 13px 0;
-    font-size: 0.98rem;
+    font-size: 1rem;
     color: var(--ink);
     min-width: 0;
   }
@@ -130,6 +135,8 @@ const groupKo: Record<string, string> = {
     color: var(--muted);
     cursor: pointer;
     transition: all 0.14s ease;
+    min-height: 44px;
+    flex: 0 0 auto;
   }
   .rb__tab:hover { border-color: rgba(12, 12, 12, 0.24); color: var(--ink); }
   .rb__tab[aria-pressed='true'] { background: var(--violet); border-color: var(--violet); color: #fff; }
@@ -157,14 +164,19 @@ const groupKo: Record<string, string> = {
     color: var(--ink);
     padding-bottom: 8px;
   }
-  .rb__row {
+  .rb__row { border-bottom: 1px solid var(--line-soft); }
+  .rb__row-link {
     display: grid;
-    grid-template-columns: auto minmax(12px, 1fr) auto;
+    grid-template-columns: auto minmax(12px, 1fr) auto 18px;
     align-items: baseline;
     gap: 10px;
     padding: 11px 0;
-    border-bottom: 1px solid var(--line-soft);
+    min-height: 48px;
+    border-radius: var(--r-sm);
+    transition: background .14s ease, color .14s ease, padding .14s ease;
   }
+  .rb__row-link:hover { background: var(--violet-soft); padding-inline: 10px; }
+  .rb__row-link:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; padding-inline: 10px; }
   .rb__name { font-size: 0.99rem; color: var(--ink); }
   .rb__dots { border-bottom: 1px dotted var(--line); transform: translateY(-3px); }
   .rb__price {
@@ -176,11 +188,30 @@ const groupKo: Record<string, string> = {
     white-space: nowrap;
   }
   .rb__unit { font-family: var(--body); font-weight: 500; font-size: 0.78rem; color: var(--muted); margin-left: 5px; }
+  .rb__chevron { width: 18px; height: 18px; align-self: center; color: var(--muted-soft); transition: transform .14s ease, color .14s ease; }
+  .rb__row-link:hover .rb__chevron, .rb__row-link:focus-visible .rb__chevron { color: var(--violet); transform: translateX(2px); }
   .rb__empty { margin-top: 26px; color: var(--muted); }
 
   @media (max-width: 560px) {
     .rb__dots { display: none; }
-    .rb__row { grid-template-columns: minmax(0, 1fr) auto; }
+    .rb__row-link { grid-template-columns: minmax(0, 1fr) auto 18px; }
+    .rb__tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 1px 30px 2px 1px;
+      margin-inline: -1px;
+      -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 26px), transparent 100%);
+      mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 26px), transparent 100%);
+    }
+    .rb__tabs::-webkit-scrollbar { display: none; }
+    .rb__tab { scroll-snap-align: start; }
+  }
+  @media (min-width: 768px) {
+    .rb__input { font-size: .98rem; }
   }
 </style>
 
@@ -194,7 +225,38 @@ const groupKo: Record<string, string> = {
     const live = rb.querySelector<HTMLElement>('[data-rb-live]');
     let announce: ReturnType<typeof setTimeout>;
 
+    const hasTabs = rb.dataset.hasTabs === 'true';
+    const validFilters = new Set(['all', ...tabs.map((tab) => tab.dataset.cur || '').filter(Boolean)]);
     let active = 'all';
+    let hasFilterHistory = false;
+
+    const restoreFromUrl = () => {
+      const params = new URLSearchParams(location.search);
+      const requested = params.get('c');
+      active = hasTabs && requested && validFilters.has(requested) ? requested : 'all';
+      if (input) input.value = (params.get('q') || '').slice(0, 100);
+      tabs.forEach((tab) => tab.setAttribute('aria-pressed', String((tab.dataset.cur || 'all') === active)));
+      const selected = tabs.find((tab) => (tab.dataset.cur || 'all') === active);
+      if (active !== 'all') selected?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    };
+
+    const writeUrl = (fromUser: boolean) => {
+      if (!hasTabs && !(input?.value || '').trim()) return;
+      const url = new URL(location.href);
+      if (hasTabs && active !== 'all') url.searchParams.set('c', active);
+      else url.searchParams.delete('c');
+      const q = (input?.value || '').trim();
+      if (q) url.searchParams.set('q', q);
+      else url.searchParams.delete('q');
+      const clean = `${url.pathname}${url.search}${url.hash}`;
+      const baseline = !new URLSearchParams(location.search).has('c') && !new URLSearchParams(location.search).has('q');
+      if (fromUser && !hasFilterHistory && baseline && (active !== 'all' || q)) {
+        history.pushState({ seonbaeFilter: true }, '', clean);
+        hasFilterHistory = true;
+      } else {
+        history.replaceState({ ...(history.state || {}), seonbaeFilter: true }, '', clean);
+      }
+    };
 
     const apply = () => {
       const q = (input?.value ?? '').trim().toLowerCase();
@@ -241,9 +303,14 @@ const groupKo: Record<string, string> = {
         tabs.forEach((t) => t.setAttribute('aria-pressed', String(t === tab)));
         if (input) input.value = '';
         apply();
+        writeUrl(true);
+        tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
       });
     });
 
-    input?.addEventListener('input', apply);
+    input?.addEventListener('input', () => { apply(); writeUrl(true); });
+    window.addEventListener('popstate', () => { restoreFromUrl(); apply(); });
+    restoreFromUrl();
+    apply();
   });
 </script>

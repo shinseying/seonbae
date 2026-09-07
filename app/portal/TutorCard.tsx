@@ -98,7 +98,7 @@ function AvailabilityTimetable({ availability }: { availability?: Record<string,
         <b>가능 시간</b>
         <span>06–24시</span>
       </div>
-      <div className={styles.weekGrid} role="img" aria-label={blocks.length
+      <div className={styles.weekGrid} role="group" aria-label={blocks.length
         ? `튜터의 주간 가능 시간표: ${blocks.map((block) => `${TIMETABLE_DAYS[block.dayIndex].label}요일 ${block.range}`).join(", ")}`
         : "등록된 가능 시간이 없는 빈 주간 시간표"}>
         <div className={styles.weekHead}>
@@ -118,6 +118,10 @@ function AvailabilityTimetable({ availability }: { availability?: Record<string,
               <span
                 className={styles.timeBlock}
                 key={`${block.dayIndex}-${block.rangeIndex}-${block.range}`}
+                tabIndex={0}
+                role="img"
+                data-tone={(block.dayIndex + block.rangeIndex) % 5}
+                data-time-label={`${TIMETABLE_DAYS[block.dayIndex].label} ${block.range}`}
                 title={`${TIMETABLE_DAYS[block.dayIndex].label} ${block.range}`}
                 aria-label={`${TIMETABLE_DAYS[block.dayIndex].label}요일 ${block.range}`}
                 style={{

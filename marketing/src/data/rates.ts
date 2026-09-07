@@ -24,9 +24,18 @@ export interface Rate {
   /** Korean label. Set only where the English name would not do on the KO site. */
   nameKo?: string;
   price: number; // KRW per hour
+  /** Stable URL value shared by pricing links and the matching form. */
+  slug: string;
+  /** Search-only Korean names and common alternate spellings. */
+  aliases: string[];
 }
 
-export const rates: Rate[] = [
+type RateSource = Omit<Rate, 'slug' | 'aliases'> & {
+  slug?: string;
+  aliases?: string[];
+};
+
+const rateRows: RateSource[] = [
   // ----- IB Diploma --------------------------------------------------------
   { curriculum: 'ib-diploma', group: 'Languages', name: 'English A: Literature HL / SL', price: 80000 },
   { curriculum: 'ib-diploma', group: 'Languages', name: 'English A: Language and Literature HL / SL', price: 80000 },
@@ -184,6 +193,48 @@ export const rates: Rate[] = [
   { curriculum: 'english-writing', group: 'English', name: 'Academic English', nameKo: '학교 영어', price: 70000 },
   { curriculum: 'english-writing', group: 'English', name: 'Business English', nameKo: '직장 영어', price: 80000 },
 ];
+
+const toSlug = (value: string) => value
+  .normalize('NFKD')
+  .replace(/[’']/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-|-$/g, '');
+
+const aliasesFor = (row: RateSource): string[] => {
+  const aliases = new Set(row.aliases ?? []);
+  const name = row.name.toLowerCase();
+  if (row.nameKo) aliases.add(row.nameKo);
+  if (/physics/.test(name)) ['물리', '물리학'].forEach((alias) => aliases.add(alias));
+  if (/mathematics|\bmath\b/.test(name)) ['수학', 'maths', 'mathematics'].forEach((alias) => aliases.add(alias));
+  if (/calculus/.test(name)) ['미적분', '수학', 'maths', 'mathematics'].forEach((alias) => aliases.add(alias));
+  if (/chemistry/.test(name)) aliases.add('화학');
+  if (/biology/.test(name)) ['생물', 'bio'].forEach((alias) => aliases.add(alias));
+  if (/economics/.test(name)) aliases.add('경제');
+  return [...aliases];
+};
+
+/** Canonical subject catalogue used by both pricing and matching. */
+export const rates: Rate[] = rateRows.map((row) => ({
+  ...row,
+  slug: row.slug ?? `${row.curriculum}--${toSlug(row.name)}`,
+  aliases: aliasesFor(row),
+}));
+
+export const curriculumSlugs: CurriculumSlug[] = [
+  'ib-diploma',
+  'advanced-placement',
+  'a-level',
+  'igcse',
+  'standardized-tests',
+  'english-writing',
+];
+
+export const isCurriculumSlug = (value: string | null | undefined): value is CurriculumSlug =>
+  Boolean(value && curriculumSlugs.includes(value as CurriculumSlug));
+
+export const rateBySlug = (slug: string | null | undefined): Rate | undefined =>
+  slug ? rates.find((rate) => rate.slug === slug) : undefined;
 
 /** Every rate for one curriculum, in the order written above. */
 export const ratesFor = (slug: string): Rate[] => rates.filter((r) => r.curriculum === slug);

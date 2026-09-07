@@ -142,7 +142,7 @@
 .availabilityHead span { color: rgba(32, 30, 25, 0.5); font-size: 0.62rem; font-variant-numeric: tabular-nums; }
 .weekGrid {
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(19, 24, 27, 0.12);
   border-radius: 8px;
   background: #fffdf9;
@@ -192,6 +192,42 @@
   height: max(4px, calc(var(--slot-height) * 1%));
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 3px;
-  background: #527f94;
+  background: #315b6f;
   box-shadow: 0 1px 3px rgba(22, 58, 81, 0.18);
+  cursor: help;
+  z-index: 1;
 }
+.timeBlock[data-tone="1"] { background: #b65b38; }
+.timeBlock[data-tone="2"] { background: #8a6b27; }
+.timeBlock[data-tone="3"] { background: #4f755f; }
+.timeBlock[data-tone="4"] { background: #765686; }
+.timeBlock::after {
+  content: attr(data-time-label);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  z-index: 20;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #13181b;
+  color: #fffdf9;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  box-shadow: 0 6px 18px rgba(19, 24, 27, 0.18);
+}
+.timeBlock:hover,
+.timeBlock:focus { z-index: 10; }
+.timeBlock:hover::after,
+.timeBlock:focus::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.timeBlock:focus-visible { outline: 3px solid #b9d6cd; outline-offset: 2px; }

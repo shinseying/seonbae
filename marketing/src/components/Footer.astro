@@ -114,7 +114,7 @@ const socials = [
     border: none;
     color: var(--on-dark);
     outline: none;
-    font-size: 0.95rem;
+    font-size: 16px;
     min-width: 0;
   }
   .newsletter-row input::placeholder { color: rgba(244, 241, 232, 0.4); }
@@ -183,6 +183,9 @@ const socials = [
   }
   @media (max-width: 520px) {
     .footer-base { flex-direction: column; align-items: flex-start; }
+  }
+  @media (min-width: 768px) {
+    .newsletter-row input { font-size: .95rem; }
   }
 </style>
 

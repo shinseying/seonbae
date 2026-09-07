@@ -10,8 +10,7 @@ export const FORM_ENDPOINT = '/api/consultations';
 
 export type SubmitMode = 'posted';
 
-// The merged goal field opens with the subject, so its first line is the best
-// short label for the admin list.
+// Free-text-only forms still use the first line as their short admin label.
 const firstLine = (value?: string) =>
   (value || '').split('\n')[0].trim().slice(0, 120);
 
@@ -35,11 +34,13 @@ export async function submitForm(form: HTMLFormElement, subject: string): Promis
   // Honeypot: bots fill hidden fields, people do not.
   if (data.company) return 'posted';
 
-  // The level answer is the curriculum now: the matching form no longer asks a
-  // separate subject, and the goal field carries the subject with it.
+  // Matching now provides a canonical curriculum and subject; older forms keep
+  // their established fallbacks so this shared submit path remains compatible.
   const curriculum = data.curriculum || data.level || data.subject || 'General enquiry';
   const detailLines = [
-    data.goal && `Subject and goal: ${data.goal}`,
+    data.subject && `Subject: ${data.subject}`,
+    data.subjectSlug && `Subject ID: ${data.subjectSlug}`,
+    data.goal && `Goal: ${data.goal}`,
 
     data.preference && `Lesson preference: ${data.preference}`,
     data.context && `Context: ${data.context}`,

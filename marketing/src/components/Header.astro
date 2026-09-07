@@ -101,7 +101,7 @@ const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order -
 
 <!-- Mobile drawer sits OUTSIDE <header>: the header's solid-state backdrop-filter
      would otherwise become the containing block for this fixed panel and collapse
-     it into the 76px header box. -->
+     it into the header box. -->
 <div class="drawer" id="mobile-drawer" hidden>
   <nav aria-label="Mobile">
     <ul class="drawer-list">
@@ -149,7 +149,7 @@ const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order -
     grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
     align-items: center;
     gap: 24px;
-    height: 86px;
+    height: calc(var(--header-h) - 1px);
     max-width: min(1560px, 100%);
     --gutter: clamp(20px, 3.2vw, 40px);
   }
@@ -350,7 +350,7 @@ const subjects = (await getCollection('subjects')).sort((a, b) => a.data.order -
   /* Drawer */
   .drawer {
     position: fixed;
-    inset: 76px 0 0 0;
+    inset: var(--header-h) 0 0 0;
     background: var(--canvas);
     padding: 24px var(--gutter) 40px;
     overflow-y: auto;

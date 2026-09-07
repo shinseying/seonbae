@@ -2,6 +2,8 @@
 import Base from '../layouts/Base.astro';
 import T from '../components/T.astro';
 import { localeFromPath, localePath } from '../i18n/locale';
+import { groupedRatesFor, rates, type CurriculumSlug } from '../data/rates';
+import { won } from '../lib/format';
 
 const locale = localeFromPath(Astro.url.pathname);
 const link = (href: string) => localePath(href, locale);
@@ -9,13 +11,16 @@ const isEnglish = locale === 'en';
 
 // Consultations run every evening between 17:00 and 20:00 KST.
 const slots = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'];
-const levels = [
-  { value: 'Lower secondary', en: 'Lower secondary', ko: '중등 과정' },
-  { value: 'IGCSE', en: 'IGCSE', ko: 'IGCSE' },
-  { value: 'IB or A Level', en: 'IB or A Level', ko: 'IB 또는 A레벨' },
-  { value: 'University prep', en: 'University prep', ko: '대학 입시 준비' },
-  { value: 'Adult learner', en: 'Adult learner', ko: '성인 학습자' },
+const curricula: { value: CurriculumSlug | 'unsure'; en: string; ko: string }[] = [
+  { value: 'ib-diploma', en: 'IB Diploma', ko: 'IB 디플로마' },
+  { value: 'advanced-placement', en: 'Advanced Placement', ko: 'AP' },
+  { value: 'a-level', en: 'A Level', ko: 'A레벨' },
+  { value: 'igcse', en: 'IGCSE', ko: 'IGCSE' },
+  { value: 'standardized-tests', en: 'Tests', ko: 'SAT·ACT·공인영어' },
+  { value: 'english-writing', en: 'English', ko: '영어' },
+  { value: 'unsure', en: 'Not sure yet', ko: '아직 잘 모르겠어요' },
 ];
+const curriculumLabel = Object.fromEntries(curricula.map((item) => [item.value, isEnglish ? item.en : item.ko]));
 const prefs = [
   { v: 'weekly', en: 'Weekly momentum', ko: '매주 꾸준히', den: 'A standing slot with one tutor', dko: '한 튜터와 정해진 시간에 수업' },
   { v: 'hourly', en: 'By the hour', ko: '필요할 때 한 시간씩', den: 'Occasional, when I need it', dko: '필요한 때만 수업' },
@@ -24,7 +29,7 @@ const prefs = [
 const stepLabels = [
   { en: 'Student', ko: '학생' },
   { en: 'Subject', ko: '과목' },
-  { en: 'Schedule', ko: '일정' },
+  { en: 'Tutor & time', ko: '튜터·일정' },
   { en: 'Contact', ko: '연락처' },
 ];
 ---
@@ -50,6 +55,11 @@ const stepLabels = [
 
           <form id="match-form" novalidate>
             <input type="text" name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <div class="match-context" data-match-context hidden>
+              <span><T en="Requesting" ko="희망 튜터" /> <strong data-context-name></strong></span>
+              <button type="button" data-clear-tutor><T en="Clear" ko="선택 해제" /></button>
+            </div>
+            <p class="sr-only" role="status" aria-live="polite" data-step-live></p>
             <!-- Step 1 -->
             <fieldset class="step is-current" data-step="1">
               <legend class="step-legend"><T en="Who are the lessons for?" ko="누구를 위한 수업인가요?" /></legend>
@@ -58,10 +68,10 @@ const stepLabels = [
                 <input class="form-control" id="m-student" name="student" type="text" required placeholder={isEnglish ? 'First name is fine' : '이름만 적어도 괜찮아요'} />
               </div>
               <div class="form-field" style="margin-top:18px">
-                <span class="field-label"><T en="Level" ko="학년·과정" /></span>
+                <span class="field-label"><T en="Curriculum" ko="커리큘럼" /></span>
                 <div class="choice-grid">
-                  {levels.map((l, i) => (
-                    <label class="choice"><input type="radio" name="level" value={l.value} checked={i === 0} /><span><T en={l.en} ko={l.ko} /></span></label>
+                  {curricula.map((l) => (
+                    <label class="choice"><input type="radio" name="level" value={l.value} checked={l.value === 'unsure'} /><span><T en={l.en} ko={l.ko} /></span></label>
                   ))}
                 </div>
               </div>
@@ -69,17 +79,51 @@ const stepLabels = [
 
             <!-- Step 2 -->
             <fieldset class="step" data-step="2" hidden>
-              <legend class="step-legend"><T en="What subject, and what for?" ko="어떤 과목을, 무엇을 위해 배우나요?" /></legend>
-              <div class="form-field">
-                <label for="m-goal"><T en="Subject and goal" ko="과목과 학습 목표" /> <span class="req">*</span></label>
-                <textarea class="form-control" id="m-goal" name="goal" rows="4" required maxlength="1000" placeholder={isEnglish ? 'IB Economics HL, aiming for a predicted 7 before the next session' : 'IB 경제 HL, 다음 학기 전 예상 7점 목표'}></textarea>
-                <p class="field-hint"><T en="Tell us the subject and what you want to achieve." ko="어떤 과목을, 무엇을 위해 배우려는지 함께 적어 주세요." /></p>
+              <legend class="step-legend"><T en="What would you like to study?" ko="어떤 과목을 배우고 싶나요?" /></legend>
+              <div class="form-field subject-field">
+                <label for="m-subject-search"><T en="Subject" ko="과목" /> <span class="req">*</span></label>
+                <input type="hidden" name="subject" data-subject-value />
+                <input type="hidden" name="subjectSlug" data-subject-slug />
+                <input type="hidden" name="curriculum" data-curriculum-value />
+                <div class="subject-combobox" data-subject-combobox>
+                  <input class="form-control subject-combobox__input" id="m-subject-search" type="search" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="m-subject-options" required autocomplete="off" placeholder={isEnglish ? 'Type a subject, e.g. IB Physics HL' : '과목을 검색하세요. 예: IB 물리 HL'} data-subject-search />
+                  <div class="subject-combobox__menu" id="m-subject-options" role="listbox" hidden data-subject-menu>
+                    <button type="button" class="subject-option subject-option--unsure" role="option" data-subject-option data-slug="not-sure" data-name="Not sure yet" data-name-ko="아직 잘 모르겠어요" data-curriculum="" data-price="" data-search="not sure unsure 아직 모름 모르겠어요">
+                      <strong><T en="Not sure yet" ko="아직 잘 모르겠어요" /></strong><small><T en="We will help you choose during the consultation" ko="상담하면서 함께 정해 드릴게요" /></small>
+                    </button>
+                    {curricula.filter((item) => item.value !== 'unsure').map((curriculum) => (
+                      <section class="subject-group" data-subject-group>
+                        <h3>{curriculumLabel[curriculum.value]}</h3>
+                        {groupedRatesFor(curriculum.value as CurriculumSlug).map((group) => group.items.map((rate) => (
+                          <button type="button" class="subject-option" role="option" data-subject-option data-slug={rate.slug} data-name={rate.name} data-name-ko={rate.nameKo ?? rate.name} data-curriculum={rate.curriculum} data-price={rate.price} data-search={`${rate.name} ${rate.nameKo ?? ''} ${rate.aliases.join(' ')}`.toLowerCase()}>
+                            <strong><T en={rate.name} ko={rate.nameKo ?? rate.name} /></strong><small>{won(rate.price)} <T en="/ hr" ko="/ 시간" /></small>
+                          </button>
+                        )))}
+                      </section>
+                    ))}
+                    <p class="subject-combobox__empty" data-subject-empty hidden><T en="No matching subject. Choose “Not sure yet” and we will help." ko="일치하는 과목이 없습니다. ‘아직 잘 모르겠어요’를 선택하시면 상담에서 도와드릴게요." /></p>
+                  </div>
+                </div>
+                <p class="subject-confirm" data-subject-confirm hidden><span data-subject-confirm-name></span><strong data-subject-confirm-price></strong></p>
+              </div>
+              <div class="form-field" style="margin-top:18px">
+                <label for="m-goal"><T en="Learning goal" ko="학습 목표" /> <span class="req">*</span></label>
+                <textarea class="form-control" id="m-goal" name="goal" rows="3" required maxlength="1000" placeholder={isEnglish ? 'What result are you aiming for, and by when?' : '어떤 목표를 언제까지 이루고 싶은지 알려주세요.'}></textarea>
+                <p class="field-hint"><T en="A target score, a deadline, or something that has felt difficult." ko="목표 점수, 일정, 지금 어렵게 느끼는 부분을 적어 주세요." /></p>
+              </div>
+              <div class="form-field" style="margin-top:20px">
+                <span class="field-label"><T en="How would you like to work?" ko="어떤 방식으로 수업할까요?" /></span>
+                <div class="choice-grid choice-grid--3">
+                  {prefs.map((p, i) => (
+                    <label class="choice choice--rich"><input type="radio" name="preference" value={p.v} checked={i === 0} /><span><strong><T en={p.en} ko={p.ko} /></strong><em><T en={p.den} ko={p.dko} /></em></span></label>
+                  ))}
+                </div>
               </div>
             </fieldset>
 
             <!-- Step 3 -->
             <fieldset class="step" data-step="3" hidden>
-              <legend class="step-legend"><T en="When works, and how often?" ko="언제, 얼마나 자주 수업할까요?" /></legend>
+              <legend class="step-legend"><T en="Who and when works best?" ko="어떤 선배와 언제 상담할까요?" /></legend>
               <div class="form-field tutor-picker-field">
                 <label for="m-tutor-search"><T en="Preferred tutor" ko="희망 튜터" /></label>
                 <div class="tutor-picker" data-tutor-picker>
@@ -104,21 +148,14 @@ const stepLabels = [
               <div class="form-field">
                 <span class="field-label"><T en="Date and time that suit you" ko="상담 가능한 날짜와 시간" /></span>
                 <input class="form-control slot-date" id="m-date" name="preferredDate" type="date" aria-label="상담 희망 날짜" />
+                <p class="timezone-note" data-timezone-note hidden></p>
                 <div class="slot-grid">
                   {slots.map((slot) => (
-                    <label class="slot"><input type="checkbox" name="times" value={slot} /><span>{slot}</span></label>
+                    <label class="slot"><input type="checkbox" name="times" value={slot} /><span><b>{slot} KST</b><small data-local-time data-slot={slot}></small></span></label>
                   ))}
                 </div>
                 <p class="field-hint"><T en="Consultations run every evening between 17:00 and 20:00 KST. Choose every slot that works." ko="상담은 매일 저녁 17:00–20:00(한국 시간)에 진행됩니다. 가능한 시간을 모두 골라 주세요." /></p>
                 <p class="field-hint" data-clock></p>
-              </div>
-              <div class="form-field" style="margin-top:20px">
-                <span class="field-label"><T en="How would you like to work?" ko="어떤 방식으로 수업할까요?" /></span>
-                <div class="choice-grid choice-grid--3">
-                  {prefs.map((p, i) => (
-                    <label class="choice choice--rich"><input type="radio" name="preference" value={p.v} checked={i === 0} /><span><strong><T en={p.en} ko={p.ko} /></strong><em><T en={p.den} ko={p.dko} /></em></span></label>
-                  ))}
-                </div>
               </div>
             </fieldset>
 
@@ -172,6 +209,15 @@ const stepLabels = [
 
   .match-card { background: var(--white); border: 1px solid var(--line-soft); border-radius: var(--r-xl); padding: clamp(24px, 3.5vw, 44px); box-shadow: var(--shadow-md); }
 
+  .match-context {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: -6px 0 24px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--violet) 28%, transparent);
+    border-radius: var(--r-sm); background: var(--violet-soft); color: var(--ink); font-size: .9rem;
+  }
+  .match-context[hidden] { display: none; }
+  .match-context button { border: 0; background: none; color: var(--violet); font: inherit; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .match-context button:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
+
   .progress { display: flex; gap: 6px; margin-bottom: 30px; }
   .progress-seg { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; opacity: 0.5; transition: opacity 0.2s ease; }
   .progress-seg::before { content: ""; position: absolute; top: 15px; left: -50%; width: 100%; height: 2px; background: var(--line); z-index: 0; }
@@ -199,6 +245,29 @@ const stepLabels = [
   .choice--rich strong { font-weight: 700; }
   .choice--rich em { font-style: normal; font-size: 0.82rem; color: var(--muted); }
   .choice--rich input:checked + span em { color: var(--violet); }
+
+  .subject-combobox { position: relative; }
+  .subject-combobox__menu {
+    position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 30;
+    max-height: 340px; overflow-y: auto; padding: 10px; border: 1px solid var(--line);
+    border-radius: var(--r-md); background: var(--white); box-shadow: var(--shadow-md);
+  }
+  .subject-group + .subject-group { margin-top: 10px; }
+  .subject-group h3 { position: sticky; top: -10px; z-index: 1; margin: 0 -2px 4px; padding: 8px 10px 5px; background: var(--white); color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .subject-option {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    width: 100%; min-height: 48px; padding: 9px 10px; border: 0; border-radius: 7px;
+    background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+  }
+  .subject-option:hover, .subject-option:focus-visible, .subject-option.is-active { background: var(--violet-soft); outline: none; }
+  .subject-option strong { font-size: .9rem; font-weight: 650; }
+  .subject-option small { flex: none; color: var(--violet); font-size: .76rem; font-weight: 700; }
+  .subject-option--unsure { border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: 8px; }
+  .subject-option--unsure > * { display: block; }
+  .subject-combobox__empty { padding: 14px 10px; color: var(--muted); font-size: .86rem; }
+  .subject-confirm { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--mint-surface); font-size: .86rem; }
+  .subject-confirm[hidden] { display: none; }
+  .subject-confirm strong { color: var(--violet); white-space: nowrap; }
 
   .tutor-picker-field { margin-bottom: 20px; }
   .tutor-picker { position: relative; }
@@ -259,7 +328,7 @@ const stepLabels = [
   .slot { position: relative; cursor: pointer; }
   .slot input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
   .slot span {
-    display: block;
+    display: grid; gap: 2px;
     padding: 11px 8px;
     border: 1px solid var(--line);
     border-radius: var(--r-sm);
@@ -268,6 +337,10 @@ const stepLabels = [
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
+  .slot b { font-size: .84rem; line-height: 1.25; }
+  .slot small { min-height: 1em; color: var(--muted); font-size: .69rem; font-weight: 550; line-height: 1.2; }
+  .slot input:checked + span small { color: rgba(255,255,255,.78); }
+  .timezone-note { margin: 2px 0 10px; color: var(--muted); font-size: .78rem; }
   .slot input:checked + span {
     border-color: var(--violet);
     background: var(--violet);
@@ -279,204 +352,4 @@ const stepLabels = [
 
 </style>
 
-<script>
-  import { submitForm } from '../lib/forms';
-
-  const form = document.getElementById('match-form') as HTMLFormElement | null;
-  const steps = [...(form?.querySelectorAll('.step') ?? [])] as HTMLElement[];
-  const segs = [...document.querySelectorAll('.progress-seg')] as HTMLElement[];
-  const back = document.getElementById('btn-back') as HTMLButtonElement | null;
-  const next = document.getElementById('btn-next') as HTMLButtonElement | null;
-  const done = document.getElementById('match-done') as HTMLElement | null;
-  const nextLabel = next?.querySelector('[data-next-label]') as HTMLElement | null;
-  let i = 0;
-
-  const language = () => document.documentElement.dataset.lang === 'en' ? 'en' : 'ko';
-  const localize = (node: HTMLElement | null, en: string, ko: string) => {
-    if (node) node.textContent = language() === 'en' ? en : ko;
-  };
-  const refreshDynamicLanguage = () => {
-    const lang = language();
-    if (pickerLabel?.dataset.manager === 'true' || pickerValue?.value === 'Manager consultation') {
-      localize(pickerLabel, pickerLabel?.dataset.labelEn || 'Consult with the team', pickerLabel?.dataset.labelKo || '매니저와 상담');
-    }
-    if (nextLabel && !next?.disabled) {
-      nextLabel.textContent = i === steps.length - 1
-        ? (lang === 'en' ? 'Submit' : '상담 신청')
-        : (lang === 'en' ? 'Continue' : '계속하기');
-    }
-    const doneNote = document.getElementById('match-done-note') as HTMLElement | null;
-    if (doneNote && !doneNote.dataset.state) {
-      doneNote.textContent = lang === 'en' ? (doneNote.dataset.defaultEn || '') : (doneNote.dataset.defaultKo || '');
-    }
-  };
-
-  type Tutor = {
-    registry_id: string;
-    name: string;
-    exam: string;
-    score: string;
-    category?: string;
-    university?: string;
-    university_en?: string;
-    photo_url?: string | null;
-  };
-
-  const picker = document.querySelector('[data-tutor-picker]') as HTMLElement | null;
-  const pickerTrigger = picker?.querySelector('.tutor-picker__trigger') as HTMLButtonElement | null;
-  const pickerMenu = picker?.querySelector('.tutor-picker__menu') as HTMLElement | null;
-  const pickerOptions = picker?.querySelector('[data-tutor-options]') as HTMLElement | null;
-  const pickerSearch = picker?.querySelector('[data-tutor-search]') as HTMLInputElement | null;
-  const pickerValue = picker?.querySelector('[data-tutor-value]') as HTMLInputElement | null;
-  const pickerLabel = picker?.querySelector('[data-tutor-label]') as HTMLElement | null;
-  const pickerEmpty = picker?.querySelector('[data-tutor-empty]') as HTMLElement | null;
-  let tutors: Tutor[] = [];
-
-  // The level answer is what narrows the tutor list now that the overlapping
-  // subject picker is gone.
-  const curriculumAliases: Record<string, string[]> = {
-    IGCSE: ['IGCSE'],
-    'IB or A Level': ['IB', 'A LEVEL', 'A-LEVEL'],
-    'University prep': ['SAT', 'ACT', 'IB', 'AP'],
-  };
-
-  // Consultations are booked forward, so yesterday is not offered.
-  const dateField = form?.querySelector('#m-date') as HTMLInputElement | null;
-  if (dateField) dateField.min = new Date().toISOString().slice(0, 10);
-
-  const activeCurriculum = () => (form?.querySelector('input[name="level"]:checked') as HTMLInputElement | null)?.value || '';
-  const matchingTutors = () => {
-    const aliases = curriculumAliases[activeCurriculum()] || [];
-    if (!aliases.length) return tutors;
-    return tutors.filter((tutor) => {
-      const haystack = `${tutor.exam} ${tutor.category || ''}`.toUpperCase();
-      return aliases.some((alias) => haystack.includes(alias));
-    });
-  };
-
-  const initials = (name: string) => name.trim().slice(0, 1).toUpperCase() || 'S';
-  const renderTutorOptions = () => {
-    if (!pickerOptions) return;
-    pickerOptions.querySelectorAll('.tutor-option:not([data-value="Manager consultation"])').forEach((node) => node.remove());
-    const fragment = document.createDocumentFragment();
-    matchingTutors().forEach((tutor) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'tutor-option';
-      button.setAttribute('role', 'option');
-      button.setAttribute('aria-selected', 'false');
-      button.dataset.value = tutor.name;
-      button.dataset.search = `${tutor.name} ${tutor.university || ''} ${tutor.university_en || ''} ${tutor.exam} ${tutor.score}`.toLowerCase();
-      const avatar = tutor.photo_url
-        ? `<span class="tutor-option__avatar"><img src="${tutor.photo_url}" alt="" /></span>`
-        : `<span class="tutor-option__avatar">${initials(tutor.name)}</span>`;
-      button.innerHTML = `${avatar}<span><strong>${tutor.name}</strong><small>${tutor.university || tutor.university_en || ''} · ${tutor.exam} ${tutor.score}</small></span>`;
-      fragment.append(button);
-    });
-    pickerOptions.append(fragment);
-    if (pickerEmpty) pickerEmpty.hidden = matchingTutors().length > 0;
-    filterTutorOptions();
-  };
-
-  const filterTutorOptions = () => {
-    const query = pickerSearch?.value.trim().toLowerCase() || '';
-    pickerOptions?.querySelectorAll('.tutor-option').forEach((node) => {
-      const option = node as HTMLElement;
-      option.hidden = Boolean(query) && !(option.dataset.search || '').includes(query);
-    });
-  };
-
-  const setTutorMenu = (open: boolean) => {
-    if (!pickerTrigger || !pickerMenu) return;
-    pickerTrigger.setAttribute('aria-expanded', String(open));
-    pickerMenu.hidden = !open;
-    if (open) window.requestAnimationFrame(() => pickerSearch?.focus());
-  };
-
-  pickerTrigger?.addEventListener('click', () => setTutorMenu(Boolean(pickerMenu?.hidden)));
-  pickerSearch?.addEventListener('input', filterTutorOptions);
-  pickerOptions?.addEventListener('click', (event) => {
-    const option = (event.target as HTMLElement).closest('.tutor-option') as HTMLButtonElement | null;
-    if (!option) return;
-    pickerOptions.querySelectorAll('.tutor-option').forEach((node) => {
-      node.classList.remove('is-selected');
-      node.setAttribute('aria-selected', 'false');
-    });
-    option.classList.add('is-selected');
-    option.setAttribute('aria-selected', 'true');
-    if (pickerValue) pickerValue.value = option.dataset.value || 'Manager consultation';
-    if (pickerLabel) pickerLabel.dataset.manager = String((option.dataset.value || '') === 'Manager consultation');
-    if (pickerLabel) pickerLabel.textContent = option.querySelector('strong')?.textContent || option.dataset.value || '';
-    if ((option.dataset.value || '') === 'Manager consultation') refreshDynamicLanguage();
-    setTutorMenu(false);
-  });
-  document.addEventListener('click', (event) => {
-    if (picker && !picker.contains(event.target as Node)) setTutorMenu(false);
-  });
-  form?.querySelectorAll('input[name="level"]').forEach((input) => input.addEventListener('change', () => {
-    if (pickerValue) pickerValue.value = 'Manager consultation';
-    if (pickerLabel) pickerLabel.dataset.manager = 'true';
-    refreshDynamicLanguage();
-    renderTutorOptions();
-  }));
-  fetch('/api/tutors', { cache: 'no-store', headers: { Accept: 'application/json' } })
-    .then((response) => response.ok ? response.json() : [])
-    .then((rows) => { tutors = Array.isArray(rows) ? rows : []; renderTutorOptions(); })
-    .catch(() => { tutors = []; renderTutorOptions(); });
-
-  const show = (n: number) => {
-    steps.forEach((s, idx) => { s.hidden = idx !== n; s.classList.toggle('is-current', idx === n); });
-    segs.forEach((s, idx) => {
-      s.classList.toggle('is-active', idx === n);
-      s.classList.toggle('is-done', idx < n);
-    });
-    if (back) back.hidden = n === 0;
-    i = n;
-    refreshDynamicLanguage();
-  };
-
-  const validStep = () => {
-    const controls = steps[i].querySelectorAll('input[required], textarea[required]');
-    for (const c of controls) {
-      if (!(c as HTMLInputElement).checkValidity()) { (c as HTMLInputElement).reportValidity(); return false; }
-    }
-    return true;
-  };
-
-  next?.addEventListener('click', async () => {
-    if (!validStep()) return;
-    if (i < steps.length - 1) { show(i + 1); return; }
-
-    if (!form) return;
-    next.disabled = true;
-    if (nextLabel) nextLabel.textContent = language() === 'en' ? 'Sending…' : '전송 중…';
-
-    let failed = false;
-    try {
-      await submitForm(form, 'New matching request from seonbaetutor.com');
-    } catch {
-      failed = true;
-    }
-
-    next.disabled = false;
-    if (nextLabel) nextLabel.textContent = language() === 'en' ? 'Submit' : '상담 신청';
-
-    const note = document.getElementById('match-done-note');
-    if (note) {
-      if (failed) {
-        note.dataset.state = 'failed';
-        note.textContent = language() === 'en'
-          ? 'Something went wrong on our side. Please email admissions@seonbaetutor.com with your subject and level, and we will match you straight away.'
-          : '처리 중 문제가 생겼습니다. 과목과 학년을 admissions@seonbaetutor.com으로 보내주시면 바로 매칭을 도와드리겠습니다.';
-      }
-    }
-
-    form.hidden = true;
-    const prog = document.getElementById('progress');
-    if (prog) prog.hidden = true;
-    if (done) { done.hidden = false; done.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-  });
-  back?.addEventListener('click', () => { if (i > 0) show(i - 1); });
-  if (pickerLabel) pickerLabel.dataset.manager = 'true';
-  refreshDynamicLanguage();
-</script>
+<script src="../scripts/match-form.ts"></script>

@@ -54,7 +54,7 @@ const link = (href: string) => localePath(href, locale);
           {s.tutorCount > 0 && <span class="subj-fact"><strong>{s.tutorCount}</strong> <T en="verified tutors" ko="명의 검증된 튜터" /></span>}
         </div>
         <div class="cta-row" style="margin-top:26px">
-          <Button href="/get-matched" label="Get matched" labelKo="매칭 시작하기" variant="primary" size="lg" arrow="diag" />
+          <Button href={`/get-matched?curriculum=${encodeURIComponent(slug)}`} label="Get matched" labelKo="매칭 시작하기" variant="primary" size="lg" arrow="diag" />
           {curriculumRates.length > 0 && <Button href="#rates" label="See every price" labelKo="전체 요금 보기" variant="text" arrow="right" />}
         </div>
       </div>
@@ -125,7 +125,7 @@ const link = (href: string) => localePath(href, locale);
         <h2 class="h2"><T en="The right tutor is one conversation away." ko="나만의 선배를 지금 만나보세요." /></h2>
         <p class="lead"><T en="Tell us about your goals and we will match you with a tutor from Korea’s top universities." ko="목표를 알려주시면 대한민국 최상위 대학 출신의 선배와 매칭해 드립니다." /></p>
       </div>
-      <Button href="/get-matched" label="Get matched" labelKo="매칭 시작하기" variant="primary" size="lg" arrow="diag" />
+      <Button href={`/get-matched?curriculum=${encodeURIComponent(slug)}`} label="Get matched" labelKo="매칭 시작하기" variant="primary" size="lg" arrow="diag" />
     </div>
   </section>
 

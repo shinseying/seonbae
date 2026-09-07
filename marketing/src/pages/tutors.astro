@@ -547,7 +547,7 @@ const timetableDays = [
   .tcardx__availability-head b { color: var(--ink); font-size: .82rem; }
   .tcardx__availability-head span { color: var(--muted-soft); font-size: .62rem; font-variant-numeric: tabular-nums; }
   .weekgrid {
-    width: 100%; overflow: hidden; border: 1px solid var(--line);
+    width: 100%; overflow: visible; border: 1px solid var(--line);
     border-radius: 9px; background: var(--white);
   }
   .weekgrid__head {
@@ -582,8 +582,24 @@ const timetableDays = [
     width: calc(100% / 7 - 4px);
     height: max(4px, calc(var(--slot-height) * 1%));
     border: 1px solid rgba(255,255,255,.55); border-radius: 3px;
-    background: var(--violet); box-shadow: 0 1px 4px rgba(22,48,69,.18);
+    background: #315b6f; box-shadow: 0 1px 4px rgba(22,48,69,.18);
+    cursor: help; z-index: 1;
   }
+  .weekgrid__slot[data-tone="1"] { background: #b65b38; }
+  .weekgrid__slot[data-tone="2"] { background: #8a6b27; }
+  .weekgrid__slot[data-tone="3"] { background: #4f755f; }
+  .weekgrid__slot[data-tone="4"] { background: #765686; }
+  .weekgrid__slot::after {
+    content: attr(data-time-label);
+    position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%) translateY(-2px);
+    padding: 5px 8px; border-radius: 5px; background: var(--ink); color: var(--white);
+    font-size: .68rem; font-weight: 700; line-height: 1.2; white-space: nowrap;
+    opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s ease, transform .12s ease;
+    box-shadow: var(--shadow-sm); z-index: 20;
+  }
+  .weekgrid__slot:hover, .weekgrid__slot:focus { z-index: 10; }
+  .weekgrid__slot:hover::after, .weekgrid__slot:focus::after { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+  .weekgrid__slot:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
   .pf .weekgrid__body { height: 236px; }
 
   .tcardx__foot { width: 100%; margin-top: auto; padding-top: 16px; }
@@ -742,6 +758,10 @@ const timetableDays = [
   const noMatch = document.querySelector('.no-match') as HTMLElement | null;
   const countEl = document.getElementById('tutor-count');
   const staticFilterCounts: Record<string, number> = { all: 0, ib: 0, ap: 0, alevel: 0, igcse: 0, tests: 0 };
+  const filterKeys = new Set(Object.keys(staticFilterCounts));
+  const initialFilter = new URLSearchParams(location.search).get('c');
+  let activeTutorFilter = initialFilter && filterKeys.has(initialFilter) ? initialFilter : 'all';
+  let hasTutorFilterHistory = false;
 
   type Tutor = {
     registry_id: string;
@@ -856,27 +876,47 @@ const timetableDays = [
     return key ? universityLabel(key) : tr(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || '');
   };
 
-  const filterRoster = (btn: HTMLButtonElement) => {
-    btn.addEventListener('click', () => {
-      buttons.forEach((b) => b.setAttribute('aria-pressed', 'false'));
-      btn.setAttribute('aria-pressed', 'true');
-      const f = btn.dataset.filter ?? 'all';
-      let shown = 0;
-      cells.forEach((cell) => {
-        const cats = cell.dataset.cats ?? '';
-        const match = f === 'all' || cats.split(' ').includes(f);
-        cell.classList.toggle('is-hidden', !match);
-        if (match) shown++;
-      });
-      if (countEl) countEl.textContent = String(shown);
-      if (noMatch) noMatch.hidden = shown > 0;
-      const live = document.getElementById('tutor-live');
-      if (live) live.textContent = language() === 'en'
-        ? `${shown} tutor${shown === 1 ? '' : 's'} listed in ${btn.querySelector('.rail__label')?.textContent ?? 'this category'}`
-        : `${btn.querySelector('.rail__label')?.textContent ?? '이 분류'}에 ${shown}명의 튜터가 있습니다`;
+  const applyTutorFilter = (filter = activeTutorFilter, announce = true) => {
+    activeTutorFilter = filterKeys.has(filter) ? filter : 'all';
+    const btn = buttons.find((button) => button.dataset.filter === activeTutorFilter) || buttons[0];
+    buttons.forEach((button) => button.setAttribute('aria-pressed', String(button === btn)));
+    let shown = 0;
+    cells.forEach((cell) => {
+      const cats = cell.dataset.cats ?? '';
+      const match = activeTutorFilter === 'all' || cats.split(' ').includes(activeTutorFilter);
+      cell.classList.toggle('is-hidden', !match);
+      if (match) shown++;
     });
+    if (countEl) countEl.textContent = String(shown);
+    if (noMatch) noMatch.hidden = shown > 0;
+    const live = document.getElementById('tutor-live');
+    if (announce && live) live.textContent = language() === 'en'
+      ? `${shown} tutor${shown === 1 ? '' : 's'} listed in ${btn?.querySelector('.rail__label')?.textContent ?? 'this category'}`
+      : `${btn?.querySelector('.rail__label')?.textContent ?? '이 분류'}에 ${shown}명의 튜터가 있습니다`;
   };
-  buttons.forEach(filterRoster);
+  const writeTutorFilterUrl = () => {
+    const before = new URLSearchParams(location.search);
+    const baseline = !before.has('c');
+    const url = new URL(location.href);
+    if (activeTutorFilter === 'all') url.searchParams.delete('c');
+    else url.searchParams.set('c', activeTutorFilter);
+    const clean = `${url.pathname}${url.search}${url.hash}`;
+    if (!hasTutorFilterHistory && baseline && activeTutorFilter !== 'all') {
+      history.pushState({ seonbaeTutorFilter: true }, '', clean);
+      hasTutorFilterHistory = true;
+    } else {
+      history.replaceState({ ...(history.state || {}), seonbaeTutorFilter: true }, '', clean);
+    }
+  };
+  buttons.forEach((btn) => btn.addEventListener('click', () => {
+    applyTutorFilter(btn.dataset.filter || 'all');
+    writeTutorFilterUrl();
+  }));
+  window.addEventListener('popstate', () => {
+    const requested = new URLSearchParams(location.search).get('c');
+    applyTutorFilter(requested && filterKeys.has(requested) ? requested : 'all');
+  });
+  applyTutorFilter(activeTutorFilter, false);
 
   const DAYS: Array<{ key: string; en: string; ko: string }> = [
     { key: 'mon', en: 'Mon', ko: '월' },
@@ -951,7 +991,7 @@ const timetableDays = [
     const aria = blocks.length
       ? `${tr('Weekly availability timetable', '주간 가능 시간표')}: ${blocks.map((block) => `${tr(block.day.en, block.day.ko)} ${block.range}`).join(', ')}`
       : tr('Empty weekly timetable; no availability has been published', '등록된 가능 시간이 없는 빈 주간 시간표');
-    return `<div class="weekgrid" role="img" aria-label="${escapeHtml(aria)}">
+    return `<div class="weekgrid" role="group" aria-label="${escapeHtml(aria)}">
       <div class="weekgrid__head"><span aria-hidden="true"></span>${DAYS.map((day) => `<b>${tr(day.en, day.ko)}</b>`).join('')}</div>
       <div class="weekgrid__body">
         <div class="weekgrid__times" aria-hidden="true">
@@ -961,7 +1001,7 @@ const timetableDays = [
           const label = `${tr(block.day.en, block.day.ko)} ${block.range}`;
           const top = ((block.start - SCHEDULE_START) / SCHEDULE_SPAN) * 100;
           const height = ((block.end - block.start) / SCHEDULE_SPAN) * 100;
-          return `<span class="weekgrid__slot" style="--day-index:${block.dayIndex};--slot-top:${top};--slot-height:${height}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+          return `<span class="weekgrid__slot" tabindex="0" role="img" data-tone="${(block.dayIndex + block.rangeIndex) % 5}" data-time-label="${escapeHtml(label)}" style="--day-index:${block.dayIndex};--slot-top:${top};--slot-height:${height}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
         }).join('')}</div>
       </div>
     </div>`;
@@ -1025,9 +1065,9 @@ const timetableDays = [
           ${videoBlock}
           ${meta}
           <div class="tcardx__foot">
-            <button type="button" class="tcardx__book" ${sandboxMode ? 'disabled aria-disabled="true"' : `data-book="${escapeHtml(tutor.registry_id)}" data-tutor-name="${escapeHtml(displayName)}"`}>
-              ${calendarIcon}${sandboxMode ? tr('Preview only', '미리보기 전용') : tr('Request a match', '매칭 요청하기')}
-            </button>
+            ${sandboxMode
+              ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
+              : `<a class="tcardx__book" href="${language() === 'en' ? '/en' : ''}/get-matched?tutor=${encodeURIComponent(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</a>`}
           </div>
         </article>
       </div>`;
@@ -1050,7 +1090,7 @@ const timetableDays = [
       }
       badge.textContent = String(staticFilterCounts[button.dataset.filter || 'all'] || 0);
     });
-    if (countEl) countEl.textContent = String(tutors.length);
+    applyTutorFilter(activeTutorFilter, false);
     const countLabel = document.querySelector('.roster__count span');
     if (countLabel) countLabel.textContent = tr('tutors listed', '명의 튜터');
     const universityKeys = new Set(tutors
@@ -1310,9 +1350,9 @@ const timetableDays = [
       </section>
 
       <div class="pf__foot">
-        <button type="button" class="tcardx__book" ${sandboxMode ? 'disabled aria-disabled="true"' : `data-book="${escapeHtml(tutor.registry_id)}"`}>
-          ${calendarIcon}${sandboxMode ? tr('Preview only', '미리보기 전용') : tr('Request a match', '매칭 요청하기')}
-        </button>
+        ${sandboxMode
+          ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
+          : `<a class="tcardx__book" href="${language() === 'en' ? '/en' : ''}/get-matched?tutor=${encodeURIComponent(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</a>`}
       </div>`;
 
     // Injected markup carries no data-astro-cid-*, so every scoped rule in this
