@@ -164,7 +164,12 @@ try {
       window.fetch = (input, init) => {
         const url = typeof input === 'string' ? input : input.url;
         if (url === '/api/tutors') return Promise.resolve(new Response(JSON.stringify(tutors), { status: 200, headers: { 'Content-Type': 'application/json' } }));
-        if (url === '/api/auth/session') return Promise.resolve(new Response(JSON.stringify({ authenticated: true, role: 'student' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        if (url === '/api/auth/session') {
+          const signedOut = new URLSearchParams(location.search).get('qa-auth') === 'out';
+          return Promise.resolve(new Response(JSON.stringify(signedOut
+            ? { authenticated: false }
+            : { authenticated: true, role: 'student' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        }
         if (url === '/api/bookings') {
           window.__bookingRequests.push(JSON.parse(init?.body || '{}'));
           return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
@@ -314,6 +319,33 @@ try {
   assert.ok(subjectLinks.every((href) => href.includes('curriculum=ib-diploma')));
 
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false });
+  await navigate(cdp, '/pricing/?qa-auth=out');
+  const signedOutHeader = await cdp.evaluate(`(() => {
+    const auth = document.querySelector('.header-auth-link');
+    const cta = document.querySelector('.header-cta');
+    const disc = auth.querySelector('.btn__disc');
+    const authBox = auth.getBoundingClientRect();
+    const ctaBox = cta.getBoundingClientRect();
+    const authStyle = getComputedStyle(auth);
+    const discStyle = getComputedStyle(disc);
+    return {
+      label: auth.querySelector('[data-auth-primary-label]').textContent.trim(),
+      visible: authBox.width > 0 && authBox.height > 0,
+      heightDelta: Math.abs(authBox.height - ctaBox.height),
+      separated: authBox.right <= ctaBox.left,
+      radius: parseFloat(authStyle.borderTopLeftRadius),
+      discRound: discStyle.borderTopLeftRadius,
+      noWrap: authStyle.whiteSpace,
+    };
+  })()`);
+  assert.equal(signedOutHeader.label, '로그인');
+  assert.equal(signedOutHeader.visible, true);
+  assert.ok(signedOutHeader.heightDelta <= 1, JSON.stringify(signedOutHeader));
+  assert.equal(signedOutHeader.separated, true, JSON.stringify(signedOutHeader));
+  assert.ok(signedOutHeader.radius >= 20, JSON.stringify(signedOutHeader));
+  assert.equal(signedOutHeader.discRound, '50%');
+  assert.equal(signedOutHeader.noWrap, 'nowrap');
+
   await navigate(cdp, '/tutors/');
   await cdp.evaluate(`(async () => {
     for (let i = 0; i < 80 && document.querySelectorAll('.tcardx:not(.tcardx--skeleton)').length < ${mockTutors.length}; i++) {
