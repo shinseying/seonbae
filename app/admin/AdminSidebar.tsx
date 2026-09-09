@@ -117,7 +117,7 @@ export default function AdminSidebar({
           </Fragment>
         ))}
         <span>사이트</span>
-        <Link href="/?stay=1"><i aria-hidden="true" />홈페이지로 <em aria-hidden="true">↗</em></Link>
+        <Link className={sidebarStyles.homepageLink} href="/"><i aria-hidden="true" />홈페이지로 <em aria-hidden="true">↗</em></Link>
         <Link href="/tutors"><i aria-hidden="true" />공개 명부 보기 <em aria-hidden="true">↗</em></Link>
       </nav>
       <div className={styles.adminAccount || undefined}>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type MouseEvent } from "react";
 import { usePathname } from "next/navigation";
 import {
+  ArrowUpRight,
   List,
   SidebarSimple,
   X,
@@ -166,8 +167,9 @@ export default function PortalSidebar({
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <Link href="/?stay=1" className={styles.sidebarUtility} aria-label={labels.website} title={expanded ? undefined : labels.website} onClick={closeMobile}>
+          <Link href="/" className={styles.sidebarUtility} aria-label={labels.website} title={expanded ? undefined : labels.website} onClick={closeMobile}>
             <span>{labels.website}</span>
+            <ArrowUpRight size={18} weight="bold" aria-hidden />
           </Link>
 
           <div className={styles.sidebarAccount}>

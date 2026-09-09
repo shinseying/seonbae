@@ -59,28 +59,6 @@
         : (lang === 'ko' ? '시작하기' : 'Get started');
     });
 
-    // A returning signed-in user goes straight to their own portal, but only on
-    // the first homepage load of the browsing session. After that the homepage
-    // is somewhere they chose to be — leaving the portal must not bounce them
-    // back. ?stay=1 still opts out of even the first redirect.
-    if (
-      authenticated
-      && (window.location.pathname === '/' || window.location.pathname === '/en' || window.location.pathname === '/en/')
-      && new URLSearchParams(window.location.search).get('stay') !== '1'
-    ) {
-      var redirected = false;
-      try {
-        redirected = window.sessionStorage.getItem('seonbae-portal-redirected') === '1';
-      } catch (e) {
-        // Private mode without storage: redirect once per page load instead.
-      }
-      if (!redirected) {
-        try {
-          window.sessionStorage.setItem('seonbae-portal-redirected', '1');
-        } catch (e) {}
-        window.location.replace(session.destination || '/portal');
-      }
-    }
   }
 
   async function refresh() {
