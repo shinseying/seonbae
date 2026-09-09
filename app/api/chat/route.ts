@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     .from("chat_messages")
     .select("id,thread_id,sender_id,body,created_at,read_at")
     .eq("thread_id", threadId)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(300);
 
   if (error) {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { messages: messages ?? [] },
+    { messages: [...(messages ?? [])].reverse() },
     { headers: { "Cache-Control": "private, no-store, max-age=0" } },
   );
 }

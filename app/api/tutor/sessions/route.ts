@@ -7,6 +7,7 @@ import {
   ZoomApiError,
 } from "../../../../utils/zoom/server";
 import { sendAdminEventEmail } from "../../../../utils/email/admin-event";
+import { hourlyRateFor } from "../../../../utils/billing/rate-lookup";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +140,7 @@ export async function POST(request: NextRequest) {
     starts_at: `${startsAt}:00`,
     duration_minutes: durationMinutes,
     subject,
+    billing_rate_krw: hourlyRateFor(subject),
     title,
     session_type: "Zoom 온라인",
     location: "선배 학습 포털",

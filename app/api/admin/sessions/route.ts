@@ -6,11 +6,12 @@ import {
   getDefaultZoomHostEmail,
   ZoomApiError,
 } from "../../../../utils/zoom/server";
+import { hourlyRateFor } from "../../../../utils/billing/rate-lookup";
 
 export const dynamic = "force-dynamic";
 
 const sessionFields =
-  "id,user_id,tutor_registry_id,session_date,starts_at,duration_minutes,subject,title,session_type,location,notes,zoom_meeting_number,zoom_host_email,zoom_status,zoom_created_at";
+  "id,user_id,tutor_registry_id,session_date,starts_at,duration_minutes,subject,title,session_type,location,notes,billing_rate_krw,zoom_meeting_number,zoom_host_email,zoom_status,zoom_created_at";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin();
@@ -121,6 +122,7 @@ export async function POST(request: NextRequest) {
       starts_at: `${startsAt}:00`,
       duration_minutes: durationMinutes,
       subject,
+      billing_rate_krw: hourlyRateFor(subject),
       title,
       session_type: "Zoom 온라인",
       location: "선배 학습 포털",

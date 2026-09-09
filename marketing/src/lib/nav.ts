@@ -19,7 +19,7 @@ export const mainNav: NavItem[] = [
 
 export const tutorNav: NavItem[] = [
   { label: 'Find a tutor', labelKo: '튜터 찾기', href: '/tutors' },
-  { label: 'Become a tutor', labelKo: '튜터 지원하기', href: '/become-a-tutor' },
+  { label: 'Tutor sign up', labelKo: '튜터 회원가입', href: '/login?mode=signup&role=tutor' },
 ];
 
 // Shown inside the header "About" menu, the mobile drawer, and the footer.

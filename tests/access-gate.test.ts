@@ -9,6 +9,7 @@ import {
   signAccessGate,
   verificationCodeDigest,
 } from "../utils/auth/access-gate.ts";
+import { safeInternalDestination } from "../utils/auth/safe-destination.ts";
 
 process.env.AUTH_STEP_UP_SECRET = "test-only-step-up-secret-with-enough-entropy";
 
@@ -67,4 +68,12 @@ test("password login does not disclose administrator accounts", () => {
   assert.equal(loginMethodMatchesRole(false, "student"), true);
   assert.equal(loginMethodMatchesRole(false, "admin"), false);
   assert.doesNotMatch(INVALID_LOGIN_MESSAGE, /관리자|admin|아이디/i);
+});
+
+test("internal redirects reject network paths and browser-normalized backslashes", () => {
+  assert.equal(safeInternalDestination("/portal/homework?view=open#today"), "/portal/homework?view=open#today");
+  assert.equal(safeInternalDestination("//attacker.example"), "/portal");
+  assert.equal(safeInternalDestination("/\\attacker.example"), "/portal");
+  assert.equal(safeInternalDestination("/%5c%5cattacker.example"), "/portal");
+  assert.equal(safeInternalDestination("https://attacker.example"), "/portal");
 });

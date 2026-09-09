@@ -46,7 +46,7 @@ export async function consumeAuthRateLimit(
         code: error.code,
         message: error.message,
       });
-      return { allowed: true, retryAfterSeconds: 0 };
+      return { allowed: false, retryAfterSeconds: 0 };
     }
 
     const row = Array.isArray(data) ? data[0] : data;
@@ -62,11 +62,24 @@ export async function consumeAuthRateLimit(
       action,
       message: error instanceof Error ? error.message : "Unknown error",
     });
-    return { allowed: true, retryAfterSeconds: 0 };
+    return { allowed: false, retryAfterSeconds: 0 };
   }
 }
 
 export function authRateLimitResponse(retryAfterSeconds: number) {
+  if (retryAfterSeconds <= 0) {
+    return NextResponse.json(
+      { error: "보안 확인 서비스를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요." },
+      {
+        status: 503,
+        headers: {
+          "Cache-Control": "private, no-store, max-age=0",
+          "Retry-After": "30",
+        },
+      },
+    );
+  }
+
   return NextResponse.json(
     {
       error:

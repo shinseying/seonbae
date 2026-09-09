@@ -45,76 +45,29 @@ export async function PATCH(request: NextRequest) {
     return error("매칭 요청 시스템이 아직 설정되지 않았습니다.", 503);
   }
 
-  const { data: booking } = await admin
-    .from("booking_requests")
-    .select("id,tutor_registry_id,requester_id,forwarded_at,status")
-    .eq("id", id)
-    .single();
-  if (!booking || booking.tutor_registry_id !== profile.tutor_registry_id) {
-    return error("이 매칭 요청을 처리할 수 없습니다.", 403);
-  }
-  // Only what the admin passed on is the tutor's to answer.
-  if (!booking.forwarded_at) return error("아직 전달되지 않은 요청입니다.", 409);
+  const { data: result, error: decisionError } = await admin.rpc(
+    "decide_tutor_booking",
+    {
+      p_booking_id: id,
+      p_tutor_registry_id: profile.tutor_registry_id,
+      p_decision: decision,
+      p_classroom_id: decision === "accepted" ? classroomId : null,
+      p_decided_by: user.id,
+    },
+  );
 
-  const decidedAt = new Date().toISOString();
-
-  if (decision === "declined") {
-    await admin
-      .from("booking_requests")
-      .update({ status: "declined", decided_at: decidedAt })
-      .eq("id", id);
-    return NextResponse.json({ ok: true, status: "declined" });
-  }
-
-  const { data: classroom } = await admin
-    .from("classrooms")
-    .select("id,tutor_registry_id,student_id")
-    .eq("id", classroomId)
-    .single();
-  if (!classroom || classroom.tutor_registry_id !== profile.tutor_registry_id) {
-    return error("본인 교실만 배정할 수 있습니다.", 403);
+  if (decisionError) {
+    const known = decisionError.message || "";
+    if (known.includes("BOOKING_NOT_FORWARDED")) return error("아직 전달되지 않은 요청입니다.", 409);
+    if (known.includes("BOOKING_ALREADY_DECIDED")) return error("이미 처리된 매칭 요청입니다.", 409);
+    if (known.includes("BOOKING_CLASSROOM_OCCUPIED")) return error("이 교실에는 이미 다른 학생이 배정되어 있습니다.", 409);
+    if (known.includes("BOOKING_CLASSROOM_FORBIDDEN")) return error("본인 교실만 배정할 수 있습니다.", 403);
+    if (known.includes("BOOKING_FORBIDDEN")) return error("이 매칭 요청을 처리할 수 없습니다.", 403);
+    if (known.includes("BOOKING_REQUESTER")) return error("요청자 계정을 교실에 배정할 수 없습니다.", 409);
+    return error("매칭 처리 결과를 저장하지 못했습니다.", 500);
   }
 
-  if (booking.requester_id) {
-    const { data: requester } = await admin
-      .from("profiles")
-      .select("id,role")
-      .eq("id", booking.requester_id)
-      .single();
-
-    if (requester?.role === "student") {
-      if (classroom.student_id && classroom.student_id !== requester.id) {
-        return error("이 교실에는 이미 다른 학생이 배정되어 있습니다.", 409);
-      }
-      const { error: seatError } = await admin
-        .from("classrooms")
-        .update({ student_id: requester.id, updated_at: decidedAt })
-        .eq("id", classroom.id);
-      if (seatError) return error("학생을 교실에 배정하지 못했습니다.", 500);
-    } else if (requester) {
-      const { error: memberError } = await admin
-        .from("classroom_members")
-        .upsert(
-          {
-            classroom_id: classroom.id,
-            user_id: requester.id,
-            role: requester.role === "parent" ? "parent" : "student",
-            status: "approved",
-            decided_at: decidedAt,
-            decided_by: user.id,
-          },
-          { onConflict: "classroom_id,user_id" },
-        );
-      if (memberError) return error("교실에 참여시키지 못했습니다.", 500);
-    }
-  }
-
-  await admin
-    .from("booking_requests")
-    .update({ status: "accepted", decided_at: decidedAt, classroom_id: classroom.id, seen_by_tutor: true })
-    .eq("id", id);
-
-  return NextResponse.json({ ok: true, status: "accepted" });
+  return NextResponse.json({ ok: true, status: result || decision });
 }
 
 function error(message: string, status: number) {

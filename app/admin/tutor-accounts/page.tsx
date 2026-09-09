@@ -47,7 +47,7 @@ export default async function AdminTutorAccountsPage() {
           <div>
             <p>TUTOR PROVISIONING</p>
             <h1>튜터 계정 생성</h1>
-            <span>계정을 만들면 임시 비밀번호와 14일 이내 변경 안내가 이메일로 발송됩니다.</span>
+            <span>계정을 만들면 본인만 사용할 수 있는 일회용 비밀번호 설정 링크가 이메일로 발송됩니다.</span>
           </div>
           <b>{applications.length}건 대기</b>
         </header>

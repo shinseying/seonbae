@@ -154,25 +154,44 @@ export async function DELETE(request: NextRequest) {
   }
 
   const countFor = async (table: string, column: string) => {
-    const { count } = await auth.supabase
+    const { count, error } = await auth.supabase
       .from(table)
       .select("*", { count: "exact", head: true })
       .eq(column, registryId);
-    return count ?? 0;
+    return { count: count ?? 0, error };
   };
 
-  const [sessions, assignments, threads, contracts] = await Promise.all([
+  const dependencyChecks = await Promise.all([
     countFor("portal_sessions", "tutor_registry_id"),
     countFor("portal_assignments", "tutor_registry_id"),
     countFor("chat_threads", "tutor_registry_id"),
     countFor("tutor_contract_signatures", "tutor_registry_id"),
+    countFor("booking_requests", "tutor_registry_id"),
+    countFor("tutor_profile_requests", "tutor_registry_id"),
+    countFor("classrooms", "tutor_registry_id"),
+    countFor("classroom_slot_requests", "tutor_registry_id"),
+    countFor("tutor_credentials", "tutor_registry_id"),
   ]);
+
+  if (dependencyChecks.some((check) => check.error)) {
+    return NextResponse.json(
+      { error: "연결된 기록을 모두 확인하지 못해 삭제를 중단했습니다." },
+      { status: 503 },
+    );
+  }
+
+  const [sessions, assignments, threads, contracts, bookings, profileRequests, classrooms, slotRequests, credentials] = dependencyChecks.map((check) => check.count);
 
   const blockers = [
     sessions && `수업 ${sessions}건`,
     assignments && `숙제 ${assignments}건`,
     threads && `대화 ${threads}건`,
     contracts && `계약 서명 ${contracts}건`,
+    bookings && `매칭 요청 ${bookings}건`,
+    profileRequests && `프로필 수정 요청 ${profileRequests}건`,
+    classrooms && `교실 ${classrooms}건`,
+    slotRequests && `교실 추가 요청 ${slotRequests}건`,
+    credentials && `검증 자료 ${credentials}건`,
   ].filter(Boolean);
 
   if (blockers.length) {
@@ -186,7 +205,7 @@ export async function DELETE(request: NextRequest) {
 
   // The account keeps its tutor role after the registry row goes, so hand it
   // back to a plain student account before deleting the card.
-  await auth.supabase
+  const { error: profileError } = await auth.supabase
     .from("profiles")
     .update({
       role: "student",
@@ -196,13 +215,22 @@ export async function DELETE(request: NextRequest) {
     .eq("tutor_registry_id", registryId)
     .neq("role", "admin");
 
-  const { error } = await auth.supabase
+  if (profileError) {
+    return NextResponse.json({ error: "튜터 계정 연결을 해제하지 못했습니다." }, { status: 500 });
+  }
+
+  const { data: deleted, error } = await auth.supabase
     .from("tutors")
     .delete()
-    .eq("registry_id", registryId);
+    .eq("registry_id", registryId)
+    .select("registry_id")
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: "튜터를 삭제하지 못했습니다." }, { status: 500 });
+  }
+  if (!deleted) {
+    return NextResponse.json({ error: "튜터를 찾지 못했습니다." }, { status: 404 });
   }
 
   return NextResponse.json(

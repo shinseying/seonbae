@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSeonbaeLocale } from "../../utils/i18n/client";
 import styles from "./portal.module.css";
 
@@ -36,6 +36,7 @@ export default function ChatPanel({
   const [draft, setDraft] = useState("");
   const [status, setStatus] = useState("");
   const [sending, setSending] = useState(false);
+  const loadInFlight = useRef(false);
   const locale = useSeonbaeLocale();
   const l = (ko: string, en: string) => locale === "ko" ? ko : en;
   const visibleHeading = heading || l("튜터 채팅", "Tutor chat");
@@ -48,6 +49,8 @@ export default function ChatPanel({
   const loadMessages = useCallback(
     async (quiet = false) => {
       if (!activeThreadId) return;
+      if (loadInFlight.current) return;
+      loadInFlight.current = true;
       try {
         const response = await fetch(`/api/chat?threadId=${activeThreadId}`, {
           cache: "no-store",
@@ -63,6 +66,8 @@ export default function ChatPanel({
         if (!quiet) setStatus("");
       } catch {
         if (!quiet) setStatus(l("메시지 연결을 확인해 주세요.", "Check your connection and try again."));
+      } finally {
+        loadInFlight.current = false;
       }
     },
     [activeThreadId, locale],
@@ -71,8 +76,17 @@ export default function ChatPanel({
   useEffect(() => {
     setMessages([]);
     void loadMessages();
-    const interval = window.setInterval(() => void loadMessages(true), 5000);
-    return () => window.clearInterval(interval);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadMessages(true);
+    };
+    const interval = window.setInterval(refreshWhenVisible, 5000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenVisible);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenVisible);
+    };
   }, [loadMessages]);
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -109,7 +123,7 @@ export default function ChatPanel({
           <h2>{visibleHeading}</h2>
         </div>
         <span className={styles.chatLive}>
-          <i /> {l("5초마다 동기화", "Syncs every 5 seconds")}
+          <i /> {l("화면을 보는 동안 자동 동기화", "Syncs while this tab is active")}
         </span>
       </div>
 

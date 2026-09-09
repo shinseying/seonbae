@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
   if (!profile || profile.account_status !== "approved") {
     return error("승인된 계정만 교실에 참여할 수 있습니다.", 403);
   }
-  if (profile.role !== "parent" && profile.role !== "student") {
-    return error("보호자 또는 학생 계정만 교실에 참여할 수 있습니다.", 403);
+  if (profile.role !== "parent") {
+    return error("보호자 계정만 교실 참여를 요청할 수 있습니다.", 403);
   }
 
   let body: { code?: unknown; password?: unknown };
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
   const row = {
     classroom_id: classroom.id,
     user_id: user.id,
-    role: profile.role,
+    role: "parent",
     status: "pending",
     requested_at: new Date().toISOString(),
     decided_at: null,
@@ -125,19 +125,31 @@ export async function PATCH(request: NextRequest) {
   // The tutor may only decide requests for their own classrooms.
   const { data: member } = await admin
     .from("classroom_members")
-    .select("id,classroom_id,classrooms(tutor_registry_id)")
+    .select("id,classroom_id,role,status,classrooms(tutor_registry_id)")
     .eq("id", id)
     .single();
   const classroom = Array.isArray(member?.classrooms) ? member?.classrooms[0] : member?.classrooms;
-  if (!member || classroom?.tutor_registry_id !== profile.tutor_registry_id) {
+  if (
+    !member
+    || member.role !== "parent"
+    || classroom?.tutor_registry_id !== profile.tutor_registry_id
+  ) {
     return error("이 교실의 참여 요청이 아닙니다.", 403);
   }
 
-  const { error: writeError } = await admin
+  if (member.status !== "pending") {
+    return error("이미 처리된 참여 요청입니다.", 409);
+  }
+
+  const { data: decidedMember, error: writeError } = await admin
     .from("classroom_members")
     .update({ status: decision, decided_at: new Date().toISOString(), decided_by: user.id })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
   if (writeError) return error("처리 결과를 저장하지 못했습니다.", 500);
+  if (!decidedMember) return error("이미 처리된 참여 요청입니다.", 409);
 
   return NextResponse.json({ ok: true, status: decision });
 }

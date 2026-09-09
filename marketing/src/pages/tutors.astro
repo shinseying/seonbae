@@ -164,7 +164,7 @@ const filters = [
 
   <dialog class="pf" id="profile-dialog" aria-labelledby="profile-heading">
     <div class="book__panel">
-      <button type="button" class="book__close" data-close-profile aria-label="Close">×</button>
+      <button type="button" class="book__close" data-close-profile><span aria-hidden="true">←</span><T en="Tutor list" ko="튜터 목록" /></button>
       <p class="book__eyebrow" id="profile-heading"><T en="Tutor profile" ko="튜터 프로필" /></p>
       <div data-profile-body></div>
     </div>
@@ -379,7 +379,7 @@ const filters = [
   .active-filter:hover { border-color: var(--violet); }
   .active-filter:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
 
-  .tutor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); grid-auto-rows: 1fr; gap: clamp(16px, 1.6vw, 22px); }
+  .tutor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: clamp(16px, 1.6vw, 22px); }
   .tutor-cell.is-hidden { display: none; }
   .live-tutor-card { display: flex; flex-direction: column; min-height: 100%; overflow: hidden; border-radius: 28px; border: 1px solid rgba(22, 48, 69, .12); box-shadow: 0 14px 36px rgba(22, 48, 69, .08); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
   .live-tutor-card:hover { transform: translateY(-4px); border-color: rgba(22, 48, 69, .2); box-shadow: 0 22px 48px rgba(22, 48, 69, .13); }
@@ -477,6 +477,9 @@ const filters = [
     .directory-tools { grid-template-columns: 1fr; }
     .directory-sort { width: min(100%, 230px); }
     .closing { grid-template-columns: 1fr; align-items: start; }
+  }
+  @media (max-width: 900px) {
+    .tutor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 700px) {
     .tutor-grid { grid-template-columns: minmax(0, 1fr); }
@@ -698,14 +701,22 @@ const filters = [
   .book__form[hidden] { display: none; }
 
   /* Profile dialog */
-  .pf { position: fixed; inset: 0; width: min(calc(100vw - 32px), 720px); max-width: none; max-height: min(calc(100dvh - 32px), 880px); margin: auto; padding: 0; border: 0; border-radius: var(--r-xl); background: transparent; color: var(--ink); box-shadow: var(--shadow-lift); }
-  .pf::backdrop { background: rgba(19, 24, 27, .56); backdrop-filter: blur(4px); }
+  .pf { position: fixed; inset: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--white); color: var(--ink); box-shadow: none; }
+  .pf::backdrop { background: var(--white); }
   /* The panel scrolls under a pinned footer, so the match CTA stays reachable
      however long the profile runs. */
   .pf .book__panel {
-    display: flex; flex-direction: column; padding-bottom: 0;
+    display: flex; flex-direction: column; width: 100%; height: 100%; max-height: none;
+    padding: clamp(18px, 3vw, 40px); padding-bottom: 0; border: 0; border-radius: 0;
     isolation: isolate; scroll-padding-bottom: 108px;
   }
+  .pf .book__close {
+    position: sticky; top: 0; z-index: 50; align-self: flex-end;
+    display: inline-flex; width: auto; min-width: 44px; height: 44px; gap: 9px;
+    padding: 0 16px; border-radius: var(--r-pill); font-size: .82rem; font-weight: 750;
+  }
+  .pf .book__eyebrow,
+  .pf [data-profile-body] { width: min(100%, 1040px); margin-inline: auto; }
 
   .pf__head {
     display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 24px; align-items: center;
@@ -758,6 +769,8 @@ const filters = [
   }
 
   @media (max-width: 560px) {
+    .pf .book__panel { padding: 12px 16px 0; }
+    .pf .book__close { top: 0; }
     .pf__head { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 20px 16px; }
     .pf__ident .tcardx__scores { justify-content: center; }
     .pf__meta { grid-template-columns: 1fr; }
@@ -1378,6 +1391,7 @@ const filters = [
     const note = document.getElementById('roster-note');
     if (note) note.hidden = tutors.length > 0;
     renderDirectory(false);
+    queueMicrotask(openProfileFromHash);
   };
 
   const normalizePreviewRow = (raw: Record<string, unknown>): Tutor | null => {
@@ -1593,7 +1607,7 @@ const filters = [
   const profileBody = profileDialog?.querySelector('[data-profile-body]') as HTMLElement | null;
   let profileReturnFocus: HTMLElement | null = null;
 
-  const openProfile = (registryId: string, trigger?: HTMLElement | null) => {
+  const openProfile = (registryId: string, trigger?: HTMLElement | null, updateRoute = true) => {
     const tutor = roster.find((row) => row.registry_id === registryId);
     if (!tutor || !profileDialog || !profileBody) return;
     profileReturnFocus = trigger || null;
@@ -1662,9 +1676,32 @@ const filters = [
     // Announce the tutor rather than the static "Tutor profile" eyebrow.
     profileDialog.setAttribute('aria-labelledby', 'profile-name');
 
-    if (typeof profileDialog.showModal === 'function') profileDialog.showModal();
-    else profileDialog.setAttribute('open', '');
+    const profileHash = `#/t/${encodeURIComponent(tutor.registry_id)}`;
+    if (updateRoute && location.hash !== profileHash) {
+      history.pushState({ tutorProfile: tutor.registry_id }, '', profileHash);
+    }
+
+    if (!profileDialog.open) {
+      if (typeof profileDialog.showModal === 'function') profileDialog.showModal();
+      else profileDialog.setAttribute('open', '');
+    }
   };
+
+  function profileIdFromHash() {
+    const match = /^#\/t\/(.+)$/.exec(location.hash);
+    if (!match) return '';
+    try { return decodeURIComponent(match[1]); } catch { return ''; }
+  }
+
+  function openProfileFromHash() {
+    const registryId = profileIdFromHash();
+    if (registryId) openProfile(registryId, null, false);
+  }
+
+  function clearProfileRoute() {
+    if (!profileIdFromHash()) return;
+    history.replaceState(null, '', `${location.pathname}${location.search}`);
+  }
 
   // ----- Booking dialog ----------------------------------------------------
   const dialog = document.querySelector('#book-dialog') as HTMLDialogElement | null;
@@ -1747,9 +1784,15 @@ const filters = [
   dialog?.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
   profileDialog?.addEventListener('click', (event) => { if (event.target === profileDialog) profileDialog.close(); });
   profileDialog?.addEventListener('close', () => {
+    clearProfileRoute();
     const target = profileReturnFocus;
     profileReturnFocus = null;
     if (target?.isConnected) target.focus({ preventScroll: true });
+  });
+  window.addEventListener('popstate', () => {
+    const registryId = profileIdFromHash();
+    if (registryId) openProfile(registryId, null, false);
+    else if (profileDialog?.open) profileDialog.close();
   });
 
   bookForm?.addEventListener('submit', async (event) => {

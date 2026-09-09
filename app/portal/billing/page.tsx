@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { lessonAmountKrw } from "../../../utils/billing/rate-lookup";
+import { hourlyRateFor, lessonAmountFromRateKrw } from "../../../utils/billing/rate-lookup";
 import { createClient } from "../../../utils/supabase/server";
 import { classroomStudentIds } from "../../../utils/classrooms/students";
 import {
@@ -51,7 +51,7 @@ export default async function BillingPage() {
 
       const { data: sessions } = await supabase
         .from("portal_sessions")
-        .select("id,user_id,session_date,duration_minutes,actual_minutes,title,subject,zoom_status,tutors(name)")
+        .select("id,user_id,session_date,duration_minutes,actual_minutes,title,subject,billing_rate_krw,zoom_status,tutors(name)")
         .in("user_id", studentIds)
         .neq("zoom_status", "cancelled")
         .order("session_date", { ascending: false });
@@ -65,7 +65,10 @@ export default async function BillingPage() {
           studentName: studentNames.get(session.user_id) || "학생",
           tutorName: tutor?.name || "담당 튜터",
           minutes: session.actual_minutes ?? session.duration_minutes,
-          amountKrw: lessonAmountKrw(session.subject, session.actual_minutes ?? session.duration_minutes),
+          amountKrw: lessonAmountFromRateKrw(
+            session.billing_rate_krw ?? hourlyRateFor(session.subject),
+            session.actual_minutes ?? session.duration_minutes,
+          ),
           status: session.zoom_status === "ended" ? "confirmed" : "scheduled",
         };
       });

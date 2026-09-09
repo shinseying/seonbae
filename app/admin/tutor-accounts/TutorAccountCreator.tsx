@@ -26,7 +26,7 @@ export default function TutorAccountCreator({
 
   async function create(payload: Record<string, unknown>, key: string, onDone?: () => void) {
     setBusy(key);
-    setMessage("계정을 만들고 임시 비밀번호를 보내는 중입니다…");
+    setMessage("계정을 만들고 비밀번호 설정 링크를 보내는 중입니다…");
     try {
       const response = await fetch("/api/admin/tutor-accounts", {
         method: "POST",
@@ -35,7 +35,7 @@ export default function TutorAccountCreator({
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "계정을 만들지 못했습니다.");
-      setMessage("계정을 만들고 임시 비밀번호를 이메일로 보냈습니다.");
+      setMessage(result.warning || "계정을 만들고 일회용 비밀번호 설정 링크를 이메일로 보냈습니다.");
       onDone?.();
       router.refresh();
     } catch (error) {
@@ -83,11 +83,11 @@ export default function TutorAccountCreator({
             </label>
             <label>
               <span>휴대전화번호</span>
-              <input name="phone" type="tel" inputMode="tel" maxLength={24} placeholder="01012345678" />
+              <input name="phone" type="tel" inputMode="tel" maxLength={24} placeholder="01012345678" required />
             </label>
             <div className={styles.actions}>
               <button type="submit" disabled={busy === "direct"}>
-                {busy === "direct" ? "생성 중…" : "계정 생성 후 임시 비밀번호 발송"}
+                {busy === "direct" ? "생성 중…" : "계정 생성 후 설정 링크 발송"}
               </button>
             </div>
           </form>

@@ -8,11 +8,10 @@ import { isEmailAddress, isKoreanSchoolEmail } from "../../../../utils/auth/scho
 import { authRateLimitResponse, consumeAuthRateLimit } from "../../../../utils/auth/rate-limit";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
+import { documentUploadError } from "../../../../utils/files/document-upload";
 
 export const dynamic = "force-dynamic";
 
-const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
-const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 type AccountRole = "student" | "parent" | "tutor";
 
 export async function POST(request: NextRequest) {
@@ -50,15 +49,9 @@ export async function POST(request: NextRequest) {
   if (!privacyAgreed || !termsAgreed || !ageConfirmed) {
     return jsonError("회원가입에 필요한 필수 약관에 모두 동의해 주세요.", 400);
   }
-  if (isTutor && (!(acceptanceLetter instanceof File) || acceptanceLetter.size === 0)) {
-    return jsonError("학적증명서를 첨부해 주세요.", 400);
-  }
-  if (
-    isTutor
-    && acceptanceLetter instanceof File
-    && (acceptanceLetter.size > MAX_DOCUMENT_BYTES || !ALLOWED_DOCUMENT_TYPES.has(acceptanceLetter.type))
-  ) {
-    return jsonError("학적증명서는 10MB 이하 PDF, JPG 또는 PNG만 제출할 수 있습니다.", 400);
+  if (isTutor) {
+    const documentError = await documentUploadError(acceptanceLetter, "학적증명서", true);
+    if (documentError) return jsonError(documentError, 400);
   }
 
   let admin: ReturnType<typeof createAdminClient>;

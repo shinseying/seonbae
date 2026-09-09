@@ -9,7 +9,7 @@ import {
   PASSWORD_ALLOWED_SYMBOLS,
 } from "../../utils/auth/password";
 import { normalizePhone, sanitizePhoneInput } from "../../utils/auth/phone";
-import { isEmailAddress } from "../../utils/auth/school-email";
+import { isEmailAddress, isKoreanSchoolEmail } from "../../utils/auth/school-email";
 import {
   setSeonbaeLocale,
   useSeonbaeLocale,
@@ -56,7 +56,8 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [accountRole, setAccountRole] = useState<"student" | "parent">("student");
+  const [accountRole, setAccountRole] = useState<"student" | "parent" | "tutor">("student");
+  const [acceptanceLetter, setAcceptanceLetter] = useState<File | null>(null);
   const [remember, setRemember] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
@@ -64,7 +65,6 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
   const [redirecting, setRedirecting] = useState(false);
 
   const passwordChecks = useMemo(() => getPasswordChecks(password), [password]);
@@ -90,39 +90,12 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    let cancelled = false;
-    fetch("/api/auth/session", {
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    })
-      .then((response) => response.ok ? response.json() : { authenticated: false })
-      .then((session) => {
-        if (cancelled) return;
-        if (session.authenticated) {
-          setRedirecting(true);
-          router.replace(session.destination || "/portal");
-          router.refresh();
-          return;
-        }
-        setCheckingSession(false);
-      })
-      .catch(() => {
-        if (!cancelled) setCheckingSession(false);
-      });
-    return () => { cancelled = true; };
-  }, [router]);
-
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedAction = params.get("mode");
     const requestedRole = params.get("role");
     if (requestedAction === "signup") setAction("signup");
     if (requestedRole === "tutor") {
-      // Tutor accounts are created by an admin after review, so a tutor link
-      // belongs on the application page rather than the sign-up form.
-      window.location.replace("/tutor-apply");
-      return;
+      setAccountRole("tutor");
     }
     if (requestedRole === "student" || requestedRole === "parent") {
       setAccountRole(requestedRole);
@@ -186,6 +159,16 @@ export default function LoginPage() {
         setBusy(false);
         return;
       }
+      if (accountRole === "tutor" && !isKoreanSchoolEmail(identifier)) {
+        setMessage(l("튜터는 .ac.kr로 끝나는 학교 이메일을 사용해 주세요.", "Tutors must use a school email ending in .ac.kr."));
+        setBusy(false);
+        return;
+      }
+      if (accountRole === "tutor" && !acceptanceLetter) {
+        setMessage(l("학적증명서를 첨부해 주세요.", "Attach your school acceptance or enrollment letter."));
+        setBusy(false);
+        return;
+      }
       if (!normalizePhone(phone)) {
         setMessage(l("휴대전화번호를 올바르게 입력해 주세요. 해외 번호는 국가번호를 포함해 주세요.", "Enter a valid mobile number, including the country code when outside Korea."));
         setBusy(false);
@@ -221,6 +204,9 @@ export default function LoginPage() {
         signupForm.set("phone", phone);
         signupForm.set("password", password);
         signupForm.set("accountRole", accountRole);
+        if (accountRole === "tutor" && acceptanceLetter) {
+          signupForm.set("acceptanceLetter", acceptanceLetter);
+        }
         signupForm.set("privacyAgreed", String(privacyAgreed));
         signupForm.set("termsAgreed", String(termsAgreed));
         signupForm.set("ageConfirmed", String(ageConfirmed));
@@ -305,6 +291,7 @@ export default function LoginPage() {
     setShowPassword(false);
     setShowConfirmPassword(false);
     setAccountRole("student");
+    setAcceptanceLetter(null);
     setPrivacyAgreed(false);
     setTermsAgreed(false);
     setAgeConfirmed(false);
@@ -331,7 +318,7 @@ export default function LoginPage() {
     setAgeConfirmed(checked);
   }
 
-  if (checkingSession || redirecting) {
+  if (redirecting) {
     return (
       <main className={styles.loadingScreen} aria-busy="true">
         <div className={styles.loadingMark} aria-hidden="true">
@@ -339,7 +326,7 @@ export default function LoginPage() {
           <span />
         </div>
         <p className={styles.loadingEyebrow}>SEONBAE PORTAL</p>
-        <h1>{redirecting ? l("포털을 여는 중입니다.", "Opening your portal.") : l("계정을 확인하고 있습니다.", "Checking your account.")}</h1>
+        <h1>{l("포털을 여는 중입니다.", "Opening your portal.")}</h1>
         <p>{l("잠시만 기다려 주세요.", "Just a moment.")}</p>
       </main>
     );
@@ -457,6 +444,16 @@ export default function LoginPage() {
                     />
                     <span><b>{l("보호자 계정", "Parent")}</b><small>{l("자녀 리포트, 일정, 결제 관리", "Student reports, schedules, and billing")}</small></span>
                   </label>
+                  <label data-selected={accountRole === "tutor"}>
+                    <input
+                      type="radio"
+                      name="account-role"
+                      value="tutor"
+                      checked={accountRole === "tutor"}
+                      onChange={() => setAccountRole("tutor")}
+                    />
+                    <span><b>{l("튜터 계정", "Tutor")}</b></span>
+                  </label>
                 </fieldset>
               </>
             )}
@@ -473,6 +470,19 @@ export default function LoginPage() {
                   maxLength={80}
                   required
                 />
+              </label>
+            )}
+
+            {isSignup && accountRole === "tutor" && (
+              <label className={styles.fileField}>
+                <span>{l("학적증명서", "School acceptance or enrollment letter")}<RequiredMark /></span>
+                <input
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
+                  onChange={(event) => setAcceptanceLetter(event.target.files?.[0] ?? null)}
+                  required
+                />
+                <small className={styles.fieldNote}>{l("10MB 이하 PDF, JPG 또는 PNG", "PDF, JPG, or PNG up to 10MB")}</small>
               </label>
             )}
 

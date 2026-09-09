@@ -9,6 +9,7 @@ import {
   GOOGLE_LOGIN_ATTEMPT_COOKIE,
   GOOGLE_LOGIN_ATTEMPT_MAX_AGE,
 } from "../../../../utils/auth/google-login-attempt";
+import { safeInternalDestination } from "../../../../utils/auth/safe-destination";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 
   const callbackUrl = new URL("/api/auth/callback", request.nextUrl.origin);
-  callbackUrl.searchParams.set("next", safeDestination(body.next));
+  callbackUrl.searchParams.set("next", safeInternalDestination(body.next));
   callbackUrl.searchParams.set("provider", "google");
 
   const supabase = await createClient();
@@ -106,15 +107,4 @@ export async function POST(request: NextRequest) {
   }
 
   return response;
-}
-
-function safeDestination(value: unknown) {
-  if (
-    typeof value !== "string"
-    || !value.startsWith("/")
-    || value.startsWith("//")
-  ) {
-    return "/portal";
-  }
-  return value;
 }

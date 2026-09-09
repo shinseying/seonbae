@@ -26,9 +26,6 @@ export function loginMethodMatchesRole(
   return isAdminLogin ? role === "admin" : role !== "admin";
 }
 
-const ADMIN_PHRASE_SHA256 =
-  "948db6f592edafc28bd69788a618f07b0e1fb53f972cfcc1a8f6ea00ab5006ea";
-
 export async function signAccessGate(payload: AccessGatePayload) {
   const encoded = encodeText(JSON.stringify(payload));
   const signature = await sign(encoded);
@@ -81,10 +78,12 @@ export async function verificationCodeDigest(input: {
 }
 
 export async function isAdminPhraseValid(value: string) {
+  const configuredDigest = process.env.ADMIN_STEP_PHRASE_SHA256?.trim().toLowerCase() || "";
+  if (!/^[a-f0-9]{64}$/.test(configuredDigest)) return false;
   const digest = new Uint8Array(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value.trim())),
   );
-  const expected = hexToBytes(ADMIN_PHRASE_SHA256);
+  const expected = hexToBytes(configuredDigest);
   if (digest.length !== expected.length) return false;
   let difference = 0;
   for (let index = 0; index < digest.length; index += 1) {

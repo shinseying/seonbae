@@ -5,11 +5,9 @@ import { isEmailAddress, isKoreanSchoolEmail } from "../../../utils/auth/school-
 import { authRateLimitResponse, consumeAuthRateLimit } from "../../../utils/auth/rate-limit";
 import { createAdminClient } from "../../../utils/supabase/admin";
 import { signApplicationId, verifyApplicationToken } from "../../../utils/auth/application-handle";
+import { documentUploadError } from "../../../utils/files/document-upload";
 
 export const dynamic = "force-dynamic";
-
-const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
-const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
 // Tutor applications arrive before any account exists. Nothing here creates a
 // login: an admin reviews the request and provisions the account afterwards.
@@ -63,7 +61,7 @@ export async function POST(request: NextRequest) {
   if (!university) return error("대학교를 선택해 주세요.", 400);
   if (!languages || !lessonFormat) return error("수업 가능 언어와 수업 형식을 입력해 주세요.", 400);
 
-  const letterError = documentError(acceptanceLetter, "학적증명서", true);
+  const letterError = await documentUploadError(acceptanceLetter, "학적증명서", true);
   if (letterError) return error(letterError, 400);
 
   // Every subject the applicant wants to teach needs a score.
@@ -83,7 +81,7 @@ export async function POST(request: NextRequest) {
   }
 
   // One score report covers every subject listed above.
-  const credentialError = documentError(credential, "성적 증명", true);
+  const credentialError = await documentUploadError(credential, "성적 증명", true);
   if (credentialError) return error(credentialError, 400);
 
   let admin: ReturnType<typeof createAdminClient>;
@@ -102,12 +100,19 @@ export async function POST(request: NextRequest) {
   const proof = credential as File;
   const proofName = safeFileName(proof.name);
   const proofPath = `${folder}/credential-${proofName}`;
+  const uploadedPaths: string[] = [];
 
   for (const [path, file] of [[letterPath, letter], [proofPath, proof]] as const) {
     const { error: uploadError } = await admin.storage
       .from("account-documents")
       .upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: false });
-    if (uploadError) return error("서류를 업로드하지 못했습니다. 다시 시도해 주세요.", 500);
+    if (uploadError) {
+      if (uploadedPaths.length) {
+        await admin.storage.from("account-documents").remove(uploadedPaths);
+      }
+      return error("서류를 업로드하지 못했습니다. 다시 시도해 주세요.", 500);
+    }
+    uploadedPaths.push(path);
   }
 
   const { data, error: insertError } = await admin
@@ -135,6 +140,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (insertError || !data) {
+    await admin.storage.from("account-documents").remove(uploadedPaths);
     return error("지원서를 저장하지 못했습니다. 다시 시도해 주세요.", 500);
   }
 
@@ -222,16 +228,6 @@ export async function PATCH(request: NextRequest) {
 
   if (updateError) return error("답변을 저장하지 못했습니다.", 500);
   return NextResponse.json({ ok: true });
-}
-
-function documentError(value: FormDataEntryValue | null, label: string, required: boolean) {
-  if (!(value instanceof File) || value.size === 0) {
-    return required ? `${label}를 첨부해 주세요.` : null;
-  }
-  if (value.size > MAX_DOCUMENT_BYTES || !ALLOWED_DOCUMENT_TYPES.has(value.type)) {
-    return `${label}는 10MB 이하 PDF, JPG 또는 PNG만 제출할 수 있습니다.`;
-  }
-  return null;
 }
 
 function text(form: FormData, key: string, max: number) {

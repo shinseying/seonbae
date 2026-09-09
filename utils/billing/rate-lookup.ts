@@ -29,6 +29,11 @@ export function hourlyRateFor(subject: string | null | undefined) {
 /** Charge for one lesson, rounded to the won. Null when the subject is unpriced. */
 export function lessonAmountKrw(subject: string | null | undefined, minutes: number | null) {
   const hourly = hourlyRateFor(subject);
-  if (hourly === null || !minutes || minutes <= 0) return null;
+  return lessonAmountFromRateKrw(hourly, minutes);
+}
+
+/** Charge from a rate captured when the lesson was scheduled. */
+export function lessonAmountFromRateKrw(hourly: number | null, minutes: number | null) {
+  if (hourly === null || !Number.isFinite(hourly) || hourly < 0 || !minutes || minutes <= 0) return null;
   return Math.round((hourly * minutes) / 60);
 }

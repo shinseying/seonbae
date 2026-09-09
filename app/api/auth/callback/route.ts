@@ -16,6 +16,7 @@ import {
   clearAccessGateCookies,
   issueUserChallenge,
 } from "../../../../utils/auth/step-up-server";
+import { safeInternalDestination } from "../../../../utils/auth/safe-destination";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const tokenHash = request.nextUrl.searchParams.get("token_hash");
   const type = emailOtpType(request.nextUrl.searchParams.get("type"));
-  const next = safeDestination(request.nextUrl.searchParams.get("next"));
+  const next = safeInternalDestination(request.nextUrl.searchParams.get("next"));
   const provider = request.nextUrl.searchParams.get("provider");
   const supabase = await createClient();
   let verified = false;
@@ -115,7 +116,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.redirect(new URL("/login", request.nextUrl.origin));
 }
-
 async function checkExistingGoogleAccount(
   supabase: Awaited<ReturnType<typeof createClient>>,
   attemptToken: string | undefined,
@@ -191,7 +191,6 @@ async function checkExistingGoogleAccount(
     return { allowed: false as const, error: "google-check-unavailable" };
   }
 }
-
 function emailOtpType(value: string | null): EmailOtpType | null {
   const allowedTypes: EmailOtpType[] = [
     "email",
@@ -205,11 +204,4 @@ function emailOtpType(value: string | null): EmailOtpType | null {
   return value && allowedTypes.includes(value as EmailOtpType)
     ? (value as EmailOtpType)
     : null;
-}
-
-function safeDestination(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/portal";
-  }
-  return value;
 }
