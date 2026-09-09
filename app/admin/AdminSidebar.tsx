@@ -117,13 +117,13 @@ export default function AdminSidebar({
           </Fragment>
         ))}
         <span>사이트</span>
-        <Link className={sidebarStyles.homepageLink} href="/"><i aria-hidden="true" />홈페이지로 <em aria-hidden="true">↗</em></Link>
+        <Link className={sidebarStyles.homepageLink} href="/"><i aria-hidden="true" /><b className={sidebarStyles.homepageLabel}>홈페이지로</b> <em aria-hidden="true">↗</em></Link>
         <Link href="/tutors"><i aria-hidden="true" />공개 명부 보기 <em aria-hidden="true">↗</em></Link>
       </nav>
       <div className={styles.adminAccount || undefined}>
         <span className={styles.adminAvatar || undefined}>{initials(adminName)}</span>
         <p><small>관리자</small><b>{adminName}</b></p>
-        <button type="button" onClick={signOut}>로그아웃</button>
+        <button className={sidebarStyles.logoutButton} type="button" onClick={signOut}>로그아웃</button>
       </div>
     </aside>
   );
