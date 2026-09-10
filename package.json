@@ -8,6 +8,7 @@
     "start": "next start",
     "test:portal-routing": "node --experimental-strip-types --test tests/portal-state.test.ts",
     "test:security": "node --experimental-strip-types --test tests/access-gate.test.ts",
+    "test:tutor-provisioning": "node --experimental-strip-types --test tests/tutor-provisioning.test.ts",
     "test:tutor-import": "node --experimental-strip-types --test tests/tutor-import.test.ts"
   },
   "dependencies": {

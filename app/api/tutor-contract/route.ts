@@ -10,7 +10,6 @@ import {
   TUTOR_CONTRACT_TITLE,
   TUTOR_CONTRACT_VERSION,
 } from "../../../utils/contracts/tutor-contract";
-import { registryRowFromApplication } from "../../../utils/tutors/from-application";
 import {
   ensureTutorApplicationRecord,
   TutorApplicationLinkError,
@@ -123,23 +122,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let tutorRegistryId = profile.tutor_registry_id;
-  if (!tutorRegistryId) {
-    tutorRegistryId = `T-${user.id.slice(0, 8).toUpperCase()}`;
-    const { error: tutorError } = await admin
-      .from("tutors")
-      .upsert(registryRowFromApplication(tutorRegistryId, application), {
-        onConflict: "registry_id",
-      });
-    if (tutorError) return jsonError("계약용 튜터 기록을 준비하지 못했습니다.", 500);
-
-    const { error: profileError } = await admin
-      .from("profiles")
-      .update({ tutor_registry_id: tutorRegistryId, updated_at: new Date().toISOString() })
-      .eq("id", user.id)
-      .in("account_status", ["pending", "approved"]);
-    if (profileError) return jsonError("계약용 튜터 기록을 연결하지 못했습니다.", 500);
-  }
+  // Signing proves consent but must not decide card ownership. A public tutor
+  // signup reaches this step before admin review, so creating a card here used
+  // to duplicate cards that staff had prepared in advance. The admin selects
+  // either a new draft or an existing unowned card when approving the account.
+  const tutorRegistryId = profile.tutor_registry_id;
 
   const signedAt = new Date().toISOString();
   const signatureSha256 = createHash("sha256").update(signature).digest("hex");

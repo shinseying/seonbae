@@ -44,3 +44,28 @@
 .reviewGrid{grid-template-columns:1fr}
 .actions .deleteButton{margin-right:auto;border-color:transparent;background:transparent;color:#8a8279;font-weight:700}
 .actions .deleteButton:hover{border-color:var(--red);color:var(--red)}
+
+/* Required card destination gate during tutor account provisioning. */
+.provisionForm{display:grid;gap:12px}
+.cardChoice{min-width:0;margin:2px 0 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(237,242,234,.5)}
+.cardChoice legend{padding:0 6px;color:#2b383d;font-size:.72rem;font-weight:800}
+.cardChoice legend b{margin-left:6px;color:var(--red);font-size:.58rem;letter-spacing:.04em}
+.cardChoice>p{margin:0 0 11px;color:#68716f;font-size:.66rem;line-height:1.5}
+.cardChoiceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.createForm .cardChoiceGrid label,.cardChoiceGrid label{min-width:0;min-height:72px;display:flex;align-items:flex-start;gap:9px;padding:11px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer}
+.cardChoiceGrid label[data-selected="true"]{border-color:var(--gold);box-shadow:0 0 0 2px rgba(214,160,43,.15)}
+.cardChoiceGrid label[data-disabled="true"]{opacity:.48;cursor:not-allowed}
+.createForm .cardChoiceGrid input[type="radio"],.cardChoiceGrid input[type="radio"]{width:17px;height:17px;min-height:0;margin:2px 0 0;padding:0;accent-color:var(--blue);box-shadow:none}
+.cardChoiceGrid span{min-width:0;display:grid;gap:3px}
+.cardChoiceGrid span b{color:#29383f;font-size:.69rem}
+.cardChoiceGrid span small{color:#707976;font-size:.61rem;line-height:1.45}
+.createForm .cardSelect,.cardSelect{display:grid;gap:6px;margin-top:11px}
+.cardSelect>span{color:#505969;font-size:.68rem;font-weight:800}
+.cardSelect select{width:100%;min-height:44px;padding:8px 36px 8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:#263238;font:inherit;font-size:.68rem}
+.cardChoiceEmpty{display:block;margin-top:10px;color:#7d6b54;font-size:.62rem}
+@media(max-width:620px){.cardChoiceGrid{grid-template-columns:1fr}}
+:global(html[data-theme="dark"]) .cardChoice{background:rgba(36,56,46,.52)}
+:global(html[data-theme="dark"]) .cardChoice legend,:global(html[data-theme="dark"]) .cardChoiceGrid span b{color:#f3f0ea}
+:global(html[data-theme="dark"]) .cardChoice>p,:global(html[data-theme="dark"]) .cardChoiceGrid span small{color:#c3ccc9}
+:global(html[data-theme="dark"]) .cardChoiceGrid label,:global(html[data-theme="dark"]) .cardSelect select{background:#111b22;border-color:rgba(240,238,235,.2);color:#f3f0ea}
+:global(html[data-theme="dark"]) .cardSelect>span{color:#e1e7e5}

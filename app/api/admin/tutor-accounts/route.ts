@@ -6,6 +6,7 @@ import { ensureTutorApplicationRecord } from "../../../../utils/tutors/applicati
 import { sendTutorAccountCreatedEmail } from "../../../../utils/email/tutor-account";
 import { normalizePhone } from "../../../../utils/auth/phone";
 import { isKoreanSchoolEmail } from "../../../../utils/auth/school-email";
+import { parseTutorCardChoice } from "../../../../utils/tutors/provisioning";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 
-  let body: { requestId?: unknown; fullName?: unknown; email?: unknown; phone?: unknown };
+  let body: {
+    requestId?: unknown;
+    fullName?: unknown;
+    email?: unknown;
+    phone?: unknown;
+    cardMode?: unknown;
+    existingRegistryId?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -39,6 +47,13 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
   const hasRequest = body.requestId !== undefined && body.requestId !== null && body.requestId !== "";
   const requestId = hasRequest ? Number(body.requestId) : null;
+  const cardChoice = parseTutorCardChoice(body.cardMode, body.existingRegistryId);
+  if (!cardChoice) {
+    return NextResponse.json(
+      { error: "새 카드를 만들지, 기존 카드에 연결할지 먼저 선택해 주세요." },
+      { status: 400 },
+    );
+  }
 
   // Two entry points: provision from a reviewed application, or create an
   // account outright when the admin already holds the tutor's details.
@@ -92,6 +107,37 @@ export async function POST(request: NextRequest) {
     application = { id: null, full_name: fullName, email, phone, status: "pending" };
   }
 
+  let registryId = cardChoice.registryId || "";
+  if (cardChoice.mode === "link") {
+    const { data: existingCard, error: cardLookupError } = await admin
+      .from("tutors")
+      .select("registry_id")
+      .eq("registry_id", cardChoice.registryId)
+      .maybeSingle();
+    if (cardLookupError) {
+      return NextResponse.json({ error: "기존 튜터 카드를 확인하지 못했습니다." }, { status: 503 });
+    }
+    if (!existingCard) {
+      return NextResponse.json({ error: "선택한 튜터 카드를 찾지 못했습니다." }, { status: 404 });
+    }
+
+    const { data: owner, error: ownerLookupError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("tutor_registry_id", cardChoice.registryId)
+      .limit(1)
+      .maybeSingle();
+    if (ownerLookupError) {
+      return NextResponse.json({ error: "튜터 카드의 연결 상태를 확인하지 못했습니다." }, { status: 503 });
+    }
+    if (owner) {
+      return NextResponse.json(
+        { error: "선택한 카드는 이미 다른 계정에 연결되어 있습니다. 목록을 새로고침해 주세요." },
+        { status: 409 },
+      );
+    }
+  }
+
   const { data: invite, error: createError } = await admin.auth.admin.generateLink({
     type: "invite",
     email: application.email,
@@ -130,20 +176,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "계정 정보를 저장하지 못했습니다." }, { status: 500 });
   }
 
-  // A tutor account is useless without a registry row: the directory reads
-  // public.tutors, and the tutor portal gates on profiles.tutor_registry_id.
-  // The row starts hidden so an empty card never appears on the live site.
-  const registryId = `T-${invite.user.id.slice(0, 8).toUpperCase()}`;
-  const { error: registryError } = await admin
-    .from("tutors")
-    .upsert(registryRowFromApplication(registryId, application), {
-      onConflict: "registry_id",
-    });
+  // Only the explicit create option writes a card. Linking preserves the
+  // existing card exactly as the admin prepared it before the account existed.
+  let createdRegistry = false;
+  if (cardChoice.mode === "create") {
+    registryId = `T-${invite.user.id.slice(0, 8).toUpperCase()}`;
+    const { error: registryError } = await admin
+      .from("tutors")
+      .insert(registryRowFromApplication(registryId, application));
 
-  if (registryError) {
-    await admin.auth.admin.deleteUser(invite.user.id);
-    return NextResponse.json({ error: "튜터 명부를 만들지 못했습니다." }, { status: 500 });
+    if (registryError) {
+      await admin.auth.admin.deleteUser(invite.user.id);
+      return NextResponse.json({ error: "튜터 명부를 만들지 못했습니다." }, { status: 500 });
+    }
+    createdRegistry = true;
   }
+
+  const rollbackAccount = async () => {
+    if (createdRegistry) await admin.from("tutors").delete().eq("registry_id", registryId);
+    await admin.auth.admin.deleteUser(invite.user.id);
+  };
 
   const { error: linkError } = await admin
     .from("profiles")
@@ -151,9 +203,16 @@ export async function POST(request: NextRequest) {
     .eq("id", invite.user.id);
 
   if (linkError) {
-    await admin.from("tutors").delete().eq("registry_id", registryId);
-    await admin.auth.admin.deleteUser(invite.user.id);
-    return NextResponse.json({ error: "튜터 명부를 계정에 연결하지 못했습니다." }, { status: 500 });
+    await rollbackAccount();
+    const claimed = linkError.code === "23505";
+    return NextResponse.json(
+      {
+        error: claimed
+          ? "선택한 카드가 방금 다른 계정에 연결되었습니다. 목록을 새로고침해 주세요."
+          : "튜터 명부를 계정에 연결하지 못했습니다.",
+      },
+      { status: claimed ? 409 : 500 },
+    );
   }
 
   if (application.id !== null) {
@@ -168,8 +227,7 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", application.id);
     if (applicationLinkError) {
-      await admin.from("tutors").delete().eq("registry_id", registryId);
-      await admin.auth.admin.deleteUser(invite.user.id);
+      await rollbackAccount();
       return NextResponse.json({ error: "지원서를 계정에 연결하지 못했습니다." }, { status: 500 });
     }
   } else {
@@ -186,8 +244,7 @@ export async function POST(request: NextRequest) {
         account_reviewed_at: reviewedAt,
       });
     } catch {
-      await admin.from("tutors").delete().eq("registry_id", registryId);
-      await admin.auth.admin.deleteUser(invite.user.id);
+      await rollbackAccount();
       return NextResponse.json({ error: "계약용 가입 기록을 준비하지 못했습니다." }, { status: 500 });
     }
   }
@@ -223,19 +280,19 @@ export async function POST(request: NextRequest) {
           {
             ok: true,
             registryId,
+            cardMode: cardChoice.mode,
             warning: "계정은 생성되었지만 안내 메일 전송에 실패했습니다. 비밀번호 재설정 메일을 보내 주세요.",
           },
           { status: 201 },
         );
       }
     }
-    await admin.from("tutors").delete().eq("registry_id", registryId);
-    await admin.auth.admin.deleteUser(invite.user.id);
+    await rollbackAccount();
     return NextResponse.json(
       { error: "안내 메일을 보내지 못해 계정 생성을 취소했습니다. 다시 시도해 주세요." },
       { status: 502 },
     );
   }
 
-  return NextResponse.json({ ok: true, registryId });
+  return NextResponse.json({ ok: true, registryId, cardMode: cardChoice.mode });
 }

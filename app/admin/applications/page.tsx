@@ -3,6 +3,7 @@ import { createAdminClient } from "../../../utils/supabase/admin";
 import { createClient } from "../../../utils/supabase/server";
 import ApplicationReviewClient, { type AccountApplication } from "./ApplicationReviewClient";
 import AdminSidebar from "../AdminSidebar";
+import { type AvailableTutorCard } from "../tutor-accounts/TutorCardChoiceFields";
 import { TUTOR_CONTRACT_VERSION } from "../../../utils/contracts/tutor-contract";
 import styles from "./applications.module.css";
 
@@ -32,15 +33,45 @@ export default async function AdminApplicationsPage() {
   const pendingTutorIds = (accountRows ?? [])
     .filter((item) => item.requested_role === "tutor" && item.user_id)
     .map((item) => item.user_id as string);
+  const registryQueries = Promise.all([
+    admin
+      .from("tutors")
+      .select("registry_id,name,university,exam,active,display_order")
+      .order("display_order", { ascending: true })
+      .order("registry_id", { ascending: true }),
+    admin
+      .from("profiles")
+      .select("tutor_registry_id")
+      .not("tutor_registry_id", "is", null),
+  ]);
+
   const signedTutorIds = new Set<string>();
+  const tutorRegistryByUser = new Map<string, string | null>();
   if (pendingTutorIds.length) {
-    const { data: signatures } = await admin
-      .from("tutor_contract_signatures")
-      .select("tutor_id")
-      .in("tutor_id", pendingTutorIds)
-      .eq("contract_version", TUTOR_CONTRACT_VERSION);
+    const [{ data: signatures }, { data: tutorProfiles }] = await Promise.all([
+      admin
+        .from("tutor_contract_signatures")
+        .select("tutor_id")
+        .in("tutor_id", pendingTutorIds)
+        .eq("contract_version", TUTOR_CONTRACT_VERSION),
+      admin
+        .from("profiles")
+        .select("id,tutor_registry_id")
+        .in("id", pendingTutorIds),
+    ]);
     for (const signature of signatures ?? []) signedTutorIds.add(signature.tutor_id);
+    for (const tutorProfile of tutorProfiles ?? []) {
+      tutorRegistryByUser.set(tutorProfile.id, tutorProfile.tutor_registry_id);
+    }
   }
+  const [{ data: tutorRows }, { data: linkedProfiles }] = await registryQueries;
+  const linkedRegistryIds = new Set(
+    (linkedProfiles ?? [])
+      .map((row) => row.tutor_registry_id)
+      .filter((value): value is string => Boolean(value)),
+  );
+  const availableCards = (tutorRows ?? [])
+    .filter((card) => !linkedRegistryIds.has(card.registry_id)) as AvailableTutorCard[];
 
   const signUrl = async (path: string | null) => {
     if (!path) return null;
@@ -53,6 +84,7 @@ export default async function AdminApplicationsPage() {
       item.requested_role !== "tutor"
       || !item.user_id
       || signedTutorIds.has(item.user_id),
+    tutor_registry_id: item.user_id ? tutorRegistryByUser.get(item.user_id) || null : null,
     documentUrl: await signUrl(item.acceptance_letter_path),
     credentialUrl: await signUrl(item.credential_path),
     subject_scores: (Array.isArray(item.subject_scores) ? item.subject_scores : []).map((row) => ({
@@ -72,7 +104,7 @@ export default async function AdminApplicationsPage() {
           </div>
           <b>{accounts.length}건 대기</b>
         </header>
-        <ApplicationReviewClient accounts={accounts} />
+        <ApplicationReviewClient accounts={accounts} availableCards={availableCards} />
       </section>
     </main>
   );
