@@ -457,10 +457,18 @@ try {
     count: Number(document.querySelector('#tutor-count').textContent),
     chips: [...document.querySelectorAll('[data-active-filters] button')].map(node => node.textContent.replace('×', '').trim()),
     names: [...document.querySelectorAll('.tcardx__profile-label > span')].map(node => node.textContent.trim()),
+    curriculumMatches: [...document.querySelectorAll('.tcardx__curricula .is-filter-match')].map(node => ({
+      label: node.textContent.trim(),
+      hasCheck: Boolean(node.querySelector('svg')),
+      foreground: getComputedStyle(node).color,
+      background: getComputedStyle(node).backgroundColor,
+    })),
   })`);
   assert.equal(composed.count, 1, JSON.stringify(composed));
   assert.equal(composed.chips.length, 2, JSON.stringify(composed));
   assert.deepEqual(composed.names, ['최에이피']);
+  assert.equal(composed.curriculumMatches.length, 1, JSON.stringify(composed));
+  assert.ok(composed.curriculumMatches.every(({ label, hasCheck, foreground, background }) => label === 'AP' && hasCheck && foreground !== background), JSON.stringify(composed));
   await cdp.evaluate(`document.querySelector('[data-remove-filter="search"]').click()`);
   assert.equal(await cdp.evaluate(`Number(document.querySelector('#tutor-count').textContent)`), 2);
 
@@ -477,19 +485,28 @@ try {
     const profileButton = document.querySelector('.tcardx__surface');
     profileButton.click();
     await new Promise(r => setTimeout(r, 50));
-    const ranges=[...document.querySelectorAll('#profile-dialog .availability-list__ranges span')];
+    const schedule = document.querySelector('#profile-dialog .weekgrid');
+    const scheduleBlocks=[...document.querySelectorAll('#profile-dialog .weekgrid__slot')];
     const rateItems=[...document.querySelectorAll('#profile-dialog .pf__rate-list li')];
     const profileAside = document.querySelector('#profile-dialog .pf__aside');
     const profileMatchButton = profileAside?.querySelector('.tcardx__book');
     const bioToggle = document.querySelector('#profile-dialog [data-expand-bio]');
     const matchButtonBox = profileMatchButton?.getBoundingClientRect();
+    const returnButton = document.querySelector('[data-close-profile]');
+    const returnButtonBox = returnButton?.getBoundingClientRect();
     const result = {
       active: document.querySelector('[data-filter="ib"]').getAttribute('aria-pressed'),
       count: Number(document.querySelector('#tutor-count').textContent),
       totalCards: document.querySelectorAll('.tutor-cell').length,
       fullScreen: document.querySelector('#profile-dialog').getBoundingClientRect().width === innerWidth,
-      rangeCount: ranges.length,
-      ranges: ranges.map(node => node.textContent.trim()),
+      schedulePresent: Boolean(schedule),
+      scheduleAria: schedule?.getAttribute('aria-label'),
+      scheduleBlockCount: scheduleBlocks.length,
+      scheduleRanges: scheduleBlocks.map(node => node.getAttribute('aria-label')),
+      keyboardScheduleBlocks: scheduleBlocks.every(node => node.getAttribute('tabindex') === '0'),
+      returnButtonLabel: returnButton?.textContent.replace(/\s+/g, ' ').trim(),
+      returnButtonHeight: returnButtonBox?.height,
+      returnButtonPadding: parseFloat(getComputedStyle(returnButton).paddingLeft),
       rateCount: rateItems.length,
       rates: rateItems.map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
       bioTogglePresent: Boolean(bioToggle),
@@ -512,8 +529,14 @@ try {
   assert.equal(tutors.count, 2);
   assert.equal(tutors.totalCards, 2);
   assert.equal(tutors.fullScreen, true);
-  assert.equal(tutors.rangeCount, 3);
-  assert.ok(tutors.ranges.includes('09:00–10:30'), JSON.stringify(tutors));
+  assert.equal(tutors.schedulePresent, true);
+  assert.equal(tutors.scheduleBlockCount, 3);
+  assert.ok(tutors.scheduleRanges.includes('월 09:00–10:30'), JSON.stringify(tutors));
+  assert.match(tutors.scheduleAria, /주간 가능 시간표/);
+  assert.equal(tutors.keyboardScheduleBlocks, true);
+  assert.equal(tutors.returnButtonLabel, '←튜터 목록으로 돌아가기');
+  assert.ok(tutors.returnButtonHeight >= 52, JSON.stringify(tutors));
+  assert.ok(tutors.returnButtonPadding >= 20, JSON.stringify(tutors));
   assert.equal(tutors.rateCount, 3);
   assert.ok(tutors.rates.every(value => /₩100,000/.test(value)), JSON.stringify(tutors));
   assert.equal(tutors.bioTogglePresent, true);
@@ -592,6 +615,26 @@ try {
   await cdp.evaluate(`document.querySelector('.filter-strip').scrollIntoView({ block: 'start' })`);
   await sleep(80);
   await capture('tutors-mobile');
+
+  const mobileProfile = await cdp.evaluate(`(async () => {
+    document.querySelector('.tcardx__surface').click();
+    await new Promise(requestAnimationFrame);
+    const dialog = document.querySelector('#profile-dialog');
+    const grid = dialog.querySelector('.weekgrid');
+    const returnButton = dialog.querySelector('[data-close-profile]');
+    return {
+      present: Boolean(grid),
+      bodyFits: document.documentElement.scrollWidth <= innerWidth,
+      gridFits: grid ? grid.scrollWidth <= grid.clientWidth + 1 : false,
+      returnButtonHeight: returnButton.getBoundingClientRect().height,
+    };
+  })()`);
+  assert.equal(mobileProfile.present, true, JSON.stringify(mobileProfile));
+  assert.equal(mobileProfile.bodyFits, true, JSON.stringify(mobileProfile));
+  assert.equal(mobileProfile.gridFits, true, JSON.stringify(mobileProfile));
+  assert.ok(mobileProfile.returnButtonHeight >= 52, JSON.stringify(mobileProfile));
+  await capture('tutor-profile-mobile');
+  await cdp.evaluate(`document.querySelector('[data-close-profile]').click()`);
 
   await cdp.send('Emulation.setEmulatedMedia', {
     media: '',

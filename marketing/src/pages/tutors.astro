@@ -151,7 +151,7 @@ const filters = [
 
   <dialog class="pf" id="profile-dialog" aria-labelledby="profile-heading">
     <div class="book__panel">
-      <button type="button" class="book__close" data-close-profile><span aria-hidden="true">←</span><T en="Tutor list" ko="튜터 목록" /></button>
+      <button type="button" class="book__close" data-close-profile><span aria-hidden="true">←</span><T en="Back to tutor list" ko="튜터 목록으로 돌아가기" /></button>
       <p class="book__eyebrow" id="profile-heading"><T en="Tutor profile" ko="튜터 프로필" /></p>
       <div data-profile-body></div>
     </div>
@@ -489,8 +489,14 @@ const filters = [
 
   .tcardx__curricula { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 0; padding: 0; list-style: none; }
   .tcardx__curricula li {
+    display: inline-flex; align-items: center; gap: 5px;
     padding: 5px 9px; border: 1px solid rgba(52,63,114,.18); border-radius: var(--r-pill);
     background: var(--violet-soft); color: var(--violet); font-size: .66rem; font-weight: 800;
+  }
+  .tcardx__curricula li svg { width: 13px; height: 13px; flex: 0 0 auto; }
+  .tcardx__curricula li.is-filter-match {
+    border-color: var(--violet); background: var(--violet); color: #fff;
+    box-shadow: 0 4px 12px rgba(52, 63, 114, .22);
   }
   .tcardx__score-head { margin-top: 16px; color: var(--muted); font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
   .tcardx__scores { display: grid; gap: 0; margin: 7px 0 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
@@ -589,8 +595,8 @@ const filters = [
   }
   .pf .book__close {
     position: sticky; top: 0; z-index: 50; align-self: flex-start;
-    display: inline-flex; width: auto; min-width: 44px; height: 44px; gap: 9px;
-    padding: 0 16px; border-radius: var(--r-pill); font-size: .82rem; font-weight: 750;
+    display: inline-flex; flex: 0 0 54px; width: auto; min-width: 44px; min-height: 54px; height: 54px; gap: 10px;
+    padding: 0 24px; border-radius: var(--r-pill); font-size: .9rem; font-weight: 800;
   }
   .pf .book__eyebrow,
   .pf [data-profile-body] { width: min(100%, 1220px); margin-inline: auto; }
@@ -640,17 +646,60 @@ const filters = [
   }
   .pf__bio-toggle:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
   .pf__empty { margin-top: 10px; color: var(--muted-soft); font-size: .92rem; line-height: 1.55; }
-  .availability-list { display: grid; gap: 8px; margin-top: 14px; }
-  .availability-list__day {
-    display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; align-items: start;
-    padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas);
+  .weekgrid {
+    width: 100%; margin-top: 14px; overflow: visible;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--white);
   }
-  .availability-list__day > b { padding-top: 5px; color: var(--violet); font-size: .78rem; }
-  .availability-list__ranges { display: flex; flex-wrap: wrap; gap: 6px; }
-  .availability-list__ranges span {
-    padding: 5px 9px; border-radius: var(--r-pill); background: var(--white); color: var(--ink);
-    font-size: .76rem; font-weight: 650; font-variant-numeric: tabular-nums;
+  .weekgrid__head {
+    display: grid; grid-template-columns: 36px repeat(7, minmax(0, 1fr));
+    border-bottom: 1px solid var(--line); background: var(--canvas);
+    border-radius: 10px 10px 0 0; overflow: hidden;
   }
+  .weekgrid__head b {
+    min-width: 0; padding: 9px 0; border-left: 1px solid var(--line-soft);
+    color: var(--muted); font-size: .68rem; font-weight: 800; text-align: center;
+  }
+  .weekgrid__head b:nth-last-child(-n + 2) { color: var(--coral); }
+  .weekgrid__body { display: grid; grid-template-columns: 36px minmax(0, 1fr); height: 250px; }
+  .weekgrid__times { position: relative; }
+  .weekgrid__times span {
+    position: absolute; top: calc(var(--time-top) * 1%); right: 6px;
+    color: var(--muted-soft); font-size: .55rem; font-variant-numeric: tabular-nums;
+    line-height: 1; transform: translateY(-50%);
+  }
+  .weekgrid__times span:first-child { transform: translateY(0); }
+  .weekgrid__times span:last-child { transform: translateY(-100%); }
+  .weekgrid__plot {
+    position: relative; min-width: 0;
+    background-image:
+      linear-gradient(to bottom, var(--line-soft) 1px, transparent 1px),
+      linear-gradient(to right, var(--line-soft) 1px, transparent 1px);
+    background-size: 100% calc(100% / 6), calc(100% / 7) 100%;
+  }
+  .weekgrid__slot {
+    position: absolute; z-index: 1;
+    top: calc(var(--slot-top) * 1%);
+    left: calc((100% / 7) * var(--day-index) + 3px);
+    width: calc(100% / 7 - 6px);
+    height: max(5px, calc(var(--slot-height) * 1%));
+    border: 1px solid rgba(255, 255, 255, .62); border-radius: 4px;
+    background: #315b6f; box-shadow: 0 2px 5px rgba(22, 48, 69, .18);
+    cursor: help;
+  }
+  .weekgrid__slot[data-tone='1'] { background: #4c5f91; }
+  .weekgrid__slot[data-tone='2'] { background: #8b5c7e; }
+  .weekgrid__slot[data-tone='3'] { background: #99713f; }
+  .weekgrid__slot[data-tone='4'] { background: #477762; }
+  .weekgrid__slot::after {
+    content: attr(data-time-label); position: absolute; z-index: 5; left: 50%; bottom: calc(100% + 7px);
+    width: max-content; max-width: 180px; padding: 6px 8px; border-radius: 6px;
+    background: var(--ink); color: #fff; font-size: .66rem; font-weight: 700;
+    line-height: 1.25; white-space: nowrap; opacity: 0; pointer-events: none;
+    transform: translate(-50%, 3px); transition: opacity .14s ease, transform .14s ease;
+  }
+  .weekgrid__slot:hover, .weekgrid__slot:focus-visible { z-index: 4; filter: brightness(1.08); }
+  .weekgrid__slot:hover::after, .weekgrid__slot:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+  .weekgrid__slot:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
 
   .pf__aside { position: sticky; top: 72px; margin-top: 18px; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--canvas); box-shadow: 0 16px 38px rgba(22,48,69,.08); }
   .pf__aside-kicker { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
@@ -673,11 +722,16 @@ const filters = [
 
   @media (max-width: 560px) {
     .pf .book__panel { padding: 12px 16px 24px; }
-    .pf .book__close { top: 0; }
+    .pf .book__close { top: 0; flex-basis: 52px; min-height: 52px; height: 52px; padding-inline: 20px; }
     .pf__head { grid-template-columns: 1fr; justify-items: center; text-align: center; }
     .pf__ident .tcardx__curricula { justify-content: center; }
     .pf__meta { grid-template-columns: 1fr; }
     .pf__aside { padding: 20px; }
+    .weekgrid__head { grid-template-columns: 29px repeat(7, minmax(0, 1fr)); }
+    .weekgrid__head b { padding-block: 8px; font-size: .58rem; }
+    .weekgrid__body { grid-template-columns: 29px minmax(0, 1fr); height: 220px; }
+    .weekgrid__times span { right: 4px; font-size: .48rem; }
+    .weekgrid__slot { left: calc((100% / 7) * var(--day-index) + 2px); width: calc(100% / 7 - 4px); }
   }
 
   .vid__title { font-size: 1.2rem; padding-right: 48px; }
@@ -820,6 +874,7 @@ const filters = [
     return escapeHtml(url);
   };
   const verifyIcon = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3l7 3v5c0 4.2-2.9 7.4-7 8.5-4.1-1.1-7-4.3-7-8.5V6l7-3z M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const curriculumMatchIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const calendarIcon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7z M4 10h16 M8 3v4 M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const language = () => document.documentElement.dataset.lang === 'en' ? 'en' : 'ko';
   const tr = (en: string, ko: string) => language() === 'en' ? en : ko;
@@ -1103,19 +1158,38 @@ const filters = [
     if (endHour * 60 + endMinute <= startHour * 60 + startMinute) return null;
     return { start: startHour * 60 + startMinute, end: endHour * 60 + endMinute };
   };
-  const availabilityList = (tutor: Tutor) => {
+  const SCHEDULE_START = 6 * 60;
+  const SCHEDULE_END = 24 * 60;
+  const SCHEDULE_SPAN = SCHEDULE_END - SCHEDULE_START;
+  const availabilityTimetable = (tutor: Tutor) => {
     const slots = slotsOf(tutor);
-    const rows = DAYS.flatMap((day) => {
+    const blocks = DAYS.flatMap((day, dayIndex) => {
       const ranges = Array.isArray(slots[day.key]) ? slots[day.key] : [];
-      const validRanges = ranges.filter((range) => typeof range === 'string' && parseAvailabilityRange(range));
-      return validRanges.length ? [{ day, ranges: validRanges }] : [];
+      return ranges.flatMap((range, rangeIndex) => {
+        if (typeof range !== 'string') return [];
+        const parsed = parseAvailabilityRange(range);
+        if (!parsed) return [];
+        const start = Math.max(SCHEDULE_START, parsed.start);
+        const end = Math.min(SCHEDULE_END, parsed.end);
+        return end > start ? [{ day, dayIndex, rangeIndex, range, start, end }] : [];
+      });
     });
-    if (!rows.length) return `<p class="pf__empty">${tr('This tutor has not published hours yet.', '아직 등록된 가능 시간이 없습니다.')}</p>`;
-    return `<div class="availability-list" role="list" aria-label="${tr('Published weekly availability', '등록된 주간 가능 시간')}">${rows.map(({ day, ranges }) => `
-      <div class="availability-list__day" role="listitem">
-        <b>${tr(day.en, day.ko)}</b>
-        <div class="availability-list__ranges">${ranges.map((range) => `<span>${escapeHtml(range.replace(/\s*[-–—]\s*/, '–'))}</span>`).join('')}</div>
-      </div>`).join('')}</div>`;
+    if (!blocks.length) return `<p class="pf__empty">${tr('This tutor has not published hours yet.', '아직 등록된 가능 시간이 없습니다.')}</p>`;
+    const aria = `${tr('Weekly availability timetable', '주간 가능 시간표')}: ${blocks.map(({ day, range }) => `${tr(day.en, day.ko)} ${range}`).join(', ')}`;
+    return `<div class="weekgrid" role="group" aria-label="${escapeHtml(aria)}">
+      <div class="weekgrid__head"><span aria-hidden="true"></span>${DAYS.map((day) => `<b>${tr(day.en, day.ko)}</b>`).join('')}</div>
+      <div class="weekgrid__body">
+        <div class="weekgrid__times" aria-hidden="true">
+          <span style="--time-top:0">06</span><span style="--time-top:33.333">12</span><span style="--time-top:66.667">18</span><span style="--time-top:100">24</span>
+        </div>
+        <div class="weekgrid__plot">${blocks.map(({ day, dayIndex, rangeIndex, range, start, end }) => {
+          const label = `${tr(day.en, day.ko)} ${range.replace(/\s*[-–—]\s*/, '–')}`;
+          const top = ((start - SCHEDULE_START) / SCHEDULE_SPAN) * 100;
+          const height = ((end - start) / SCHEDULE_SPAN) * 100;
+          return `<span class="weekgrid__slot" tabindex="0" role="img" data-tone="${(dayIndex + rangeIndex) % 5}" data-time-label="${escapeHtml(label)}" style="--day-index:${dayIndex};--slot-top:${top};--slot-height:${height}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+        }).join('')}</div>
+      </div>
+    </div>`;
   };
 
   const matchingRateForScore = (tutor: Tutor, row: SubjectScore) => {
@@ -1199,7 +1273,10 @@ const filters = [
     }).join('');
     const categoryList = categoriesFor(tutor).map((key) => {
       const category = curriculumNames[key as CurriculumKey];
-      return category ? `<li>${escapeHtml(tr(category.en, category.ko))}</li>` : '';
+      if (!category) return '';
+      const label = escapeHtml(tr(category.en, category.ko));
+      const matchesFilter = activeTutorFilter !== 'all' && activeTutorFilter === key;
+      return `<li${matchesFilter ? ` class="is-filter-match" aria-label="${label} ${tr('selected curriculum', '선택한 커리큘럼')}"` : ''}>${matchesFilter ? curriculumMatchIcon : ''}<span>${label}</span></li>`;
     }).join('');
     const metaParts = [
       tutor.languages ? languagesOf(tutor) : '',
@@ -1577,7 +1654,7 @@ const filters = [
 
           <section class="pf__block">
             <h3 class="pf__sub">${tr('Available hours', '가능 시간')}</h3>
-            ${availabilityList(tutor)}
+            ${availabilityTimetable(tutor)}
           </section>
 
           ${video ? `<section class="pf__block">
