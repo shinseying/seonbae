@@ -66,23 +66,39 @@ export default async function AdminCompletedApplicationsPage() {
     }
   }
 
-  const applications: CompletedApplication[] = (rows ?? []).map((row) => ({
-    id: row.id,
-    fullName: row.full_name,
-    email: row.email,
-    phone: row.phone,
-    role: row.requested_role,
-    university: row.university,
-    subjects: row.subjects,
-    curriculum: row.curriculum,
-    officialScore: row.official_score,
-    status: row.status,
-    reviewNote: row.review_note,
-    reviewedAt: row.reviewed_at,
-    reviewerName: row.reviewed_by ? reviewerNames.get(row.reviewed_by) || "관리자" : null,
-    registryId: row.user_id ? registryIds.get(row.user_id) || null : null,
-    createdAt: row.created_at,
-  }));
+  const rosterNumbers = new Map<string, string>();
+  const linkedRegistryIds = [...new Set(registryIds.values())];
+  if (linkedRegistryIds.length) {
+    const { data: tutorCards } = await admin
+      .from("tutors")
+      .select("registry_id,roster_number")
+      .in("registry_id", linkedRegistryIds);
+    for (const tutorCard of tutorCards ?? []) {
+      if (tutorCard.roster_number) rosterNumbers.set(tutorCard.registry_id, tutorCard.roster_number);
+    }
+  }
+
+  const applications: CompletedApplication[] = (rows ?? []).map((row) => {
+    const registryId = row.user_id ? registryIds.get(row.user_id) || null : null;
+    return {
+      id: row.id,
+      fullName: row.full_name,
+      email: row.email,
+      phone: row.phone,
+      role: row.requested_role,
+      university: row.university,
+      subjects: row.subjects,
+      curriculum: row.curriculum,
+      officialScore: row.official_score,
+      status: row.status,
+      reviewNote: row.review_note,
+      reviewedAt: row.reviewed_at,
+      reviewerName: row.reviewed_by ? reviewerNames.get(row.reviewed_by) || "관리자" : null,
+      hasTutorCard: Boolean(registryId),
+      rosterNumber: registryId ? rosterNumbers.get(registryId) || null : null,
+      createdAt: row.created_at,
+    };
+  });
 
   const approved = applications.filter((item) => item.status === "approved").length;
 

@@ -6,7 +6,7 @@ import styles from "./slots.module.css";
 
 export type SlotRequest = {
   id: number;
-  registryId: string;
+  rosterNumber: string | null;
   tutorName: string;
   reason: string | null;
   status: string;
@@ -57,7 +57,7 @@ export default function SlotRequestList({ requests }: { requests: SlotRequest[] 
           <header>
             <div>
               <b>{request.tutorName}</b>
-              <small>{request.registryId} · 현재 {request.currentRooms}/{request.currentLimit}개</small>
+              <small>{request.rosterNumber || "명부 번호 준비 중"} · 현재 {request.currentRooms}/{request.currentLimit}개</small>
             </div>
             <span data-status={request.status}>{statusLabel(request.status)}</span>
           </header>

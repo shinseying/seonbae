@@ -1,179 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendAdmissionsAccountReviewEmail } from "../../../utils/email/admissions";
-import { normalizePhone } from "../../../utils/auth/phone";
-import { isEmailAddress, isKoreanSchoolEmail } from "../../../utils/auth/school-email";
 import { authRateLimitResponse, consumeAuthRateLimit } from "../../../utils/auth/rate-limit";
 import { createAdminClient } from "../../../utils/supabase/admin";
-import { signApplicationId, verifyApplicationToken } from "../../../utils/auth/application-handle";
-import { documentUploadError } from "../../../utils/files/document-upload";
+import { verifyApplicationToken } from "../../../utils/auth/application-handle";
 
 export const dynamic = "force-dynamic";
 
-// Tutor applications arrive before any account exists. Nothing here creates a
-// login: an admin reviews the request and provisions the account afterwards.
-export async function POST(request: NextRequest) {
-  const rateLimit = await consumeAuthRateLimit(request, "signup");
-  if (!rateLimit.allowed) return authRateLimitResponse(rateLimit.retryAfterSeconds);
-
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return error("지원서를 다시 확인해 주세요.", 400);
-  }
-
-  const fullName = text(form, "fullName", 80);
-  const email = text(form, "email", 254).toLowerCase();
-  const phone = normalizePhone(text(form, "phone", 24));
-  const university = text(form, "university", 80);
-  const curriculum = text(form, "curriculum", 60);
-  const languages = text(form, "languages", 80);
-  const lessonFormat = text(form, "lessonFormat", 80);
-
-  // One row per subject: name, score, and the proof for that subject. The
-  // three lists come back from FormData in the order the rows were filled.
-  const subjectNames = form.getAll("subjectName");
-  const subjectScoreValues = form.getAll("subjectScore");
-  const subjects = subjectNames
-    .map((value) => (typeof value === "string" ? value.trim().slice(0, 80) : ""))
-    .filter(Boolean)
-    .join(", ")
-    .slice(0, 300);
-  const introduction = text(form, "introduction", 2000);
-  const note = [
-    text(form, "major", 120) && `전공/학년: ${text(form, "major", 120)}`,
-    curriculum && `지원 커리큘럼: ${curriculum}`,
-    languages && `수업 가능 언어: ${languages}`,
-    lessonFormat && `수업 형식: ${lessonFormat}`,
-    introduction && `소개: ${introduction}`,
-  ].filter(Boolean).join("\n");
-
-  const acceptanceLetter = form.get("acceptanceLetter");
-  const credential = form.get("credential");
-
-  if (fullName.length < 2 || !isEmailAddress(email)) {
-    return error("이름과 이메일 주소를 확인해 주세요.", 400);
-  }
-  if (!isKoreanSchoolEmail(email)) {
-    return error("튜터 지원은 .ac.kr로 끝나는 학교 이메일로만 접수됩니다.", 400);
-  }
-  if (!phone) return error("휴대전화 번호를 국가 번호와 함께 입력해 주세요.", 400);
-  if (!university) return error("대학교를 선택해 주세요.", 400);
-  if (!languages || !lessonFormat) return error("수업 가능 언어와 수업 형식을 입력해 주세요.", 400);
-
-  const letterError = await documentUploadError(acceptanceLetter, "학적증명서", true);
-  if (letterError) return error(letterError, 400);
-
-  // Every subject the applicant wants to teach needs a score.
-  if (!subjectNames.length) return error("가르칠 과목을 최소 하나 입력해 주세요.", 400);
-  if (subjectScoreValues.length !== subjectNames.length) {
-    return error("과목별 성적을 모두 채워 주세요.", 400);
-  }
-
-  const subjectRows = subjectNames.map((value, index) => ({
-    subject: typeof value === "string" ? value.trim().slice(0, 80) : "",
-    score: typeof subjectScoreValues[index] === "string"
-      ? (subjectScoreValues[index] as string).trim().slice(0, 24)
-      : "",
-  }));
-  if (subjectRows.some((row) => !row.subject || !row.score)) {
-    return error("과목별 성적을 모두 채워 주세요.", 400);
-  }
-
-  // One score report covers every subject listed above.
-  const credentialError = await documentUploadError(credential, "성적 증명", true);
-  if (credentialError) return error(credentialError, 400);
-
-  let admin: ReturnType<typeof createAdminClient>;
-  try {
-    admin = createAdminClient();
-  } catch {
-    return error("지원 시스템이 아직 설정되지 않았습니다. 입학팀에 문의해 주세요.", 503);
-  }
-
-  const folder = `applications/${crypto.randomUUID()}`;
-  const letter = acceptanceLetter as File;
-  const letterName = safeFileName(letter.name);
-  const letterPath = `${folder}/letter-${letterName}`;
-
-  // One score report backs every subject score listed above.
-  const proof = credential as File;
-  const proofName = safeFileName(proof.name);
-  const proofPath = `${folder}/credential-${proofName}`;
-  const uploadedPaths: string[] = [];
-
-  for (const [path, file] of [[letterPath, letter], [proofPath, proof]] as const) {
-    const { error: uploadError } = await admin.storage
-      .from("account-documents")
-      .upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: false });
-    if (uploadError) {
-      if (uploadedPaths.length) {
-        await admin.storage.from("account-documents").remove(uploadedPaths);
-      }
-      return error("서류를 업로드하지 못했습니다. 다시 시도해 주세요.", 500);
-    }
-    uploadedPaths.push(path);
-  }
-
-  const { data, error: insertError } = await admin
-    .from("account_creation_requests")
-    .insert({
-      user_id: null,
-      full_name: fullName,
-      email,
-      phone,
-      requested_role: "tutor",
-      acceptance_letter_path: letterPath,
-      acceptance_letter_name: letterName,
-      credential_path: proofPath,
-      credential_name: proofName,
-      university,
-      subjects,
-      curriculum: curriculum || null,
-      subject_scores: subjectRows,
-      languages,
-      lesson_format: lessonFormat,
-      introduction: introduction || null,
-      applicant_note: note || null,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !data) {
-    await admin.storage.from("account-documents").remove(uploadedPaths);
-    return error("지원서를 저장하지 못했습니다. 다시 시도해 주세요.", 500);
-  }
-
-  const { data: signed } = await admin.storage
-    .from("account-documents")
-    .createSignedUrl(letterPath, 60 * 60 * 24 * 7);
-
-  try {
-    await sendAdmissionsAccountReviewEmail({
-      requestId: data.id,
-      fullName,
-      email,
-      phone,
-      role: "tutor",
-      letterName,
-      letterUrl: signed?.signedUrl,
-    });
-    await admin
-      .from("account_creation_requests")
-      .update({ notification_sent_at: new Date().toISOString() })
-      .eq("id", data.id);
-  } catch (sendError) {
-    // The application is already stored; a failed notification is recorded for
-    // the admin queue rather than shown to the applicant.
-    await admin
-      .from("account_creation_requests")
-      .update({ notification_error: String(sendError).slice(0, 500) })
-      .eq("id", data.id);
-  }
-
-  // The thank-you page uses these to attach the "how did you hear about us"
-  // answer to this row, and nothing else.
-  return NextResponse.json({ ok: true, id: data.id, token: signApplicationId(data.id) });
+// Old accountless applications caused duplicate tutor records. Keep the URL
+// explicit for stale clients, but refuse new writes and point them to signup.
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: "튜터 지원은 계정 회원가입에서 진행해 주세요.",
+      destination: "/login?mode=signup&role=tutor",
+    },
+    { status: 410, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 const SOURCES = new Set(["online", "kakao", "friend", "other"]);
@@ -230,16 +71,6 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-function text(form: FormData, key: string, max: number) {
-  const value = form.get(key);
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
-function safeFileName(name: string) {
-  const cleaned = name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
-  return cleaned || "document";
-}
-
 function error(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
 }

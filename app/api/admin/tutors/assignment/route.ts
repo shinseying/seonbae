@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
 
   const registryId = typeof body.registry_id === "string" ? body.registry_id.trim().slice(0, 24) : "";
   if (!registryId) {
-    return NextResponse.json({ error: "명부 번호가 필요합니다." }, { status: 400 });
+    return NextResponse.json({ error: "카드 연결 ID가 필요합니다." }, { status: 400 });
   }
 
   const profileId = typeof body.profile_id === "string" && body.profile_id.trim()
@@ -90,7 +90,7 @@ export async function PATCH(request: NextRequest) {
   }
   if (target.tutor_registry_id && target.tutor_registry_id !== registryId) {
     return NextResponse.json(
-      { error: `이 계정은 이미 ${target.tutor_registry_id} 카드에 연결되어 있습니다. 먼저 그 카드에서 연결을 해제해 주세요.` },
+      { error: "이 계정은 이미 다른 튜터 카드에 연결되어 있습니다. 먼저 기존 카드에서 연결을 해제해 주세요." },
       { status: 409 },
     );
   }

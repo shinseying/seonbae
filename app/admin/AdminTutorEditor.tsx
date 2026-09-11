@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AdminSidebar from "./AdminSidebar";
 import TutorCard from "../portal/TutorCard";
 import {
@@ -8,10 +8,13 @@ import {
   type TutorImportError,
   type TutorImportRow,
 } from "../../utils/tutors/excel-import";
+import { createTutorRegistryId } from "../../utils/tutors/registry-id";
+import { createTutorPhotoDraftTracker } from "../../utils/tutors/photo-draft-tracker";
 import styles from "./admin.module.css";
 
 export type AdminTutor = {
   registry_id: string;
+  roster_number: string | null;
   name: string;
   exam: string;
   score: string;
@@ -19,6 +22,7 @@ export type AdminTutor = {
   university: string | null;
   university_en: string | null;
   photo_url: string | null;
+  photo_path: string | null;
   banner_url: string | null;
   zoom_host_email: string | null;
   display_order: number;
@@ -61,6 +65,13 @@ const bannerOptions = [
 const DRAFT_KEY = "__draft__";
 const TUTOR_PREVIEW_STORAGE_KEY = "seonbae:tutor-import-preview:v1";
 
+function requestPhotoCleanup(path: string, keepalive = false) {
+  return fetch(`/api/admin/tutors/photo?path=${encodeURIComponent(path)}`, {
+    method: "DELETE",
+    keepalive,
+  }).catch(() => undefined);
+}
+
 type ImportPreview = {
   fileName: string;
   rows: TutorImportRow[];
@@ -70,6 +81,7 @@ type ImportPreview = {
 function emptyTutor(registryId: string, displayOrder: number): AdminTutor {
   return {
     registry_id: registryId,
+    roster_number: null,
     name: "",
     exam: "",
     score: "",
@@ -77,6 +89,7 @@ function emptyTutor(registryId: string, displayOrder: number): AdminTutor {
     university: null,
     university_en: null,
     photo_url: null,
+    photo_path: null,
     banner_url: null,
     zoom_host_email: null,
     display_order: displayOrder,
@@ -97,6 +110,7 @@ function emptyTutor(registryId: string, displayOrder: number): AdminTutor {
 function tutorPreviewSnapshot(tutor: AdminTutor) {
   return {
     registry_id: tutor.registry_id,
+    roster_number: tutor.roster_number,
     name: tutor.name,
     exam: tutor.exam,
     score: tutor.score,
@@ -104,6 +118,7 @@ function tutorPreviewSnapshot(tutor: AdminTutor) {
     university: tutor.university,
     university_en: tutor.university_en,
     photo_url: tutor.photo_url,
+    photo_path: tutor.photo_path,
     banner_url: tutor.banner_url,
     display_order: tutor.display_order,
     active: tutor.active,
@@ -115,17 +130,6 @@ function tutorPreviewSnapshot(tutor: AdminTutor) {
     languages: tutor.languages,
     lesson_format: tutor.lesson_format,
   };
-}
-
-// Registry numbers on manually added cards run P-001, P-002, ... Suggest the
-// next free one; the admin can still type something else.
-function nextRegistryId(tutors: AdminTutor[]) {
-  const used = tutors
-    .map((tutor) => /^P-(\d+)$/.exec(tutor.registry_id)?.[1])
-    .filter(Boolean)
-    .map(Number);
-  const next = used.length ? Math.max(...used) + 1 : 1;
-  return `P-${String(next).padStart(3, "0")}`;
 }
 
 export default function AdminTutorEditor({
@@ -148,16 +152,38 @@ export default function AdminTutorEditor({
   const [draft, setDraft] = useState<AdminTutor | null>(null);
   const [selectedId, setSelectedId] = useState(initialTutors[0]?.registry_id ?? "");
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
   const [readingWorkbook, setReadingWorkbook] = useState(false);
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importMessage, setImportMessage] = useState("");
+  const photoDrafts = useRef(createTutorPhotoDraftTracker());
+  const selectedIdRef = useRef(selectedId);
+  const mountedRef = useRef(false);
+  selectedIdRef.current = selectedId;
   const isDraft = selectedId === DRAFT_KEY;
   const selected = isDraft ? draft : tutors.find((tutor) => tutor.registry_id === selectedId) ?? null;
+  const featuredScore = selected?.subject_scores?.find((row) => row.subject.trim() && row.score.trim()) ?? null;
+  const displayRosterNumber = selected?.roster_number || (isDraft ? "저장 후 자동 배정" : "배정 대기");
   const linkedAccount = selected && !isDraft
     ? links.find((account) => account.tutor_registry_id === selected.registry_id) ?? null
     : null;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const cleanupEveryPhotoDraft = () => {
+      for (const path of photoDrafts.current.abandonAll()) {
+        void requestPhotoCleanup(path, true);
+      }
+    };
+    window.addEventListener("pagehide", cleanupEveryPhotoDraft);
+    return () => {
+      mountedRef.current = false;
+      window.removeEventListener("pagehide", cleanupEveryPhotoDraft);
+      cleanupEveryPhotoDraft();
+    };
+  }, []);
 
   function updateSelected<K extends keyof AdminTutor>(key: K, value: AdminTutor[K]) {
     if (isDraft) setDraft((current) => current && { ...current, [key]: value });
@@ -165,16 +191,24 @@ export default function AdminTutorEditor({
     setMessage("");
   }
 
+  function activateSelection(nextId: string) {
+    // Async upload completion must see a selection change immediately.
+    selectedIdRef.current = nextId;
+    setSelectedId(nextId);
+  }
+
   function startDraft() {
+    abandonPhotoDraft(selectedId);
     const order = tutors.reduce((max, tutor) => Math.max(max, tutor.display_order), 0) + 1;
-    setDraft(emptyTutor(nextRegistryId(tutors), order));
-    setSelectedId(DRAFT_KEY);
-    setMessage("빈 카드입니다. 이름, 시험, 성적을 채운 뒤 저장하세요.");
+    setDraft(emptyTutor(createTutorRegistryId(), order));
+    activateSelection(DRAFT_KEY);
+    setMessage("빈 카드입니다. 필수 항목과 과목별 성적을 채운 뒤 저장하세요.");
   }
 
   function discardDraft() {
+    abandonPhotoDraft(DRAFT_KEY);
     setDraft(null);
-    setSelectedId(tutors[0]?.registry_id ?? "");
+    activateSelection(tutors[0]?.registry_id ?? "");
     setMessage("");
   }
 
@@ -184,6 +218,10 @@ export default function AdminTutorEditor({
     updateSelected("subject_scores", rows);
   }
   function addScore() {
+    if ((selected?.subject_scores?.length ?? 0) >= 12) {
+      setMessage("과목별 성적은 최대 12개까지 입력할 수 있습니다.");
+      return;
+    }
     updateSelected("subject_scores", [...(selected?.subject_scores ?? []), { subject: "", score: "" }]);
   }
   function removeScore(index: number) {
@@ -199,6 +237,74 @@ export default function AdminTutorEditor({
     setDayText((current) => ({ ...current, [`${selectedId}|${day}`]: value }));
     const ranges = value.split(",").map((range) => range.trim()).filter(Boolean);
     updateSelected("availability", { ...(selected?.availability ?? {}), [day]: ranges });
+  }
+
+  function selectTutor(nextId: string) {
+    if (nextId === selectedId) return;
+    abandonPhotoDraft(selectedId);
+    activateSelection(nextId);
+    setMessage("");
+  }
+
+  function abandonPhotoDraft(cardKey: string) {
+    const paths = photoDrafts.current.abandon(cardKey);
+    if (!paths.length) return;
+    for (const path of paths) void requestPhotoCleanup(path);
+
+    if (cardKey === DRAFT_KEY) {
+      setDraft((current) => current && paths.includes(current.photo_path || "")
+        ? { ...current, photo_url: null, photo_path: null }
+        : current);
+      return;
+    }
+
+    const committed = committedTutors.find((tutor) => tutor.registry_id === cardKey);
+    setTutors((current) => current.map((tutor) => (
+      tutor.registry_id === cardKey && paths.includes(tutor.photo_path || "")
+        ? { ...tutor, photo_url: committed?.photo_url ?? null, photo_path: committed?.photo_path ?? null }
+        : tutor
+    )));
+  }
+
+  async function uploadPhoto(file: File | undefined) {
+    if (!file) return;
+    if (!/^image\/(?:jpeg|png|webp)$/.test(file.type) || file.size > 4 * 1024 * 1024) {
+      setMessage("프로필 사진은 4MB 이하 JPG, PNG 또는 WebP만 사용할 수 있습니다.");
+      return;
+    }
+
+    const uploadCardKey = selectedId;
+    setUploadingPhoto(true);
+    setMessage("");
+    const body = new FormData();
+    body.set("photo", file);
+    try {
+      const response = await fetch("/api/admin/tutors/photo", { method: "POST", body });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || "사진을 업로드하지 못했습니다.");
+      const uploadedPath = typeof result?.photoPath === "string" ? result.photoPath : "";
+      if (!uploadedPath) throw new Error("업로드한 사진 경로를 확인하지 못했습니다.");
+      if (!mountedRef.current || selectedIdRef.current !== uploadCardKey) {
+        void requestPhotoCleanup(uploadedPath, !mountedRef.current);
+        return;
+      }
+      for (const path of photoDrafts.current.replace(uploadCardKey, uploadedPath)) {
+        void requestPhotoCleanup(path);
+      }
+      updateSelected("photo_url", result.photoUrl || null);
+      updateSelected("photo_path", uploadedPath);
+      setMessage("사진을 올렸습니다. 아래 저장 버튼을 눌러 카드에 반영하세요.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "사진을 업로드하지 못했습니다.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
+  function usePhotoUrl(value: string) {
+    abandonPhotoDraft(selectedId);
+    updateSelected("photo_url", value || null);
+    updateSelected("photo_path", null);
   }
 
   async function readWorkbook(file: File | undefined) {
@@ -271,12 +377,15 @@ export default function AdminTutorEditor({
       setSaving(false);
       return;
     }
+    for (const path of photoDrafts.current.commit(selectedId, result.photo_path)) {
+      void requestPhotoCleanup(path);
+    }
     setDayText({});
     if (isDraft) {
       setTutors((current) => [...current, result].sort(byDisplayOrder));
       setCommittedTutors((current) => [...current, result].sort(byDisplayOrder));
       setDraft(null);
-      setSelectedId(result.registry_id);
+      activateSelection(result.registry_id);
       setMessage(`${result.name} 튜터 카드를 만들었습니다. ${result.active ? "공개 명부에 바로 표시됩니다." : "‘공개 명부에 표시’를 켜면 사이트에 나타납니다."}`);
     } else {
       setTutors((current) => current.map((tutor) => tutor.registry_id === selectedId ? result : tutor));
@@ -292,8 +401,9 @@ export default function AdminTutorEditor({
   async function assignAccount(profileId: string | null) {
     if (!selected || isDraft) return;
     const registryId = selected.registry_id;
+    const rosterNumber = selected.roster_number || registryId;
     const target = profileId ? links.find((account) => account.id === profileId) : null;
-    if (!profileId && !window.confirm(`${selected.name} (${registryId}) 카드의 계정 연결을 해제할까요? 해당 계정은 학생으로 돌아갑니다.`)) {
+    if (!profileId && !window.confirm(`${selected.name} (${rosterNumber}) 카드의 계정 연결을 해제할까요? 해당 계정은 학생으로 돌아갑니다.`)) {
       return;
     }
 
@@ -322,13 +432,13 @@ export default function AdminTutorEditor({
       return account;
     }));
     setMessage(profileId
-      ? `${accountLabel(target)} 계정에 ${registryId} 카드를 연결했습니다.`
-      : `${registryId} 카드의 계정 연결을 해제했습니다.`);
+      ? `${accountLabel(target)} 계정에 ${rosterNumber} 카드를 연결했습니다.`
+      : `${rosterNumber} 카드의 계정 연결을 해제했습니다.`);
   }
 
   async function deleteTutor() {
     if (!selected) return;
-    if (!window.confirm(`${selected.name} (${selected.registry_id}) 튜터 카드를 삭제할까요? 공개 명부에서 즉시 사라지며 되돌릴 수 없습니다.`)) {
+    if (!window.confirm(`${selected.name} (${selected.roster_number || selected.registry_id}) 튜터 카드를 삭제할까요? 공개 명부에서 즉시 사라지며 되돌릴 수 없습니다.`)) {
       return;
     }
 
@@ -345,10 +455,11 @@ export default function AdminTutorEditor({
       return;
     }
 
+    abandonPhotoDraft(selected.registry_id);
     const remaining = tutors.filter((tutor) => tutor.registry_id !== selected.registry_id);
     setTutors(remaining);
     setCommittedTutors((current) => current.filter((tutor) => tutor.registry_id !== selected.registry_id));
-    setSelectedId(remaining[0]?.registry_id ?? "");
+    activateSelection(remaining[0]?.registry_id ?? "");
     setMessage(`${selected.name} 튜터를 삭제했습니다.`);
   }
 
@@ -426,10 +537,10 @@ export default function AdminTutorEditor({
               <button
                 type="button"
                 className={isDraft ? styles.selectedTutor : ""}
-                onClick={() => { setSelectedId(DRAFT_KEY); setMessage(""); }}
+                onClick={() => selectTutor(DRAFT_KEY)}
               >
                 <span className={styles.listAvatar}>{draft.name ? initials(draft.name) : "＋"}</span>
-                <span><b>{draft.name || "새 튜터 카드"}</b><small>{draft.registry_id} · 저장 전</small></span>
+                <span><b>{draft.name || "새 튜터 카드"}</b><small>명부 번호 자동 배정 · 저장 전</small></span>
                 <i className={styles.hidden} />
               </button>
             )}
@@ -437,11 +548,11 @@ export default function AdminTutorEditor({
               <button
                 type="button"
                 className={selectedId === tutor.registry_id ? styles.selectedTutor : ""}
-                onClick={() => { setSelectedId(tutor.registry_id); setMessage(""); }}
+                onClick={() => selectTutor(tutor.registry_id)}
                 key={tutor.registry_id}
               >
                 <span className={styles.listAvatar}>{tutor.photo_url ? <img src={tutor.photo_url} alt="" /> : initials(tutor.name)}</span>
-                <span><b>{tutor.name}</b><small>{tutor.registry_id} · {tutor.exam}</small></span>
+                <span><b>{tutor.name}</b><small>{tutor.roster_number || "명부 번호 대기"} · {tutor.exam}</small></span>
                 <i className={tutor.active ? styles.live : styles.hidden} />
               </button>
             ))}
@@ -454,14 +565,15 @@ export default function AdminTutorEditor({
             <div className={styles.editor}>
               <div className={styles.cardPreview} style={selected.banner_url ? { backgroundImage: `${bannerOverlay(selected.banner_url)},url("${selected.banner_url}")` } : undefined}>
                 <span className={styles.previewPhoto}>{selected.photo_url ? <img src={selected.photo_url} alt={`${selected.name} 튜터`} /> : <b>{initials(selected.name)}<small>사진 준비 중</small></b>}</span>
-                <div><p>{selected.registry_id}</p><h2>{selected.name}</h2><span>{selected.university || "대학교 미입력"}</span></div>
-                <strong>{selected.score}<small>{selected.exam}</small></strong>
+                <div><p>{displayRosterNumber}</p><h2>{selected.name}</h2><span>{selected.university || "대학교 미입력"}</span></div>
+                <strong>{featuredScore?.score || "—"}<small>{featuredScore?.subject || "과목 성적 미입력"}</small></strong>
               </div>
 
               <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 16px" }}>
                 <TutorCard
                   tutor={{
                     registryId: selected.registry_id,
+                    rosterNumber: selected.roster_number,
                     name: selected.name,
                     university: selected.university,
                     photoUrl: selected.photo_url,
@@ -479,21 +591,40 @@ export default function AdminTutorEditor({
               </div>
 
               <div className={styles.formGrid}>
-                <label><span>명부 번호</span><input value={selected.registry_id} disabled={!isDraft} placeholder="P-004" onChange={(event) => updateSelected("registry_id", event.target.value.toUpperCase())} /></label>
-                <label><span>표시 순서</span><input type="number" min="0" max="9999" value={selected.display_order} onChange={(event) => updateSelected("display_order", Number(event.target.value))} /></label>
-                <label><span>튜터 이름</span><input value={selected.name} onChange={(event) => updateSelected("name", event.target.value)} /></label>
-                <label><span>시험 / 커리큘럼</span><input value={selected.exam} onChange={(event) => updateSelected("exam", event.target.value)} /></label>
-                <label><span>검증 성적</span><input value={selected.score} onChange={(event) => updateSelected("score", event.target.value)} /></label>
-                <label><span>카테고리</span><select value={selected.category} onChange={(event) => updateSelected("category", event.target.value as AdminTutor["category"])}><option value="ib">IB</option><option value="ap">AP</option><option value="alevel">A-Level</option><option value="sat">SAT / ACT</option><option value="english">영어 시험</option></select></label>
-                                <label><span>대학교 (한국어)</span><input value={selected.university || ""} onChange={(event) => updateSelected("university", event.target.value || null)} /></label>
+                <label><span>명부 번호</span><input value={displayRosterNumber} disabled aria-describedby="roster-number-help" /><small id="roster-number-help" className={styles.fieldHint}>모든 카드에 같은 T-0001 형식으로 자동 배정됩니다.</small></label>
+                <label><span>표시 순서 <b className={styles.required}>필수</b></span><input type="number" min="0" max="9999" value={selected.display_order} onChange={(event) => updateSelected("display_order", Number(event.target.value))} /></label>
+                <label><span>튜터 이름 <b className={styles.required}>필수</b></span><input required value={selected.name} onChange={(event) => updateSelected("name", event.target.value)} /></label>
+                <label><span>시험 / 커리큘럼 <b className={styles.required}>필수</b></span><input required placeholder="예: IB Diploma" value={selected.exam} onChange={(event) => updateSelected("exam", event.target.value)} /></label>
+                <label><span>카테고리 <b className={styles.required}>필수</b></span><select value={selected.category} onChange={(event) => updateSelected("category", event.target.value as AdminTutor["category"])}><option value="ib">IB</option><option value="ap">AP</option><option value="alevel">A-Level</option><option value="sat">SAT / ACT</option><option value="english">영어 시험</option></select></label>
+                <label><span>대학교 (한국어)</span><input value={selected.university || ""} onChange={(event) => updateSelected("university", event.target.value || null)} /></label>
                 <label><span>대학교 (영문)</span><input value={selected.university_en || ""} onChange={(event) => updateSelected("university_en", event.target.value || null)} /></label>
                 <label><span>대학교 배너</span><select value={selected.banner_url || ""} onChange={(event) => updateSelected("banner_url", event.target.value || null)}><option value="">배너 없음</option>{bannerOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
                 <label><span>Zoom 호스트 이메일</span><input type="email" placeholder="tutor@seonbae.com" value={selected.zoom_host_email || ""} onChange={(event) => updateSelected("zoom_host_email", event.target.value || null)} /></label>
-                <label className={styles.full}><span>튜터 사진 URL</span><input type="url" placeholder="https://... 또는 /images/..." value={selected.photo_url || ""} onChange={(event) => updateSelected("photo_url", event.target.value || null)} /></label>
+                <div className={`${styles.full} ${styles.photoField}`}>
+                  <span className={styles.groupLabel}>튜터 프로필 사진</span>
+                  <p className={styles.groupHint}>정사각형 사진을 권장합니다. JPG, PNG 또는 WebP · 최대 4MB</p>
+                  <label className={styles.photoUploadButton} aria-disabled={uploadingPhoto}>
+                    {uploadingPhoto ? "사진 올리는 중…" : selected.photo_url ? "다른 사진 선택" : "사진 파일 선택"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                      disabled={uploadingPhoto}
+                      onChange={(event) => {
+                        void uploadPhoto(event.target.files?.[0]);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                  {selected.photo_url && <span className={styles.photoReady}>사진 미리보기에 반영됨</span>}
+                  <details className={styles.photoUrlFallback}>
+                    <summary>이미지 주소로 직접 입력</summary>
+                    <input type="url" placeholder="https://... 또는 /images/..." value={selected.photo_url || ""} onChange={(event) => usePhotoUrl(event.target.value)} />
+                  </details>
+                </div>
 
                 <div className={styles.full}>
-                  <span className={styles.groupLabel}>과목별 성적</span>
-                  <p className={styles.groupHint}>튜터 카드의 성적 배지로 표시됩니다. 비워 두면 위의 시험·검증 성적이 대신 표시됩니다.</p>
+                  <span className={styles.groupLabel}>과목별 성적 <b className={styles.required}>필수</b></span>
+                  <p className={styles.groupHint}>공개 카드에 그대로 표시됩니다. 과목과 해당 성적을 한 개 이상 모두 입력해 주세요.</p>
                   {(selected.subject_scores ?? []).map((row, index) => (
                     <div className={styles.pairRow} key={index}>
                       <input
@@ -509,7 +640,7 @@ export default function AdminTutorEditor({
                       <button type="button" onClick={() => removeScore(index)} aria-label="과목 삭제">×</button>
                     </div>
                   ))}
-                  <button type="button" className={styles.addRow} onClick={addScore}>과목 추가</button>
+                  <button type="button" className={styles.addRow} onClick={addScore} disabled={(selected.subject_scores?.length ?? 0) >= 12}>과목 추가</button>
                 </div>
 
                 <div className={styles.full}>
@@ -558,7 +689,7 @@ export default function AdminTutorEditor({
                           >
                             {accountLabel(account)}
                             {account.tutor_registry_id && account.tutor_registry_id !== selected.registry_id
-                              ? ` · ${account.tutor_registry_id} 연결됨`
+                              ? ` · ${tutors.find((tutor) => tutor.registry_id === account.tutor_registry_id)?.roster_number || "다른 카드"} 연결됨`
                               : ""}
                           </option>
                         ))}
@@ -577,19 +708,19 @@ export default function AdminTutorEditor({
 
               <footer className={styles.actions}>
                 <p className={message.startsWith("저장") || message.includes("만들었습니다") ? styles.success : ""}>
-                  {message || (isDraft ? "이름, 시험, 성적은 반드시 입력해야 합니다." : "필수 정보와 이미지 설정을 확인한 뒤 저장하세요.")}
+                  {message || (isDraft ? "필수 항목과 과목별 성적을 한 개 이상 입력해 주세요." : "필수 정보와 이미지 설정을 확인한 뒤 저장하세요.")}
                 </p>
                 <div className={styles.actionButtons}>
                   {isDraft ? (
-                    <button type="button" className={styles.deleteButton} onClick={discardDraft} disabled={saving}>
+                    <button type="button" className={styles.deleteButton} onClick={discardDraft} disabled={saving || uploadingPhoto}>
                       취소
                     </button>
                   ) : (
-                    <button type="button" className={styles.deleteButton} onClick={deleteTutor} disabled={saving || deleting}>
+                    <button type="button" className={styles.deleteButton} onClick={deleteTutor} disabled={saving || deleting || uploadingPhoto}>
                       {deleting ? "삭제 중..." : "튜터 삭제"}
                     </button>
                   )}
-                  <button type="button" className={styles.applyButton} onClick={saveTutor} disabled={saving || deleting}>
+                  <button type="button" className={styles.applyButton} onClick={saveTutor} disabled={saving || deleting || uploadingPhoto}>
                     {saving ? (isDraft ? "만드는 중..." : "반영 중...") : (isDraft ? "카드 만들기 · Supabase에 반영" : "Supabase에 반영")}
                     <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m6.5 12.5 3.4 3.4 7.6-8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
                   </button>

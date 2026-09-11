@@ -35,6 +35,9 @@ importers:
       read-excel-file:
         specifier: 9.3.10
         version: 9.3.10
+      sharp:
+        specifier: ^0.35.4
+        version: 0.35.4(@types/node@20.17.6)
     devDependencies:
       '@types/node':
         specifier: 20.17.6
@@ -45,9 +48,6 @@ importers:
       astro:
         specifier: ^7.3.2
         version: 7.3.2(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@20.17.6)
-      sharp:
-        specifier: ^0.35.4
-        version: 0.35.4(@types/node@20.17.6)
       typescript:
         specifier: 5.8.2
         version: 5.8.2

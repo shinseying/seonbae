@@ -82,6 +82,22 @@
 @media(max-width:640px){.pairRow{grid-template-columns:1fr}.dayRow{grid-template-columns:1fr}}
 :global(html[data-theme="dark"]) .pairRow button,:global(html[data-theme="dark"]) .addRow{background:#111b2b;color:#f0f4fa}
 
+.required{display:inline-flex;margin-left:5px;padding:2px 5px;border-radius:4px;background:#fbeed8;color:#a7492d;font-size:.52rem;line-height:1;font-weight:850;vertical-align:middle}
+.fieldHint{display:block;margin-top:6px;color:#747d7b;font-size:.62rem;line-height:1.45}
+.photoField{padding:14px;border:1px solid var(--line);border-radius:9px;background:rgba(237,242,234,.35)}
+.photoUploadButton{width:max-content;min-height:44px;display:inline-flex!important;align-items:center;justify-content:center;padding:0 16px;border:1px solid var(--blue);border-radius:7px;background:var(--blue);color:#fff!important;font-size:.7rem;font-weight:800;cursor:pointer}
+.photoUploadButton[aria-disabled="true"]{opacity:.55;cursor:wait}
+.photoUploadButton input{position:absolute;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0!important}
+.photoReady{display:inline-block;margin-left:10px;color:#2f7d4f;font-size:.68rem;font-weight:750}
+.photoUrlFallback{margin-top:12px}
+.photoUrlFallback summary{width:max-content;color:#65716d;font-size:.64rem;font-weight:700;cursor:pointer}
+.photoUrlFallback input{margin-top:9px}
+:global(html[data-theme="dark"]) .required{background:#4a3820;color:#ffe19a}
+:global(html[data-theme="dark"]) .fieldHint{color:#c1cbc8}
+:global(html[data-theme="dark"]) .photoField{background:rgba(36,56,46,.4)}
+:global(html[data-theme="dark"]) .photoUploadButton{background:#d5e6ef!important;color:#14232b!important;border-color:#d5e6ef!important}
+:global(html[data-theme="dark"]) .photoReady{color:#9ed4ae}
+
 .actionButtons{display:flex;align-items:center;gap:10px}
 .deleteButton{background:transparent!important;color:#b3452a!important;border:1px solid rgba(179,69,42,.4)!important;box-shadow:none!important}
 .deleteButton:disabled{opacity:.5}

@@ -30,19 +30,24 @@ export default async function AdminCardRequestsPage() {
     .order("created_at", { ascending: true });
 
   const registryIds = Array.from(new Set((rows ?? []).map((row) => row.tutor_registry_id)));
-  const names = new Map<string, string>();
+  const tutorsByRegistry = new Map<string, { name: string; rosterNumber: string | null }>();
   if (registryIds.length) {
     const { data: tutors } = await admin
       .from("tutors")
-      .select("registry_id,name")
+      .select("registry_id,roster_number,name")
       .in("registry_id", registryIds);
-    for (const tutor of tutors ?? []) names.set(tutor.registry_id, tutor.name);
+    for (const tutor of tutors ?? []) {
+      tutorsByRegistry.set(tutor.registry_id, {
+        name: tutor.name,
+        rosterNumber: tutor.roster_number,
+      });
+    }
   }
 
   const requests: CardRequest[] = (rows ?? []).map((row) => ({
     id: row.id,
-    registryId: row.tutor_registry_id,
-    tutorName: names.get(row.tutor_registry_id) || row.tutor_registry_id,
+    rosterNumber: tutorsByRegistry.get(row.tutor_registry_id)?.rosterNumber || null,
+    tutorName: tutorsByRegistry.get(row.tutor_registry_id)?.name || "튜터 카드",
     note: row.note,
     payload: (row.payload ?? {}) as Record<string, unknown>,
     createdAt: row.created_at,

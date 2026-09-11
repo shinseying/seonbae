@@ -18,7 +18,8 @@ export type CompletedApplication = {
   reviewNote: string | null;
   reviewedAt: string | null;
   reviewerName: string | null;
-  registryId: string | null;
+  hasTutorCard: boolean;
+  rosterNumber: string | null;
   createdAt: string;
 };
 
@@ -100,8 +101,8 @@ export default function CompletedApplicationList({
                   {item.reviewedAt ? ` · 처리 ${formatDate(item.reviewedAt)}` : ""}
                   {item.reviewerName ? ` · ${item.reviewerName}` : ""}
                 </span>
-                {item.registryId && (
-                  <Link href="/admin">명부 {item.registryId} 보기 ↗</Link>
+                {item.hasTutorCard && (
+                  <Link href="/admin">명부 {item.rosterNumber || "번호 준비 중"} 보기 ↗</Link>
                 )}
               </footer>
             </li>

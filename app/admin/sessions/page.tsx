@@ -31,7 +31,7 @@ export default async function AdminSessionsPage() {
         .order("full_name", { ascending: true }),
       supabase
         .from("tutors")
-        .select("registry_id,name,exam,zoom_host_email,active")
+        .select("registry_id,roster_number,name,exam,zoom_host_email,active")
         .order("display_order", { ascending: true }),
       supabase
         .from("portal_sessions")

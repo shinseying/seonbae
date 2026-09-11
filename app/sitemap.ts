@@ -16,7 +16,6 @@ const publicPages: Array<{
   { path: "/subjects", changeFrequency: "monthly", priority: 0.8 },
   { path: "/pricing", changeFrequency: "monthly", priority: 0.8 },
   { path: "/get-matched", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/become-a-tutor", changeFrequency: "monthly", priority: 0.7 },
   { path: "/mock-exams", changeFrequency: "monthly", priority: 0.7 },
   { path: "/resources", changeFrequency: "weekly", priority: 0.8 },
   { path: "/contact", changeFrequency: "yearly", priority: 0.5 },

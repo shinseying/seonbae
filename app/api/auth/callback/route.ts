@@ -15,7 +15,9 @@ import {
 import {
   clearAccessGateCookies,
   issueUserChallenge,
+  setUserVerified,
 } from "../../../../utils/auth/step-up-server";
+import { shouldEstablishSignupVerificationGate } from "../../../../utils/auth/callback-verification";
 import { safeInternalDestination } from "../../../../utils/auth/safe-destination";
 
 export const dynamic = "force-dynamic";
@@ -28,16 +30,26 @@ export async function GET(request: NextRequest) {
   const provider = request.nextUrl.searchParams.get("provider");
   const supabase = await createClient();
   let verified = false;
+  let verifiedUserId = "";
+  let verifiedSessionId = "";
 
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     verified = !error;
+    verifiedUserId = data.user?.id || "";
+    verifiedSessionId = sessionBindingFromClaims(
+      decodeJwtClaims(data.session?.access_token),
+    );
   } else if (tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type,
     });
     verified = !error;
+    verifiedUserId = data.user?.id || "";
+    verifiedSessionId = sessionBindingFromClaims(
+      decodeJwtClaims(data.session?.access_token),
+    );
   }
 
   if (verified) {
@@ -110,6 +122,23 @@ export async function GET(request: NextRequest) {
       path: "/",
       maxAge: 400 * 24 * 60 * 60,
     });
+
+    if (shouldEstablishSignupVerificationGate({ destination: next, provider })) {
+      if (!verifiedUserId || !verifiedSessionId) {
+        await supabase.auth.signOut({ scope: "local" });
+        clearAccessGateCookies(cookieStore);
+        return NextResponse.redirect(
+          new URL("/login?error=verification-email-unavailable", request.nextUrl.origin),
+        );
+      }
+
+      clearAccessGateCookies(cookieStore);
+      await setUserVerified({
+        userId: verifiedUserId,
+        sessionId: verifiedSessionId,
+        remember: true,
+      });
+    }
 
     return NextResponse.redirect(new URL(next, request.nextUrl.origin));
   }

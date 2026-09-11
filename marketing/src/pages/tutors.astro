@@ -1241,7 +1241,7 @@ const filters = [
           </div>
         </div>
         ${categoryList ? `<ul class="tcardx__curricula" aria-label="${tr('Curricula taught', '수업 가능 커리큘럼')}">${categoryList}</ul>` : ''}
-        ${scoreList ? `<p class="tcardx__score-head">${tr('Subjects and verified scores', '과목 및 검증 성적')}</p><ul class="tcardx__scores">${scoreList}</ul>` : ''}
+        ${scoreList ? `<p class="tcardx__score-head">${tr('Subject results', '과목별 성적')}</p><ul class="tcardx__scores">${scoreList}</ul>` : ''}
         ${bio ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>` : ''}
         ${metaParts.length ? `<p class="tcardx__meta-line">${metaParts.map(escapeHtml).join(' · ')}</p>` : ''}
         <div class="tcardx__foot">
@@ -1331,10 +1331,12 @@ const filters = [
     const name = text(raw.name);
     const exam = text(raw.exam);
     const score = text(raw.score);
-    if (!registryId || !name || !exam || !score) return null;
     const scores = Array.isArray(raw.subjectScores)
       ? raw.subjectScores
       : Array.isArray(raw.subject_scores) ? raw.subject_scores : [];
+    const completeScores = (scores as Array<{ subject?: unknown; score?: unknown }>).filter((row) =>
+      text(row?.subject) && text(row?.score));
+    if (!registryId || !name || !exam || (!score && !completeScores.length)) return null;
     const availability = raw.availability && typeof raw.availability === 'object' && !Array.isArray(raw.availability)
       ? raw.availability as Record<string, string[]>
       : {};
@@ -1349,7 +1351,7 @@ const filters = [
       university_en: text(raw.university_en),
       photo_url: text(raw.photo_url) || null,
       banner_url: text(raw.banner_url) || null,
-      subject_scores: scores as Array<{ subject: string; score: string }>,
+      subject_scores: completeScores.map((row) => ({ subject: text(row.subject), score: text(row.score) })),
       availability,
       bio: text(raw.bio) || null,
       bio_en: text(raw.bioEn ?? raw.bio_en) || null,
@@ -1560,7 +1562,7 @@ const filters = [
     const rateList = profileScores.map((row) => {
       const rate = matchingRateForScore(tutor, row);
       return `<li>
-        <span class="pf__rate-subject">${escapeHtml(row.subject)}<small class="pf__rate-score">${tr('Verified score', '검증 성적')} ${escapeHtml(row.score)}</small></span>
+          <span class="pf__rate-subject">${escapeHtml(row.subject)}<small class="pf__rate-score">${tr('Result', '성적')} ${escapeHtml(row.score)}</small></span>
         ${rate
           ? `<span class="pf__rate-price">${formatWon(rate.price)}<small>${tr('per hour', '시간당')}</small></span>`
           : `<a class="pf__rate-missing" href="${pricingHref}">${tr('See rate', '요금 확인')}</a>`}

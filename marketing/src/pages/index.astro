@@ -812,7 +812,7 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
     const photo = safeTutorAsset(tutor.photo_url) || '/images/ian-bae-placeholder.png';
     const rows = scoresOf(tutor);
     const fallback = !rows.length && String(tutor.score || '').trim() && tutor.score !== '.'
-      ? [{ subject: tutor.exam || previewText('Verified score', '검증 성적'), score: tutor.score }]
+      ? [{ subject: tutor.exam || previewText('Subject result', '과목 성적'), score: tutor.score }]
       : [];
     const allScores = rows.length ? rows : fallback;
     const visibleScores = allScores.slice(0, 3);
@@ -829,8 +829,8 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
         <div><h3 class="home-tutor-card__name"><span>${escapeTutorText(displayName)}</span>${alternateName && alternateName !== displayName ? `<small>${escapeTutorText(alternateName)}</small>` : ''}</h3><p class="home-tutor-card__uni">${escapeTutorText(tutorUniversity(tutor))}</p></div>
       </div>
       <ul class="home-tutor-card__curricula" aria-label="${previewText('Curricula taught', '수업 가능 커리큘럼')}">${categoryItems.map((category) => `<li>${escapeTutorText(previewText(category.en, category.ko))}</li>`).join('')}</ul>
-      ${visibleScores.length ? `<p class="home-tutor-card__score-head">${previewText('Subjects and verified scores', '과목 및 검증 성적')}</p><ul class="home-tutor-card__scores">${visibleScores.map((row) => `<li><span>${escapeTutorText(row.subject)}</span><strong>${escapeTutorText(row.score)}</strong></li>`).join('')}</ul>` : ''}
-      ${remaining > 0 ? `<p class="home-tutor-card__more">+${remaining} ${previewText('more verified scores', '개 검증 성적 더 보기')}</p>` : ''}
+      ${visibleScores.length ? `<p class="home-tutor-card__score-head">${previewText('Subject results', '과목별 성적')}</p><ul class="home-tutor-card__scores">${visibleScores.map((row) => `<li><span>${escapeTutorText(row.subject)}</span><strong>${escapeTutorText(row.score)}</strong></li>`).join('')}</ul>` : ''}
+      ${remaining > 0 ? `<p class="home-tutor-card__more">+${remaining} ${previewText('more results', '개 성적 더 보기')}</p>` : ''}
       ${bio ? `<p class="home-tutor-card__bio">${escapeTutorText(bio)}</p>` : ''}
       <span class="home-tutor-card__view">${previewText('View full profile', '전체 프로필 보기')}${tutorArrow}</span>
     </a>`;

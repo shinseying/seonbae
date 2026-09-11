@@ -55,16 +55,19 @@ export function registryRowFromApplication(
   registryId: string,
   application: TutorApplicationRow,
 ) {
-  const scores = cardScores(application.subject_scores);
-  // Older applications carried a single overall score instead of per-subject
-  // ones, so fall back to it rather than showing an empty badge.
+  let scores = cardScores(application.subject_scores);
+  // Preserve older applications by converting their one legacy result into
+  // the structured field. New cards never depend on `official_score`.
   const fallbackScore = (application.official_score || "").trim();
+  if (!scores.length && fallbackScore) {
+    scores = [{ subject: (application.curriculum || "성적").trim(), score: fallbackScore }];
+  }
 
   return {
     registry_id: registryId,
     name: application.full_name,
     exam: (application.curriculum || "").trim(),
-    score: scores.length ? "" : fallbackScore,
+    score: "",
     category: tutorCategoryFor(application.curriculum),
     university: application.university?.trim() || null,
     bio: application.introduction?.trim() || null,

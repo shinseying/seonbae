@@ -14,6 +14,7 @@ export type AdminStudent = {
 
 export type AdminZoomTutor = {
   registry_id: string;
+  roster_number: string | null;
   name: string;
   exam: string;
   zoom_host_email: string | null;
@@ -173,7 +174,7 @@ export default function AdminSessionManager({
                 <select value={form.tutorRegistryId} onChange={(event) => updateForm("tutorRegistryId", event.target.value)} required>
                   {activeTutors.map((tutor) => (
                     <option value={tutor.registry_id} key={tutor.registry_id}>
-                      {tutor.name} · {tutor.exam}
+                      {tutor.name} · {tutor.roster_number || "명부 번호 준비 중"} · {tutor.exam}
                     </option>
                   ))}
                 </select>
@@ -203,7 +204,7 @@ export default function AdminSessionManager({
                 return (
                   <article key={lesson.id}>
                     <time><b>{lesson.session_date}</b><span>{lesson.starts_at.slice(0, 5)} · {lesson.duration_minutes}분</span></time>
-                    <div><h3>{lesson.title}</h3><p>{student?.full_name || student?.email || "학생"} · {tutor?.name || "튜터"}</p></div>
+                    <div><h3>{lesson.title}</h3><p>{student?.full_name || student?.email || "학생"} · {tutor?.name || "튜터"} · {tutor?.roster_number || "명부 번호 준비 중"}</p></div>
                     <span className={styles[statusClass(lesson.zoom_status)]}>{statusLabel(lesson.zoom_status)}</span>
                     {lesson.zoom_status !== "cancelled" && lesson.zoom_status !== "ended" && (
                       <>

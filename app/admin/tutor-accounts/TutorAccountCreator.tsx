@@ -60,12 +60,15 @@ export default function TutorAccountCreator({
       const linkedRegistryId = payload.cardMode === "link" && typeof payload.existingRegistryId === "string"
         ? payload.existingRegistryId
         : "";
+      const linkedRosterNumber = linkedRegistryId
+        ? availableCards.find((card) => card.registry_id === linkedRegistryId)?.roster_number
+        : null;
       if (linkedRegistryId) {
         setAvailableCards((cards) => cards.filter((card) => card.registry_id !== linkedRegistryId));
       }
       setMessage(result.warning || (
         payload.cardMode === "link"
-          ? `계정을 만들고 ${result.registryId || linkedRegistryId} 기존 카드에 연결했습니다.`
+          ? `계정을 만들고 ${linkedRosterNumber || "명부 번호 준비 중"} 기존 카드에 연결했습니다.`
           : "계정과 새 비공개 카드를 만들고 일회용 비밀번호 설정 링크를 보냈습니다."
       ));
       onDone?.(result);

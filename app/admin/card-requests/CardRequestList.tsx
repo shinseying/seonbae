@@ -7,7 +7,7 @@ import styles from "../applications/applications.module.css";
 export type CardRequest = {
   id: number;
   tutorName: string;
-  registryId: string;
+  rosterNumber: string | null;
   note: string | null;
   payload: Record<string, unknown>;
   createdAt: string;
@@ -61,7 +61,7 @@ export default function CardRequestList({ requests }: { requests: CardRequest[] 
           <article key={item.id}>
             <div className={styles.title}>
               <div>
-                <small>#{item.id} · {item.registryId}</small>
+                <small>#{item.id} · {item.rosterNumber || "명부 번호 준비 중"}</small>
                 <h3>{item.tutorName}</h3>
               </div>
               <time>{formatDate(item.createdAt)}</time>

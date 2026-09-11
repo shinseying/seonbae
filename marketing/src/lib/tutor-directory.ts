@@ -4,6 +4,7 @@ export type CurriculumKey = 'ib' | 'ap' | 'alevel' | 'igcse' | 'tests';
 
 export type PublicTutor = {
   registry_id: string;
+  roster_number?: string | null;
   name: string;
   name_en?: string;
   exam: string;

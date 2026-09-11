@@ -7,6 +7,7 @@ import styles from "./profile.module.css";
 
 export type TutorProfile = {
   registryId: string;
+  rosterNumber: string | null;
   name: string;
   university: string;
   photoUrl: string | null;
@@ -120,6 +121,7 @@ export default function TutorProfileForm({
             <TutorCard
               tutor={{
                 registryId: profile.registryId,
+                rosterNumber: profile.rosterNumber,
                 name: profile.name,
                 university: profile.university,
                 photoUrl: profile.photoUrl,
@@ -164,7 +166,7 @@ export default function TutorProfileForm({
             <button type="button" onClick={() => setScores((current) => current.filter((_, i) => i !== index))} aria-label={l("삭제", "Remove")}>×</button>
           </div>
         ))}
-        <button type="button" className={styles.add} onClick={() => setScores((current) => [...current, { subject: "", score: "" }])}>
+        <button type="button" className={styles.add} disabled={scores.length >= 12} onClick={() => setScores((current) => current.length < 12 ? [...current, { subject: "", score: "" }] : current)}>
           {l("과목 추가", "Add subject")}
         </button>
       </fieldset>

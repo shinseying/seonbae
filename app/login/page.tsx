@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getPasswordChecks,
@@ -11,13 +11,42 @@ import {
 import { normalizePhone, sanitizePhoneInput } from "../../utils/auth/phone";
 import { isEmailAddress, isKoreanSchoolEmail } from "../../utils/auth/school-email";
 import {
+  MAX_TUTOR_CREDENTIAL_FILES,
+  MAX_TUTOR_SUBJECTS,
+  TUTOR_CURRICULA,
+  TUTOR_LESSON_FORMATS,
+  TUTOR_UNIVERSITIES,
+  tutorSignupErrorKo,
+  validateTutorCredentialCount,
+  validateTutorSignupDetails,
+  type TutorSubjectScore,
+  type TutorSignupErrorCode,
+} from "../../utils/auth/tutor-signup";
+import {
   setSeonbaeLocale,
   useSeonbaeLocale,
   type SeonbaeLocale,
 } from "../../utils/i18n/client";
+import { isDocumentMimeType, MAX_DOCUMENT_BYTES } from "../../utils/files/document-rules";
+import { createClient as createBrowserSupabaseClient } from "../../utils/supabase/client";
 import styles from "./login.module.css";
 
 type AuthAction = "signin" | "signup" | "find-id" | "reset-password";
+
+type EditableSubjectScore = TutorSubjectScore & { id: number };
+
+async function discardTutorUpload(ticket: string) {
+  try {
+    await fetch("/api/auth/signup/uploads", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticket }),
+      keepalive: true,
+    });
+  } catch {
+    // Best effort: the signed ticket expires shortly and cannot expose files.
+  }
+}
 
 const actionCopy: Record<
   AuthAction,
@@ -57,7 +86,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [accountRole, setAccountRole] = useState<"student" | "parent" | "tutor">("student");
+  const [tutorUniversity, setTutorUniversity] = useState("");
+  const [tutorMajorYear, setTutorMajorYear] = useState("");
+  const [tutorCurriculum, setTutorCurriculum] = useState("");
+  const [tutorLanguages, setTutorLanguages] = useState("");
+  const [tutorLessonFormat, setTutorLessonFormat] = useState("");
+  const [tutorSubjectScores, setTutorSubjectScores] = useState<EditableSubjectScore[]>([
+    { id: 1, subject: "", score: "" },
+  ]);
+  const [nextSubjectId, setNextSubjectId] = useState(2);
+  const [tutorIntroduction, setTutorIntroduction] = useState("");
   const [acceptanceLetter, setAcceptanceLetter] = useState<File | null>(null);
+  const [credentialDocuments, setCredentialDocuments] = useState<File[]>([]);
   const [remember, setRemember] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
@@ -66,6 +106,7 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const activeTutorUpload = useRef<{ ticket: string; finalizing: boolean } | null>(null);
 
   const passwordChecks = useMemo(() => getPasswordChecks(password), [password]);
   const allRequiredAgreed = privacyAgreed && termsAgreed && ageConfirmed;
@@ -78,6 +119,20 @@ export default function LoginPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const cleanupCancelledUpload = () => {
+      const active = activeTutorUpload.current;
+      if (!active || active.finalizing) return;
+      activeTutorUpload.current = null;
+      void discardTutorUpload(active.ticket);
+    };
+    window.addEventListener("pagehide", cleanupCancelledUpload);
+    return () => {
+      window.removeEventListener("pagehide", cleanupCancelledUpload);
+      cleanupCancelledUpload();
+    };
+  }, []);
+
   function changeLocale(nextLocale: SeonbaeLocale) {
     setSeonbaeLocale(nextLocale);
   }
@@ -88,9 +143,27 @@ export default function LoginPage() {
     if (locale === "ko" || !/[가-힣]/.test(value)) return value;
     return fallbackEn;
   };
+  const tutorSignupMessage = (code: TutorSignupErrorCode) => {
+    const english: Record<TutorSignupErrorCode, string> = {
+      university: "Select your current or accepted university.",
+      majorYear: "Enter your course and year in 120 characters or fewer.",
+      curriculum: "Select the curriculum you want to teach.",
+      languages: "Enter the languages you can teach in, using 80 characters or fewer.",
+      lessonFormat: "Select your preferred lesson format.",
+      subjectCount: `Add between 1 and ${MAX_TUTOR_SUBJECTS} subjects.`,
+      subjectRows: "Enter both the subject and result for every row.",
+      introduction: "Describe your teaching experience in 2,000 characters or fewer.",
+      credentialCount: `Attach between 1 and ${MAX_TUTOR_CREDENTIAL_FILES} score reports or credentials.`,
+    };
+    return locale === "ko" ? tutorSignupErrorKo(code) : english[code];
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const requestedLanguage = params.get("lang");
+    if (requestedLanguage === "en" || requestedLanguage === "ko") {
+      setSeonbaeLocale(requestedLanguage);
+    }
     const requestedAction = params.get("mode");
     const requestedRole = params.get("role");
     if (requestedAction === "signup") setAction("signup");
@@ -137,6 +210,30 @@ export default function LoginPage() {
     }
   }
 
+  function selectAccountRole(role: "student" | "parent" | "tutor") {
+    setAccountRole(role);
+    if (role !== "tutor") {
+      setAcceptanceLetter(null);
+      setCredentialDocuments([]);
+    }
+  }
+
+  function updateSubjectScore(id: number, key: keyof TutorSubjectScore, value: string) {
+    setTutorSubjectScores((rows) => rows.map((row) => (
+      row.id === id ? { ...row, [key]: value } : row
+    )));
+  }
+
+  function addSubjectScore() {
+    if (tutorSubjectScores.length >= MAX_TUTOR_SUBJECTS) return;
+    setTutorSubjectScores((rows) => [...rows, { id: nextSubjectId, subject: "", score: "" }]);
+    setNextSubjectId((value) => value + 1);
+  }
+
+  function removeSubjectScore(id: number) {
+    setTutorSubjectScores((rows) => rows.length === 1 ? rows : rows.filter((row) => row.id !== id));
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -164,10 +261,54 @@ export default function LoginPage() {
         setBusy(false);
         return;
       }
+      if (accountRole === "tutor") {
+        const detailError = validateTutorSignupDetails({
+          university: tutorUniversity.trim(),
+          majorYear: tutorMajorYear.trim(),
+          curriculum: tutorCurriculum.trim(),
+          languages: tutorLanguages.trim(),
+          lessonFormat: tutorLessonFormat.trim(),
+          subjectScores: tutorSubjectScores.map(({ subject, score }) => ({
+            subject: subject.trim(),
+            score: score.trim(),
+          })),
+          introduction: tutorIntroduction.trim(),
+        });
+        if (detailError) {
+          setMessage(tutorSignupMessage(detailError));
+          setBusy(false);
+          return;
+        }
+      }
       if (accountRole === "tutor" && !acceptanceLetter) {
-        setMessage(l("학적증명서를 첨부해 주세요.", "Attach your school acceptance or enrollment letter."));
+        setMessage(l("재학 또는 입학 증명서를 첨부해 주세요.", "Attach your proof of enrolment or admission."));
         setBusy(false);
         return;
+      }
+      if (accountRole === "tutor") {
+        const credentialError = validateTutorCredentialCount(credentialDocuments.length);
+        if (credentialError) {
+          setMessage(tutorSignupMessage(credentialError));
+          setBusy(false);
+          return;
+        }
+        const documents = [acceptanceLetter!, ...credentialDocuments];
+        if (documents.some((document) => !isDocumentMimeType(document.type))) {
+          setMessage(l(
+            "첨부 파일은 PDF, JPG 또는 PNG 형식만 사용할 수 있습니다.",
+            "Attachments must be PDF, JPG, or PNG files.",
+          ));
+          setBusy(false);
+          return;
+        }
+        if (documents.some((document) => document.size < 1 || document.size > MAX_DOCUMENT_BYTES)) {
+          setMessage(l(
+            "각 첨부 파일은 10MB 이하여야 합니다.",
+            "Each attachment must be no larger than 10MB.",
+          ));
+          setBusy(false);
+          return;
+        }
       }
       if (!normalizePhone(phone)) {
         setMessage(l("휴대전화번호를 올바르게 입력해 주세요. 해외 번호는 국가번호를 포함해 주세요.", "Enter a valid mobile number, including the country code when outside Korea."));
@@ -196,6 +337,9 @@ export default function LoginPage() {
           ...(action === "reset-password" ? { email: identifier } : {}),
         };
 
+    let uploadTicket: string | null = null;
+    let finalSignupStarted = false;
+
     try {
       const signupForm = new FormData();
       if (action === "signup") {
@@ -205,12 +349,105 @@ export default function LoginPage() {
         signupForm.set("password", password);
         signupForm.set("accountRole", accountRole);
         if (accountRole === "tutor" && acceptanceLetter) {
-          signupForm.set("acceptanceLetter", acceptanceLetter);
+          signupForm.set("university", tutorUniversity);
+          signupForm.set("majorYear", tutorMajorYear);
+          signupForm.set("curriculum", tutorCurriculum);
+          signupForm.set("languages", tutorLanguages);
+          signupForm.set("lessonFormat", tutorLessonFormat);
+          signupForm.set("introduction", tutorIntroduction);
+          for (const row of tutorSubjectScores) {
+            signupForm.append("subjectName", row.subject);
+            signupForm.append("subjectScore", row.score);
+          }
+
+          const documents = [
+            { kind: "school_proof" as const, file: acceptanceLetter },
+            ...credentialDocuments.map((file) => ({ kind: "credential" as const, file })),
+          ];
+          setMessage(l("서류 업로드를 준비하고 있습니다...", "Preparing your document upload..."));
+          const preparationResponse = await fetch("/api/auth/signup/uploads", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: identifier,
+              phone,
+              documents: documents.map(({ kind, file }) => ({
+                kind,
+                originalName: file.name,
+                mimeType: file.type,
+                sizeBytes: file.size,
+              })),
+            }),
+          });
+          const preparation = await preparationResponse.json().catch(() => ({}));
+          if (!preparationResponse.ok) {
+            setMessage(localizeApiMessage(
+              preparation.error,
+              "튜터 서류 업로드를 준비하지 못했습니다. 다시 시도해 주세요.",
+              "We could not prepare the tutor document upload. Please try again.",
+            ));
+            return;
+          }
+
+          const uploads = preparation.uploads;
+          if (
+            typeof preparation.ticket !== "string"
+            || !Array.isArray(uploads)
+            || uploads.length !== documents.length
+            || uploads.some((upload) => (
+              !upload
+              || typeof upload.path !== "string"
+              || typeof upload.token !== "string"
+            ))
+          ) {
+            setMessage(l(
+              "튜터 서류 업로드 정보를 확인하지 못했습니다. 다시 시도해 주세요.",
+              "We could not verify the tutor upload details. Please try again.",
+            ));
+            return;
+          }
+
+          uploadTicket = preparation.ticket;
+          activeTutorUpload.current = { ticket: uploadTicket, finalizing: false };
+          const storage = createBrowserSupabaseClient().storage.from("account-documents");
+          for (let index = 0; index < documents.length; index += 1) {
+            setMessage(l(
+              `서류를 업로드하고 있습니다 (${index + 1}/${documents.length})...`,
+              `Uploading documents (${index + 1}/${documents.length})...`,
+            ));
+            const { error: uploadError } = await storage.uploadToSignedUrl(
+              uploads[index].path,
+              uploads[index].token,
+              documents[index].file,
+              {
+                cacheControl: "0",
+                contentType: documents[index].file.type,
+                upsert: false,
+              },
+            );
+            if (uploadError) {
+              await discardTutorUpload(uploadTicket);
+              activeTutorUpload.current = null;
+              uploadTicket = null;
+              setMessage(l(
+                "튜터 서류를 업로드하지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.",
+                "We could not upload the tutor documents. Check your connection and try again.",
+              ));
+              return;
+            }
+          }
+          signupForm.set("uploadTicket", uploadTicket);
         }
         signupForm.set("privacyAgreed", String(privacyAgreed));
         signupForm.set("termsAgreed", String(termsAgreed));
         signupForm.set("ageConfirmed", String(ageConfirmed));
       }
+
+      if (uploadTicket) {
+        setMessage(l("가입 요청을 안전하게 저장하고 있습니다...", "Securely saving your application..."));
+        activeTutorUpload.current = { ticket: uploadTicket, finalizing: true };
+      }
+      finalSignupStarted = action === "signup";
       const response = await fetch(endpoint, action === "signup"
         ? { method: "POST", body: signupForm }
         : {
@@ -218,9 +455,14 @@ export default function LoginPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
           });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        if (uploadTicket) {
+          await discardTutorUpload(uploadTicket);
+          activeTutorUpload.current = null;
+          uploadTicket = null;
+        }
         const fallbackKo = action === "signin"
           ? "이메일 또는 비밀번호가 일치하지 않습니다."
           : "입력한 정보를 다시 확인해 주세요.";
@@ -232,6 +474,8 @@ export default function LoginPage() {
         return;
       }
 
+      activeTutorUpload.current = null;
+
       if (result.destination) {
         setRedirecting(true);
         router.replace(result.destination);
@@ -241,6 +485,13 @@ export default function LoginPage() {
 
       setMessage(localizeApiMessage(result.message, "가입 확인 메일을 보냈습니다.", "We sent your confirmation email."));
     } catch {
+      // A failed direct upload is safe to remove. Once final account creation
+      // has started, its outcome can be ambiguous after a network interruption,
+      // so the server remains responsible for retaining or rolling it back.
+      if (uploadTicket && !finalSignupStarted) {
+        await discardTutorUpload(uploadTicket);
+        activeTutorUpload.current = null;
+      }
       setMessage(l("요청을 처리하지 못했습니다. 네트워크 연결을 확인하고 다시 시도해 주세요.", "We could not process the request. Check your connection and try again."));
     } finally {
       setBusy(false);
@@ -291,7 +542,16 @@ export default function LoginPage() {
     setShowPassword(false);
     setShowConfirmPassword(false);
     setAccountRole("student");
+    setTutorUniversity("");
+    setTutorMajorYear("");
+    setTutorCurriculum("");
+    setTutorLanguages("");
+    setTutorLessonFormat("");
+    setTutorSubjectScores([{ id: 1, subject: "", score: "" }]);
+    setNextSubjectId(2);
+    setTutorIntroduction("");
     setAcceptanceLetter(null);
+    setCredentialDocuments([]);
     setPrivacyAgreed(false);
     setTermsAgreed(false);
     setAgeConfirmed(false);
@@ -430,7 +690,7 @@ export default function LoginPage() {
                       name="account-role"
                       value="student"
                       checked={accountRole === "student"}
-                      onChange={() => setAccountRole("student")}
+                      onChange={() => selectAccountRole("student")}
                     />
                     <span><b>{l("학생 계정", "Student")}</b><small>{l("수업 일정, Zoom, 튜터 채팅", "Lesson calendar, Zoom, and tutor chat")}</small></span>
                   </label>
@@ -440,7 +700,7 @@ export default function LoginPage() {
                       name="account-role"
                       value="parent"
                       checked={accountRole === "parent"}
-                      onChange={() => setAccountRole("parent")}
+                      onChange={() => selectAccountRole("parent")}
                     />
                     <span><b>{l("보호자 계정", "Parent")}</b><small>{l("자녀 리포트, 일정, 결제 관리", "Student reports, schedules, and billing")}</small></span>
                   </label>
@@ -450,7 +710,7 @@ export default function LoginPage() {
                       name="account-role"
                       value="tutor"
                       checked={accountRole === "tutor"}
-                      onChange={() => setAccountRole("tutor")}
+                      onChange={() => selectAccountRole("tutor")}
                     />
                     <span><b>{l("튜터 계정", "Tutor")}</b></span>
                   </label>
@@ -473,19 +733,6 @@ export default function LoginPage() {
               </label>
             )}
 
-            {isSignup && accountRole === "tutor" && (
-              <label className={styles.fileField}>
-                <span>{l("학적증명서", "School acceptance or enrollment letter")}<RequiredMark /></span>
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
-                  onChange={(event) => setAcceptanceLetter(event.target.files?.[0] ?? null)}
-                  required
-                />
-                <small className={styles.fieldNote}>{l("10MB 이하 PDF, JPG 또는 PNG", "PDF, JPG, or PNG up to 10MB")}</small>
-              </label>
-            )}
-
             {(action === "signin" || isSignup || action === "reset-password") && (
               <label>
                 <span>
@@ -500,8 +747,14 @@ export default function LoginPage() {
                   autoCapitalize="none"
                   spellCheck={false}
                   maxLength={254}
+                  aria-describedby={isSignup && accountRole === "tutor" ? "tutor-email-help" : undefined}
                   required
                 />
+                {isSignup && accountRole === "tutor" && (
+                  <small className={styles.fieldNote} id="tutor-email-help">
+                    {l("현재 학교에서 사용하는 .ac.kr 이메일을 입력해 주세요.", "Use your current university email ending in .ac.kr.")}
+                  </small>
+                )}
               </label>
             )}
 
@@ -525,6 +778,178 @@ export default function LoginPage() {
                   </small>
                 )}
               </label>
+            )}
+
+            {isSignup && accountRole === "tutor" && (
+              <section className={styles.tutorDetails} aria-labelledby="tutor-details-title">
+                <header>
+                  <p>TUTOR APPLICATION</p>
+                  <h3 id="tutor-details-title">{l("튜터 지원 정보", "Tutor application details")}</h3>
+                  <span>
+                    {l(
+                      "가르칠 분야와 이를 확인할 자료를 입력해 주세요. 아래 정보는 튜터 심사에 사용됩니다.",
+                      "Tell us what you can teach and provide the documents used for tutor review.",
+                    )}
+                  </span>
+                </header>
+
+                <div className={styles.tutorFieldGrid}>
+                  <label>
+                    <span>{l("대학교", "University")}<RequiredMark /></span>
+                    <select value={tutorUniversity} onChange={(event) => setTutorUniversity(event.target.value)} required>
+                      <option value="" disabled>{l("학교 선택", "Select university")}</option>
+                      {TUTOR_UNIVERSITIES.map((university) => (
+                        <option value={university} key={university}>{universityLabel(university, locale)}</option>
+                      ))}
+                    </select>
+                    <small className={styles.fieldNote}>
+                      {l("현재 재학 중이거나 입학 허가를 받은 학교를 선택해 주세요.", "Select the university where you are enrolled or have accepted admission.")}
+                    </small>
+                  </label>
+                  <label>
+                    <span>{l("전공과 학년", "Course and year")}<RequiredMark /></span>
+                    <input
+                      value={tutorMajorYear}
+                      onChange={(event) => setTutorMajorYear(event.target.value)}
+                      maxLength={120}
+                      placeholder={l("예: 경제학부 2학년 또는 입학 예정", "e.g. Economics, 2nd year or incoming")}
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>{l("지원 커리큘럼", "Curriculum")}<RequiredMark /></span>
+                    <select value={tutorCurriculum} onChange={(event) => setTutorCurriculum(event.target.value)} required>
+                      <option value="" disabled>{l("커리큘럼 선택", "Select curriculum")}</option>
+                      {TUTOR_CURRICULA.map((curriculum) => <option value={curriculum} key={curriculum}>{curriculum}</option>)}
+                    </select>
+                    <small className={styles.fieldNote}>
+                      {l("가장 자신 있게 가르칠 수 있는 커리큘럼을 선택해 주세요.", "Choose the curriculum you are best prepared to teach.")}
+                    </small>
+                  </label>
+                  <label>
+                    <span>{l("수업 가능 언어", "Teaching languages")}<RequiredMark /></span>
+                    <input
+                      value={tutorLanguages}
+                      onChange={(event) => setTutorLanguages(event.target.value)}
+                      maxLength={80}
+                      placeholder={l("예: 한국어, 영어", "e.g. Korean, English")}
+                      required
+                    />
+                  </label>
+                  <label className={styles.fullField}>
+                    <span>{l("선호 수업 형식", "Preferred lesson format")}<RequiredMark /></span>
+                    <select value={tutorLessonFormat} onChange={(event) => setTutorLessonFormat(event.target.value)} required>
+                      <option value="" disabled>{l("수업 형식 선택", "Select lesson format")}</option>
+                      {TUTOR_LESSON_FORMATS.map((format) => (
+                        <option value={format} key={format}>{lessonFormatLabel(format, locale)}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <fieldset className={styles.subjectScores}>
+                  <legend>{l("가르칠 과목의 과목별 성적", "Results for subjects you want to teach")}<RequiredMark /></legend>
+                  <p className={styles.fieldNote}>
+                    {l("가르칠 과목마다 한 줄씩 입력해 주세요. 이 내용은 승인 후 튜터 카드 초안에 사용됩니다.", "Add one row per subject. These results are used for your tutor-card draft after approval.")}
+                  </p>
+                  <div className={styles.subjectRows}>
+                    {tutorSubjectScores.map((row, index) => (
+                      <div className={styles.subjectRow} key={row.id}>
+                        <label>
+                          <span>{l(`과목 ${index + 1}`, `Subject ${index + 1}`)}</span>
+                          <input
+                            value={row.subject}
+                            onChange={(event) => updateSubjectScore(row.id, "subject", event.target.value)}
+                            maxLength={80}
+                            placeholder={l("예: IB Physics HL", "e.g. IB Physics HL")}
+                            required
+                          />
+                        </label>
+                        <label>
+                          <span>{l("성적", "Result")}</span>
+                          <input
+                            value={row.score}
+                            onChange={(event) => updateSubjectScore(row.id, "score", event.target.value)}
+                            maxLength={24}
+                            placeholder={l("예: 7", "e.g. 7")}
+                            required
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className={styles.removeSubject}
+                          disabled={tutorSubjectScores.length === 1}
+                          onClick={() => removeSubjectScore(row.id)}
+                          aria-label={l(`${index + 1}번째 과목 삭제`, `Remove subject ${index + 1}`)}
+                        >
+                          {l("삭제", "Remove")}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.addSubject}
+                    disabled={tutorSubjectScores.length >= MAX_TUTOR_SUBJECTS}
+                    onClick={addSubjectScore}
+                  >
+                    <span aria-hidden="true">+</span> {l("과목 추가", "Add subject")}
+                  </button>
+                </fieldset>
+
+                <label>
+                  <span>{l("소개 및 수업 경험", "Teaching experience")}<RequiredMark /></span>
+                  <textarea
+                    value={tutorIntroduction}
+                    onChange={(event) => setTutorIntroduction(event.target.value)}
+                    rows={5}
+                    maxLength={2000}
+                    placeholder={l("지원 동기, 수업 경험과 가르칠 때 중요하게 생각하는 점을 적어 주세요.", "Describe why you are applying, your teaching experience, and your approach to lessons.")}
+                    required
+                  />
+                  <small className={styles.fieldNote}>{tutorIntroduction.length.toLocaleString()} / 2,000</small>
+                </label>
+
+                <div className={styles.documentFields}>
+                  <div className={styles.documentHeading}>
+                    <h4>{l("심사 서류", "Review documents")}</h4>
+                    <p>{l("학적 증명과 성적·자격 증빙을 구분해서 첨부해 주세요.", "Upload school proof and score or qualification evidence separately.")}</p>
+                  </div>
+                  <label className={styles.fileField}>
+                    <span>{l("재학·입학 증명", "Proof of enrolment or admission")}<RequiredMark /></span>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
+                      aria-describedby="school-proof-help"
+                      onChange={(event) => setAcceptanceLetter(event.target.files?.[0] ?? null)}
+                      required
+                    />
+                    <small className={styles.fieldNote} id="school-proof-help">
+                      {l("재학증명서, 합격통지서 또는 입학허가서 1개. 성적표와 자격증은 아래에 첨부해 주세요. PDF, JPG 또는 PNG, 최대 10MB.", "One enrolment certificate, acceptance notice, or admission letter. Upload score reports and certificates below. PDF, JPG, or PNG, up to 10MB.")}
+                    </small>
+                    {acceptanceLetter && <FileSelection files={[acceptanceLetter]} label={l("선택된 학적 증명", "Selected school proof")} />}
+                  </label>
+                  <label className={styles.fileField}>
+                    <span>{l("성적·자격 증빙", "Score and qualification evidence")}<RequiredMark /></span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
+                      aria-describedby="credential-documents-help"
+                      aria-invalid={credentialDocuments.length > MAX_TUTOR_CREDENTIAL_FILES}
+                      onChange={(event) => setCredentialDocuments(Array.from(event.target.files ?? []))}
+                      required
+                    />
+                    <small className={styles.fieldNote} id="credential-documents-help">
+                      {l(`위 과목 성적을 확인할 성적표, 시험 결과 또는 자격증을 1~${MAX_TUTOR_CREDENTIAL_FILES}개 첨부할 수 있습니다. 파일당 PDF, JPG 또는 PNG, 최대 10MB.`, `Attach 1–${MAX_TUTOR_CREDENTIAL_FILES} score reports, test results, or certificates covering the subjects above. PDF, JPG, or PNG, up to 10MB per file.`)}
+                    </small>
+                    {credentialDocuments.length > 0 && <FileSelection files={credentialDocuments} label={l("선택된 성적·자격 증빙", "Selected score and qualification evidence")} />}
+                    {credentialDocuments.length > MAX_TUTOR_CREDENTIAL_FILES && (
+                      <small className={styles.fieldError} role="alert">{tutorSignupMessage("credentialCount")}</small>
+                    )}
+                  </label>
+                </div>
+              </section>
             )}
 
             {(action === "signin" || isSignup) && (
@@ -608,13 +1033,23 @@ export default function LoginPage() {
                     <div>
                       <dt>{l("수집 항목", "Information collected")}</dt>
                       <dd>
-                        {l("이름, 이메일, 휴대전화번호, 인증·동의 기록", "Name, email, mobile number, and authentication and consent records")}
+                        {accountRole === "tutor"
+                          ? l(
+                              "이름, 학교 이메일, 휴대전화번호, 대학·전공·학년, 수업 가능 정보, 과목별 성적, 소개, 제출 서류, 인증·동의 기록",
+                              "Name, university email, mobile number, university, course and year, teaching details, subject results, introduction, submitted documents, and authentication and consent records",
+                            )
+                          : l("이름, 이메일, 휴대전화번호, 인증·동의 기록", "Name, email, mobile number, and authentication and consent records")}
                       </dd>
                     </div>
                     <div>
                       <dt>{l("이용 목적", "Purpose")}</dt>
                       <dd>
-                        {l("회원 관리, 포털 제공, 계정 복구, 비밀번호 재설정", "Account management, portal access, account recovery, and password resets")}
+                        {accountRole === "tutor"
+                          ? l(
+                              "회원 관리, 튜터 자격 심사, 계약 및 튜터 카드 초안 생성, 포털 제공, 계정 복구",
+                              "Account management, tutor eligibility review, contracting and tutor-card drafting, portal access, and account recovery",
+                            )
+                          : l("회원 관리, 포털 제공, 계정 복구, 비밀번호 재설정", "Account management, portal access, account recovery, and password resets")}
                       </dd>
                     </div>
                     <div>
@@ -743,6 +1178,39 @@ export default function LoginPage() {
 
 function RequiredMark() {
   return <i className={styles.requiredMark} aria-hidden="true">*</i>;
+}
+
+function FileSelection({ files, label }: { files: File[]; label: string }) {
+  return (
+    <ul className={styles.fileSelection} aria-label={label}>
+      {files.map((file, index) => (
+        <li key={`${file.name}-${file.size}-${index}`}>
+          <span>{file.name}</span>
+          <small>{formatFileSize(file.size)}</small>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function universityLabel(university: (typeof TUTOR_UNIVERSITIES)[number], locale: SeonbaeLocale) {
+  if (locale === "ko") return university;
+  if (university === "서울대학교") return "Seoul National University";
+  if (university === "고려대학교") return "Korea University";
+  return "Yonsei University";
+}
+
+function lessonFormatLabel(format: (typeof TUTOR_LESSON_FORMATS)[number], locale: SeonbaeLocale) {
+  if (locale === "ko") return format;
+  if (format === "온라인 1:1") return "Online 1:1";
+  if (format === "온라인 소그룹") return "Online small group";
+  if (format === "대면 1:1") return "In person 1:1";
+  return "Online or in person";
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function GoogleIcon() {

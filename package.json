@@ -8,8 +8,9 @@
     "start": "next start",
     "test:portal-routing": "node --experimental-strip-types --test tests/portal-state.test.ts",
     "test:security": "node --experimental-strip-types --test tests/access-gate.test.ts",
+    "test:tutor-signup": "node --experimental-strip-types --test tests/tutor-signup.test.ts tests/tutor-upload-ticket.test.ts",
     "test:tutor-provisioning": "node --experimental-strip-types --test tests/tutor-provisioning.test.ts",
-    "test:tutor-import": "node --experimental-strip-types --test tests/tutor-import.test.ts"
+    "test:tutor-import": "node --experimental-strip-types --test tests/tutor-import.test.ts tests/tutor-card-fields.test.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -19,13 +20,13 @@
     "next": "^15.5.25",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "read-excel-file": "9.3.10"
+    "read-excel-file": "9.3.10",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@types/node": "20.17.6",
     "@types/react": "18.3.24",
     "astro": "^7.3.2",
-    "sharp": "^0.35.4",
     "typescript": "5.8.2"
   }
 }

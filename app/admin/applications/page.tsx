@@ -36,7 +36,7 @@ export default async function AdminApplicationsPage() {
   const registryQueries = Promise.all([
     admin
       .from("tutors")
-      .select("registry_id,name,university,exam,active,display_order")
+      .select("registry_id,roster_number,name,university,exam,active,display_order")
       .order("display_order", { ascending: true })
       .order("registry_id", { ascending: true }),
     admin
@@ -65,6 +65,9 @@ export default async function AdminApplicationsPage() {
     }
   }
   const [{ data: tutorRows }, { data: linkedProfiles }] = await registryQueries;
+  const rosterNumberByRegistry = new Map(
+    (tutorRows ?? []).map((card) => [card.registry_id, card.roster_number]),
+  );
   const linkedRegistryIds = new Set(
     (linkedProfiles ?? [])
       .map((row) => row.tutor_registry_id)
@@ -78,20 +81,24 @@ export default async function AdminApplicationsPage() {
     const signed = await admin.storage.from("account-documents").createSignedUrl(path, 60 * 60);
     return signed.data?.signedUrl || null;
   };
-  const accounts: AccountApplication[] = await Promise.all((accountRows ?? []).map(async (item) => ({
-    ...item,
-    contract_signed:
-      item.requested_role !== "tutor"
-      || !item.user_id
-      || signedTutorIds.has(item.user_id),
-    tutor_registry_id: item.user_id ? tutorRegistryByUser.get(item.user_id) || null : null,
-    documentUrl: await signUrl(item.acceptance_letter_path),
-    credentialUrl: await signUrl(item.credential_path),
-    subject_scores: (Array.isArray(item.subject_scores) ? item.subject_scores : []).map((row) => ({
-      subject: String(row?.subject ?? ""),
-      score: String(row?.score ?? ""),
-    })),
-  })));
+  const accounts: AccountApplication[] = await Promise.all((accountRows ?? []).map(async (item) => {
+    const registryId = item.user_id ? tutorRegistryByUser.get(item.user_id) || null : null;
+    return {
+      ...item,
+      contract_signed:
+        item.requested_role !== "tutor"
+        || !item.user_id
+        || signedTutorIds.has(item.user_id),
+      has_tutor_card: Boolean(registryId),
+      tutor_roster_number: registryId ? rosterNumberByRegistry.get(registryId) || null : null,
+      documentUrl: await signUrl(item.acceptance_letter_path),
+      credentialUrl: await signUrl(item.credential_path),
+      subject_scores: (Array.isArray(item.subject_scores) ? item.subject_scores : []).map((row) => ({
+        subject: String(row?.subject ?? ""),
+        score: String(row?.score ?? ""),
+      })),
+    };
+  }));
   return (
     <main className={styles.page}>
       <AdminSidebar active="applications" adminName={profile.full_name || profile.email || "관리자"} styles={styles} />

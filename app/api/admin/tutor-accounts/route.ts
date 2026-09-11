@@ -7,6 +7,7 @@ import { sendTutorAccountCreatedEmail } from "../../../../utils/email/tutor-acco
 import { normalizePhone } from "../../../../utils/auth/phone";
 import { isKoreanSchoolEmail } from "../../../../utils/auth/school-email";
 import { parseTutorCardChoice } from "../../../../utils/tutors/provisioning";
+import { createTutorRegistryId } from "../../../../utils/tutors/registry-id";
 
 export const dynamic = "force-dynamic";
 
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
   // existing card exactly as the admin prepared it before the account existed.
   let createdRegistry = false;
   if (cardChoice.mode === "create") {
-    registryId = `T-${invite.user.id.slice(0, 8).toUpperCase()}`;
+    registryId = createTutorRegistryId(invite.user.id);
     const { error: registryError } = await admin
       .from("tutors")
       .insert(registryRowFromApplication(registryId, application));

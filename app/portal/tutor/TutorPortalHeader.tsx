@@ -7,7 +7,7 @@ import PortalSidebar, { type PortalSidebarItem } from "../PortalSidebar";
 export type TutorHeaderUser = {
   name: string;
   email: string;
-  registryId: string;
+  rosterNumber: string | null;
 };
 
 export default function TutorPortalHeader({
@@ -40,7 +40,7 @@ export default function TutorPortalHeader({
       roleLabel={l("튜터 포털", "Tutor portal")}
       navigationLabel={l("튜터 포털 메뉴", "Tutor portal menu")}
       homeHref="/portal/tutor"
-      user={{ name: tutor.name, email: tutor.email, detail: tutor.registryId }}
+      user={{ name: tutor.name, email: tutor.email, detail: tutor.rosterNumber || l("명부 번호 준비 중", "Roster number pending") }}
       items={items}
       labels={{
         expand: l("사이드바 펼치기", "Expand sidebar"),

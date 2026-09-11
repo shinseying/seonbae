@@ -1,7 +1,7 @@
-import { parseProfile } from "./profile-patch";
+import { parseProfile } from "./profile-patch.ts";
 
 export const TUTOR_FIELDS =
-  "registry_id,name,exam,score,category,university,university_en,photo_url,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
+  "registry_id,roster_number,name,exam,score,category,university,university_en,photo_url,photo_path,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
 
 const ALLOWED_CATEGORIES = new Set(["ib", "ap", "alevel", "sat", "english"]);
 
@@ -29,6 +29,16 @@ export function buildTutorRow(body: Record<string, unknown>) {
   });
   if (typeof profilePatch === "string") return profilePatch;
 
+  const rawScores = body.subjectScores ?? body.subject_scores;
+  if (Array.isArray(rawScores)) {
+    const incomplete = rawScores.some((item) => {
+      if (!item || typeof item !== "object") return false;
+      const row = item as Record<string, unknown>;
+      return Boolean(String(row.subject ?? "").trim()) !== Boolean(String(row.score ?? "").trim());
+    });
+    if (incomplete) return "과목별 성적은 과목과 성적을 모두 입력해 주세요.";
+  }
+
   const row = {
     ...profilePatch,
     name: cleanText(body.name, 80),
@@ -38,6 +48,7 @@ export function buildTutorRow(body: Record<string, unknown>) {
     university: nullableText(body.university, 120),
     university_en: nullableText(body.university_en, 160),
     photo_url: safeAssetUrl(body.photo_url),
+    photo_path: safePhotoPath(body.photo_path),
     banner_url: safeAssetUrl(body.banner_url),
     zoom_host_email: zoomHostEmail || null,
     display_order: displayOrder,
@@ -45,7 +56,8 @@ export function buildTutorRow(body: Record<string, unknown>) {
     updated_at: new Date().toISOString(),
   };
 
-  if (!row.name || !row.exam || !row.score) return "이름, 시험, 성적을 모두 입력해 주세요.";
+  if (!row.name || !row.exam) return "튜터 이름과 커리큘럼을 입력해 주세요.";
+  if (!row.subject_scores.length) return "과목별 성적을 한 개 이상 입력해 주세요.";
   return row;
 }
 
@@ -77,4 +89,14 @@ function safeAssetUrl(value: unknown) {
   } catch {
     return null;
   }
+}
+
+export function isManagedTutorPhotoPath(value: unknown): value is string {
+  const text = cleanText(value, 160);
+  return /^profiles\/[a-f0-9-]+\.(?:jpg|png|webp)$/i.test(text);
+}
+
+function safePhotoPath(value: unknown) {
+  const text = cleanText(value, 160);
+  return isManagedTutorPhotoPath(text) ? text : null;
 }

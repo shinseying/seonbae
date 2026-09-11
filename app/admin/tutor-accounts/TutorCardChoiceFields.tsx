@@ -4,6 +4,7 @@ import styles from "../applications/applications.module.css";
 
 export type AvailableTutorCard = {
   registry_id: string;
+  roster_number: string | null;
   name: string;
   university: string | null;
   exam: string;
@@ -77,7 +78,7 @@ export function TutorCardChoiceFields({
             <option value="">카드를 선택해 주세요</option>
             {availableCards.map((card) => (
               <option key={card.registry_id} value={card.registry_id}>
-                {card.registry_id} · {card.name} · {card.university || card.exam || "정보 없음"} · {card.active ? "공개" : "비공개"}
+                {card.roster_number || "명부 번호 대기"} · {card.name} · {card.university || card.exam || "정보 없음"} · {card.active ? "공개" : "비공개"}
               </option>
             ))}
           </select>

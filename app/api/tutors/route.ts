@@ -6,14 +6,10 @@ export const dynamic = "force-dynamic";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-// Every tutor card shows the same image for now, so the per-person portraits
-// are not served here.
-const TUTOR_CARD_PHOTO = "/images/ian-bae-placeholder.png";
-
-const publicProfiles: Record<string, { name_en: string; photo_url: string }> = {
-  "P-001": { name_en: "Ian Bae", photo_url: TUTOR_CARD_PHOTO },
-  "P-002": { name_en: "Seung-Yun Shin", photo_url: TUTOR_CARD_PHOTO },
-  "P-003": { name_en: "Byeongguk Oh", photo_url: TUTOR_CARD_PHOTO },
+const legacyEnglishNames: Record<string, string> = {
+  "P-001": "Ian Bae",
+  "P-002": "Seung-Yun Shin",
+  "P-003": "Byeongguk Oh",
 };
 
 export async function GET() {
@@ -31,7 +27,7 @@ export async function GET() {
   let { data, error } = await supabase
     .from("tutors")
     .select(
-      "registry_id,name,exam,score,category,university,university_en,photo_url,banner_url,display_order,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format,created_at",
+      "registry_id,roster_number,name,exam,score,category,university,university_en,photo_url,banner_url,display_order,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format,created_at",
     )
     .eq("active", true)
     .order("display_order", { ascending: true })
@@ -67,11 +63,10 @@ export async function GET() {
   }
 
   const publicRows = (data ?? []).map((row) => {
-    const profile = publicProfiles[row.registry_id];
     return {
       ...row,
-      name_en: profile?.name_en || row.name,
-      photo_url: profile?.photo_url || row.photo_url || null,
+      name_en: legacyEnglishNames[row.registry_id] || row.name,
+      photo_url: row.photo_url || null,
     };
   });
 

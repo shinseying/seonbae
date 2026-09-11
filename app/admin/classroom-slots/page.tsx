@@ -31,15 +31,17 @@ export default async function AdminClassroomSlotsPage() {
 
   const registryIds = Array.from(new Set((rows ?? []).map((row) => row.tutor_registry_id)));
   const tutorName = new Map<string, string>();
+  const rosterNumber = new Map<string, string>();
   const tutorLimit = new Map<string, number>();
   const roomCount = new Map<string, number>();
   if (registryIds.length) {
     const [{ data: tutors }, { data: rooms }] = await Promise.all([
-      admin.from("tutors").select("registry_id,name,classroom_limit").in("registry_id", registryIds),
+      admin.from("tutors").select("registry_id,roster_number,name,classroom_limit").in("registry_id", registryIds),
       admin.from("classrooms").select("tutor_registry_id").in("tutor_registry_id", registryIds),
     ]);
     for (const tutor of tutors ?? []) {
       tutorName.set(tutor.registry_id, tutor.name);
+      if (tutor.roster_number) rosterNumber.set(tutor.registry_id, tutor.roster_number);
       tutorLimit.set(tutor.registry_id, tutor.classroom_limit ?? 3);
     }
     for (const room of rooms ?? []) {
@@ -49,8 +51,8 @@ export default async function AdminClassroomSlotsPage() {
 
   const requests: SlotRequest[] = (rows ?? []).map((row) => ({
     id: row.id,
-    registryId: row.tutor_registry_id,
-    tutorName: tutorName.get(row.tutor_registry_id) || row.tutor_registry_id,
+    rosterNumber: rosterNumber.get(row.tutor_registry_id) || null,
+    tutorName: tutorName.get(row.tutor_registry_id) || "튜터",
     reason: row.reason,
     status: row.status,
     granted: row.granted,

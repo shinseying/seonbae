@@ -4,13 +4,13 @@ import { parseTutorSpreadsheet } from "../utils/tutors/excel-import.ts";
 
 test("Korean applicant rows become inactive tutor cards with inferred fields", () => {
   const result = parseTutorSpreadsheet([
-    ["튜터 이름", "시험 / 커리큘럼", "검증 성적", "대학교 (한국어)", "과목별 성적", "월 가능 시간"],
-    ["김선배", "IB", "43/45", "고려대학교", "IB Math AA HL:7 | IB Physics HL:7", "18:00-21:00, 22:00-24:00"],
+    ["튜터 이름", "시험 / 커리큘럼", "대학교 (한국어)", "과목별 성적", "월 가능 시간"],
+    ["김선배", "IB", "고려대학교", "IB Math AA HL:7 | IB Physics HL:7", "18:00-21:00, 22:00-24:00"],
   ], { existingRegistryIds: ["P-004"], maxDisplayOrder: 8 });
 
   assert.deepEqual(result.errors, []);
   assert.equal(result.rows.length, 1);
-  assert.equal(result.rows[0].registry_id, "P-005");
+  assert.match(result.rows[0].registry_id, /^T-[A-F0-9]{8}$/);
   assert.equal(result.rows[0].category, "ib");
   assert.equal(result.rows[0].banner_url, "/university-korea-banner.png");
   assert.equal(result.rows[0].display_order, 9);
@@ -87,10 +87,10 @@ test("Google Forms tutor applications map to private, inactive card drafts", () 
   assert.deepEqual(result.errors, []);
   assert.equal(result.rows.length, 1);
   assert.deepEqual(result.rows[0], {
-    registry_id: "P-011",
+    registry_id: result.rows[0].registry_id,
     name: "홍길동",
     exam: "AP, SAT, TOEFL",
-    score: "1570",
+    score: "",
     category: "ap",
     university: "서울대학교",
     university_en: "Seoul National University",
@@ -112,6 +112,7 @@ test("Google Forms tutor applications map to private, inactive card drafts", () 
     lessonFormat: "온라인 1:1 · 주당 6–10시간 가능",
     sourceRow: 2,
   });
+  assert.match(result.rows[0].registry_id, /^T-[A-F0-9]{8}$/);
   assert.equal("phone" in result.rows[0], false);
   assert.equal("email" in result.rows[0], false);
 });
@@ -133,7 +134,10 @@ test("aggregate A-Level results become a concise representative score", () => {
   ]);
 
   assert.deepEqual(result.errors, []);
-  assert.equal(result.rows[0].score, "4A*");
+  assert.equal(result.rows[0].score, "");
+  assert.deepEqual(result.rows[0].subjectScores, [
+    { subject: "Maths, Further Maths, Computer Science, Physics", score: "4A*" },
+  ]);
   assert.equal(result.rows[0].category, "alevel");
   assert.equal(result.rows[0].university_en, "Korea University");
 });

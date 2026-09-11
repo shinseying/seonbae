@@ -7,6 +7,25 @@ const nextConfig = {
     : process.env.NODE_ENV === "production"
       ? ".next-build"
       : ".next",
+  async redirects() {
+    return [
+      {
+        source: "/become-a-tutor",
+        destination: "/login?mode=signup&role=tutor",
+        permanent: false,
+      },
+      {
+        source: "/en/become-a-tutor",
+        destination: "/login?mode=signup&role=tutor&lang=en",
+        permanent: false,
+      },
+      {
+        source: "/tutor-apply",
+        destination: "/login?mode=signup&role=tutor",
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     return {
       beforeFiles: [
@@ -123,6 +142,18 @@ const nextConfig = {
       {
         source: "/admin-verify",
         headers: privateNoStoreHeaders,
+      },
+      {
+        // Tutor applications and signed contracts contain private documents.
+        // Never cache, frame, or forward their short-lived signed URLs.
+        source: "/admin/tutor-details/:path*",
+        headers: [
+          ...privateNoStoreHeaders,
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
       },
       {
         source: "/portal/tutor/contract",

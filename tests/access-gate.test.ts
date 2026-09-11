@@ -10,6 +10,10 @@ import {
   verificationCodeDigest,
 } from "../utils/auth/access-gate.ts";
 import { safeInternalDestination } from "../utils/auth/safe-destination.ts";
+import {
+  SIGNUP_CONFIRMATION_DESTINATION,
+  shouldEstablishSignupVerificationGate,
+} from "../utils/auth/callback-verification.ts";
 
 process.env.AUTH_STEP_UP_SECRET = "test-only-step-up-secret-with-enough-entropy";
 
@@ -76,4 +80,25 @@ test("internal redirects reject network paths and browser-normalized backslashes
   assert.equal(safeInternalDestination("/\\attacker.example"), "/portal");
   assert.equal(safeInternalDestination("/%5c%5cattacker.example"), "/portal");
   assert.equal(safeInternalDestination("https://attacker.example"), "/portal");
+});
+
+test("only email signup confirmation establishes the user verification gate", () => {
+  assert.equal(
+    shouldEstablishSignupVerificationGate({
+      destination: SIGNUP_CONFIRMATION_DESTINATION,
+      provider: null,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldEstablishSignupVerificationGate({ destination: "/portal", provider: null }),
+    false,
+  );
+  assert.equal(
+    shouldEstablishSignupVerificationGate({
+      destination: SIGNUP_CONFIRMATION_DESTINATION,
+      provider: "google",
+    }),
+    false,
+  );
 });

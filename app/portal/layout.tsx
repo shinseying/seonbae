@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createClient } from "../../utils/supabase/server";
 import { hasSignedTutorContract } from "../../utils/contracts/tutor-signature";
+import { createAdminClient } from "../../utils/supabase/admin";
 import PortalHeader from "./PortalHeader";
 import TutorPortalHeader from "./tutor/TutorPortalHeader";
 
@@ -36,6 +37,13 @@ export default async function PortalLayout({ children }: { children: ReactNode }
     || user.email?.split("@")[0]
     || "Seonbae";
   const email = profile.email || user.email || "";
+  const tutorRosterNumber = profile.role === "tutor" && profile.tutor_registry_id
+    ? (await createAdminClient()
+        .from("tutors")
+        .select("roster_number")
+        .eq("registry_id", profile.tutor_registry_id)
+        .maybeSingle()).data?.roster_number
+    : null;
 
   return (
     <>
@@ -44,7 +52,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
           tutor={{
             name,
             email,
-            registryId: profile.tutor_registry_id || "TUTOR",
+            rosterNumber: tutorRosterNumber || null,
           }}
         />
       ) : (

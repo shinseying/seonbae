@@ -35,7 +35,7 @@ export default async function AdminTutorAccountsPage() {
       .order("created_at", { ascending: true }),
     admin
       .from("tutors")
-      .select("registry_id,name,university,exam,active,display_order")
+      .select("registry_id,roster_number,name,university,exam,active,display_order")
       .order("display_order", { ascending: true })
       .order("registry_id", { ascending: true }),
     admin

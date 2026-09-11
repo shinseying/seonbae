@@ -29,7 +29,8 @@ export type AccountApplication = {
   subject_scores: Array<{ subject: string; score: string }>;
   referral_code: string | null;
   contract_signed: boolean;
-  tutor_registry_id: string | null;
+  has_tutor_card: boolean;
+  tutor_roster_number: string | null;
   status: string;
   notification_sent_at: string | null;
   notification_error: string | null;
@@ -101,7 +102,7 @@ export default function ApplicationReviewClient({
           id: item.id,
           decision,
           note: notes[key] || "",
-          ...(decision === "approved" && item.requested_role === "tutor" && !item.tutor_registry_id
+          ...(decision === "approved" && item.requested_role === "tutor" && !item.has_tutor_card
             ? {
                 cardMode,
                 existingRegistryId: cardMode === "link" ? existingRegistryId : null,
@@ -139,7 +140,7 @@ export default function ApplicationReviewClient({
           const key = `account-${item.id}`;
           const cardMode = cardModes[key] || "";
           const cardRegistryId = cardRegistryIds[key] || "";
-          const needsCardChoice = item.requested_role === "tutor" && Boolean(item.user_id) && !item.tutor_registry_id;
+          const needsCardChoice = item.requested_role === "tutor" && Boolean(item.user_id) && !item.has_tutor_card;
           const cardChoiceReady = !needsCardChoice
             || tutorCardChoiceIsReady(cardMode, cardRegistryId, availableCards);
           const itemBusy = busyId === item.id;
@@ -181,8 +182,8 @@ export default function ApplicationReviewClient({
                   {item.contract_signed ? "튜터 계약 서명 완료" : "튜터 계약 서명 대기"}
                 </span>
               )}
-              {item.requested_role === "tutor" && item.tutor_registry_id && (
-                <span className={styles.sent}>연결된 튜터 카드 · {item.tutor_registry_id}</span>
+              {item.requested_role === "tutor" && item.has_tutor_card && (
+                <span className={styles.sent}>연결된 튜터 카드 · {item.tutor_roster_number || "명부 번호 준비 중"}</span>
               )}
               {needsCardChoice && item.contract_signed && (
                 <TutorCardChoiceFields
@@ -242,7 +243,7 @@ function roleLabel(role: AccountApplication["requested_role"]) {
 function approvalTitle(item: AccountApplication, cardChoiceReady: boolean) {
   if (item.requested_role !== "tutor") return undefined;
   if (!item.contract_signed) return "계약 서명 후 승인할 수 있습니다.";
-  if (!item.tutor_registry_id && !cardChoiceReady) {
+  if (!item.has_tutor_card && !cardChoiceReady) {
     return "새 카드를 만들지, 기존 카드에 연결할지 선택해 주세요.";
   }
   return undefined;

@@ -1,10 +1,12 @@
-import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import { TUTOR_CONTRACT_VERSION } from "../../../../utils/contracts/tutor-contract";
+import { isMissingDocumentsRelation } from "../../../../utils/tutors/admin-details";
+import { collectApplicationDocumentPaths } from "../../../../utils/tutors/application-documents";
 import { registryRowFromApplication } from "../../../../utils/tutors/from-application";
 import { parseTutorCardChoice } from "../../../../utils/tutors/provisioning";
+import { createTutorRegistryId } from "../../../../utils/tutors/registry-id";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +109,7 @@ export async function PATCH(request: NextRequest) {
         }
         tutorRegistryId = cardChoice.registryId;
       } else {
-        tutorRegistryId = `T-${application.user_id!.slice(0, 8).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
+        tutorRegistryId = createTutorRegistryId(application.user_id!);
         const { error: tutorError } = await admin
           .from("tutors")
           .insert(registryRowFromApplication(tutorRegistryId, application));
@@ -214,12 +216,26 @@ export async function DELETE(request: NextRequest) {
   const id = Number(body.id);
   if (!Number.isInteger(id)) return jsonError("삭제할 신청 번호를 확인해 주세요.", 400);
 
-  const { data: application } = await admin
-    .from("account_creation_requests")
-    .select("id,acceptance_letter_path,credential_path")
-    .eq("id", id)
-    .single();
+  const [{ data: application }, normalizedDocuments] = await Promise.all([
+    admin
+      .from("account_creation_requests")
+      .select("id,acceptance_letter_path,credential_path")
+      .eq("id", id)
+      .single(),
+    admin
+      .from("account_request_documents")
+      .select("storage_path")
+      .eq("request_id", id),
+  ]);
   if (!application) return jsonError("이미 삭제됐거나 없는 신청입니다.", 404);
+  if (normalizedDocuments.error && !isMissingDocumentsRelation(normalizedDocuments.error)) {
+    return jsonError("제출 서류 목록을 확인하지 못해 신청을 삭제하지 않았습니다.", 503);
+  }
+
+  const documentPaths = collectApplicationDocumentPaths(
+    application,
+    normalizedDocuments.error ? [] : normalizedDocuments.data ?? [],
+  );
 
   // tutor_contract_signatures references this row with `on delete restrict`, so
   // a signed contract blocks the delete at the database. Say so plainly instead
@@ -232,11 +248,21 @@ export async function DELETE(request: NextRequest) {
     return jsonError("튜터 계약 서명이 연결된 신청은 삭제할 수 없습니다. 보완 요청으로 반려해 주세요.", 409);
   }
 
-  const { error } = await admin.from("account_creation_requests").delete().eq("id", id);
-  if (error) return jsonError("신청을 삭제하지 못했습니다.", 500);
+  // Clear storage first. If it fails, keep the request and its document rows so
+  // an admin can retry without losing the only durable list of object paths.
+  if (documentPaths.length) {
+    const { error: storageError } = await admin.storage
+      .from("account-documents")
+      .remove(documentPaths);
+    if (storageError) {
+      return jsonError("제출 서류를 삭제하지 못해 신청 기록을 유지했습니다. 다시 시도해 주세요.", 503);
+    }
+  }
 
-  const paths = [application.acceptance_letter_path, application.credential_path].filter(Boolean) as string[];
-  if (paths.length) await admin.storage.from("account-documents").remove(paths);
+  const { error } = await admin.from("account_creation_requests").delete().eq("id", id);
+  if (error) {
+    return jsonError("제출 서류는 삭제됐지만 신청 기록을 삭제하지 못했습니다. 다시 시도해 주세요.", 500);
+  }
 
   return NextResponse.json({ id, deleted: true });
 }

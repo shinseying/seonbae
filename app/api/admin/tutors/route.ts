@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 import {
   buildTutorRow,
   cleanText,
+  isManagedTutorPhotoPath,
   isValidRegistryId,
   normalizeRegistryId,
   TUTOR_FIELDS,
 } from "../../../../utils/tutors/admin-card";
 
 export const dynamic = "force-dynamic";
+
+async function removeManagedPhoto(path: unknown) {
+  if (!isManagedTutorPhotoPath(path)) return;
+  const { error } = await createAdminClient().storage.from("tutor-profile-photos").remove([path]);
+  if (error) console.error("[admin tutor photo cleanup]", error);
+}
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -65,12 +73,21 @@ export async function PATCH(request: NextRequest) {
 
   const registryId = cleanText(body.registry_id, 24);
   if (!registryId) {
-    return NextResponse.json({ error: "명부 번호가 필요합니다." }, { status: 400 });
+    return NextResponse.json({ error: "카드 연결 ID가 필요합니다." }, { status: 400 });
   }
 
   const updates = buildTutorRow(body);
   if (typeof updates === "string") {
     return NextResponse.json({ error: updates }, { status: 400 });
+  }
+
+  const { data: current, error: currentError } = await auth.supabase
+    .from("tutors")
+    .select("photo_path")
+    .eq("registry_id", registryId)
+    .maybeSingle();
+  if (currentError || !current) {
+    return NextResponse.json({ error: "튜터를 찾지 못했습니다." }, { status: 404 });
   }
 
   const { data, error } = await auth.supabase
@@ -82,6 +99,10 @@ export async function PATCH(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: "튜터 정보를 저장하지 못했습니다." }, { status: 500 });
+  }
+
+  if (current.photo_path && current.photo_path !== data.photo_path) {
+    await removeManagedPhoto(current.photo_path);
   }
 
   return NextResponse.json(data, {
@@ -106,7 +127,7 @@ export async function POST(request: NextRequest) {
   const registryId = normalizeRegistryId(body.registry_id);
   if (!isValidRegistryId(registryId)) {
     return NextResponse.json(
-      { error: "명부 번호는 영문 대문자로 시작하고 영문·숫자·하이픈만 쓸 수 있습니다. 예: P-004" },
+      { error: "카드 연결 ID는 영문 대문자로 시작하고 영문·숫자·하이픈만 쓸 수 있습니다. 예: T-A1B2C3D4" },
       { status: 400 },
     );
   }
@@ -121,7 +142,7 @@ export async function POST(request: NextRequest) {
     .select("registry_id", { count: "exact", head: true })
     .eq("registry_id", registryId);
   if (count) {
-    return NextResponse.json({ error: `명부 번호 ${registryId}는 이미 사용 중입니다.` }, { status: 409 });
+    return NextResponse.json({ error: `카드 연결 ID ${registryId}는 이미 사용 중입니다.` }, { status: 409 });
   }
 
   const { data, error } = await auth.supabase
@@ -150,7 +171,7 @@ export async function DELETE(request: NextRequest) {
 
   const registryId = cleanText(request.nextUrl.searchParams.get("registry_id"), 24);
   if (!registryId) {
-    return NextResponse.json({ error: "명부 번호가 필요합니다." }, { status: 400 });
+    return NextResponse.json({ error: "카드 연결 ID가 필요합니다." }, { status: 400 });
   }
 
   const countFor = async (table: string, column: string) => {
@@ -170,7 +191,6 @@ export async function DELETE(request: NextRequest) {
     countFor("tutor_profile_requests", "tutor_registry_id"),
     countFor("classrooms", "tutor_registry_id"),
     countFor("classroom_slot_requests", "tutor_registry_id"),
-    countFor("tutor_credentials", "tutor_registry_id"),
   ]);
 
   if (dependencyChecks.some((check) => check.error)) {
@@ -180,7 +200,7 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const [sessions, assignments, threads, contracts, bookings, profileRequests, classrooms, slotRequests, credentials] = dependencyChecks.map((check) => check.count);
+  const [sessions, assignments, threads, contracts, bookings, profileRequests, classrooms, slotRequests] = dependencyChecks.map((check) => check.count);
 
   const blockers = [
     sessions && `수업 ${sessions}건`,
@@ -191,7 +211,6 @@ export async function DELETE(request: NextRequest) {
     profileRequests && `프로필 수정 요청 ${profileRequests}건`,
     classrooms && `교실 ${classrooms}건`,
     slotRequests && `교실 추가 요청 ${slotRequests}건`,
-    credentials && `검증 자료 ${credentials}건`,
   ].filter(Boolean);
 
   if (blockers.length) {
@@ -223,7 +242,7 @@ export async function DELETE(request: NextRequest) {
     .from("tutors")
     .delete()
     .eq("registry_id", registryId)
-    .select("registry_id")
+    .select("registry_id,photo_path")
     .maybeSingle();
 
   if (error) {
@@ -232,6 +251,9 @@ export async function DELETE(request: NextRequest) {
   if (!deleted) {
     return NextResponse.json({ error: "튜터를 찾지 못했습니다." }, { status: 404 });
   }
+
+
+  await removeManagedPhoto(deleted.photo_path);
 
   return NextResponse.json(
     { deleted: registryId },

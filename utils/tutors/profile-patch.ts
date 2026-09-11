@@ -52,7 +52,8 @@ export function parseProfile(body: Record<string, unknown>) {
 
   const scores: Array<{ subject: string; score: string }> = [];
   if (Array.isArray(body.subjectScores)) {
-    for (const row of body.subjectScores.slice(0, 12)) {
+    if (body.subjectScores.length > 12) return "과목별 성적은 최대 12개까지 입력할 수 있습니다.";
+    for (const row of body.subjectScores) {
       if (!row || typeof row !== "object") continue;
       const subject = String((row as Record<string, unknown>).subject ?? "").trim().slice(0, 80);
       const score = String((row as Record<string, unknown>).score ?? "").trim().slice(0, 24);

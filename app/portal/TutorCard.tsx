@@ -6,6 +6,7 @@ import styles from "./tutor-card.module.css";
 // see. Missing fields fall back to placeholders, matching the public card.
 export type TutorCardData = {
   registryId: string;
+  rosterNumber?: string | null;
   name: string;
   university?: string | null;
   photoUrl?: string | null;
@@ -46,7 +47,9 @@ export default function TutorCard({ tutor }: { tutor: TutorCardData }) {
   const scores = (tutor.subjectScores ?? []).filter((row) => row.subject.trim() && row.score.trim());
   const scoreList = scores.length
     ? scores
-    : [{ score: tutor.score || "—", subject: tutor.exam || "검증 성적" }];
+    : tutor.score?.trim()
+      ? [{ score: tutor.score, subject: tutor.exam || "과목 성적" }]
+      : [];
 
   return (
     <article className={styles.card}>
@@ -56,7 +59,7 @@ export default function TutorCard({ tutor }: { tutor: TutorCardData }) {
       ) : (
         <span className={`${styles.avatar} ${styles.avatarFallback}`}>{initials(tutor.name)}</span>
       )}
-      <h3 className={styles.name}>{tutor.name}<small>{tutor.registryId}</small></h3>
+      <h3 className={styles.name}>{tutor.name}<small>{tutor.rosterNumber || tutor.registryId}</small></h3>
       <p className={styles.uni}>{tutor.university || "선배 검증 튜터"}</p>
       <ul className={styles.scores}>
         {scoreList.map((row, index) => (

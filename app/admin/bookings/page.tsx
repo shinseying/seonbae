@@ -29,13 +29,16 @@ export default async function AdminBookingsPage() {
       .select("id,tutor_registry_id,name,email,phone,subject,preferred_day,preferred_time,note,status,seen_by_admin,forwarded_at,created_at")
       .order("created_at", { ascending: false })
       .limit(100),
-    admin.from("tutors").select("registry_id,name"),
+    admin.from("tutors").select("registry_id,roster_number,name"),
   ]);
 
-  const tutorNames = new Map((tutors ?? []).map((row) => [row.registry_id, row.name]));
+  const tutorLabels = new Map((tutors ?? []).map((row) => [
+    row.registry_id,
+    `${row.name} · ${row.roster_number || "명부 번호 준비 중"}`,
+  ]));
   const bookings: PortalBooking[] = (rows ?? []).map((row) => ({
     id: row.id,
-    tutorName: tutorNames.get(row.tutor_registry_id) || row.tutor_registry_id,
+    tutorName: tutorLabels.get(row.tutor_registry_id) || "튜터 카드 · 명부 번호 준비 중",
     name: row.name,
     email: row.email,
     phone: row.phone,

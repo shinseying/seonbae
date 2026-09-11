@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
-// The application form itself lives on the marketing page, so this legacy route
-// just points at it rather than keeping a second copy in sync.
+// Keep every tutor application on the account-backed signup flow.
 export default function TutorApplyPage() {
-  redirect("/become-a-tutor#apply");
+  redirect("/login?mode=signup&role=tutor");
 }

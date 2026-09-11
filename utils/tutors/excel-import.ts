@@ -1,3 +1,5 @@
+import { createTutorRegistryId } from "./registry-id.ts";
+
 export type TutorImportCategory = "ib" | "ap" | "alevel" | "sat" | "english";
 
 export type TutorImportRow = {
@@ -41,7 +43,7 @@ type ColumnKey =
   | "bio" | "bio_en" | "video_url" | "languages" | "lesson_format" | "major_year" | "weekly_hours";
 
 const COLUMN_ALIASES: Record<ColumnKey, string[]> = {
-  registry_id: ["명부번호", "튜터번호", "카드번호", "registryid", "registry", "cardid"],
+  registry_id: ["명부번호", "튜터번호", "카드번호", "내부연결id", "registryid", "registry", "cardid"],
   name: ["튜터이름", "이름", "성명", "지원자이름", "name", "tutorname", "이름name"],
   exam: ["시험커리큘럼", "시험", "커리큘럼", "교육과정", "exam", "curriculum", "지원커리큘럼curriculayoucanteach"],
   score: ["검증성적", "성적", "대표성적", "score", "verifiedscore", "과목과성적subjectsandyourscores"],
@@ -69,14 +71,13 @@ const COLUMN_ALIASES: Record<ColumnKey, string[]> = {
   video_url: ["샘플수업영상url", "영상url", "video", "videourl"],
   languages: ["언어", "가능언어", "languages", "language", "languagesyouteachin수업가능언어"],
   lesson_format: ["수업형식", "수업방식", "lessonformat", "format"],
-  major_year: ["전공과학년courseandyear"],
+  major_year: ["전공과학년", "전공과학년courseandyear"],
   weekly_hours: ["주당수업가능시간hoursperweekyoucanteach"],
 };
 
 const REQUIRED_COLUMNS: Array<{ key: ColumnKey; label: string }> = [
   { key: "name", label: "튜터 이름" },
   { key: "exam", label: "시험 / 커리큘럼" },
-  { key: "score", label: "검증 성적" },
 ];
 
 export function parseTutorSpreadsheet(
@@ -94,6 +95,9 @@ export function parseTutorSpreadsheet(
       errors.push({ row: 1, field: required.label, message: `필수 열 ‘${required.label}’을 찾지 못했습니다.` });
     }
   }
+  if (columns.subject_scores === undefined && columns.score === undefined) {
+    errors.push({ row: 1, field: "과목별 성적", message: "필수 열 ‘과목별 성적’을 찾지 못했습니다." });
+  }
   if (errors.length) return { rows: [], errors };
 
   const dataRows = sheet.slice(1).filter((row) => Array.isArray(row) && row.some((cell) => cellText(cell) !== ""));
@@ -110,7 +114,6 @@ export function parseTutorSpreadsheet(
     const explicit = read(row, columns.registry_id).toUpperCase();
     if (explicit) reserved.add(explicit);
   }
-  let nextIdNumber = Math.max(0, ...[...reserved].map((value) => Number(/^P-(\d+)$/.exec(value)?.[1] ?? 0))) + 1;
   let nextOrder = Math.max(0, Number(options.maxDisplayOrder) || 0) + 1;
   const seenInFile = new Set<string>();
   const parsed: TutorImportRow[] = [];
@@ -121,8 +124,7 @@ export function parseTutorSpreadsheet(
     let registryId = read(row, columns.registry_id).toUpperCase();
     if (!registryId) {
       do {
-        registryId = `P-${String(nextIdNumber).padStart(3, "0")}`;
-        nextIdNumber += 1;
+        registryId = createTutorRegistryId();
       } while (reserved.has(registryId) || seenInFile.has(registryId));
     }
     if (!/^[A-Z][A-Z0-9-]{1,23}$/.test(registryId)) {
@@ -136,14 +138,14 @@ export function parseTutorSpreadsheet(
     const name = requiredText(row, columns.name, sourceRow, "튜터 이름", 80, rowErrors);
     const exam = requiredText(row, columns.exam, sourceRow, "시험 / 커리큘럼", 80, rowErrors);
     const rawScore = read(row, columns.score);
-    const subjectScores = parseSubjectScores(read(row, columns.subject_scores), sourceRow, rowErrors);
-    let score: string;
-    if (columns.score === columns.subject_scores) {
-      score = representativeScore(rawScore, subjectScores);
-      if (!score) rowErrors.push({ row: sourceRow, field: "검증 성적", message: "성적 정보에서 대표 성적을 찾지 못했습니다." });
-    } else {
-      score = requiredText(row, columns.score, sourceRow, "검증 성적", 80, rowErrors);
+    let subjectScores = parseSubjectScores(read(row, columns.subject_scores), sourceRow, rowErrors);
+    if (!subjectScores.length && rawScore) {
+      subjectScores = [{ subject: exam, score: rawScore.slice(0, 24) }];
     }
+    if (!subjectScores.length) {
+      rowErrors.push({ row: sourceRow, field: "과목별 성적", message: "과목과 성적을 한 개 이상 입력해 주세요." });
+    }
+    const score = "";
     const category = parseCategory(read(row, columns.category), exam);
     if (!category) {
       rowErrors.push({ row: sourceRow, field: "카테고리", message: "IB, AP, A-Level, SAT, 영어 시험 중 하나를 입력해 주세요." });
@@ -353,13 +355,6 @@ function splitSubjectScore(entry: string) {
   const trailing = /^(.+?)\s+((?:\d+\s*)?A\*?|\d+(?:\.\d+)?(?:\/\d+)?(?:\s*\([^)]*\))?)$/i.exec(clean);
   if (trailing) return { subject: trailing[1].trim(), score: trailing[2].trim() };
   return null;
-}
-
-function representativeScore(raw: string, scores: Array<{ subject: string; score: string }>) {
-  const aggregate = /\b(\d+\s*A\*)\b/i.exec(raw)?.[1];
-  if (aggregate) return aggregate.replace(/\s+/g, "");
-  const overall = scores.find((entry) => /^(SAT|TOEFL|IELTS|IB)$/i.test(entry.subject.trim()));
-  return (overall?.score || scores[0]?.score || "").slice(0, 80);
 }
 
 function normalizeUniversity(raw: string | null, explicitEnglish: string | null) {
