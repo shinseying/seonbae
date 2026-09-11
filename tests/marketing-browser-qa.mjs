@@ -327,6 +327,94 @@ try {
   assert.ok(subjectLinks.every((href) => href.includes('curriculum=ib-diploma')));
 
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false });
+  await navigate(cdp, '/');
+  await cdp.evaluate(`(async () => {
+    for (let i = 0; i < 60 && document.querySelectorAll('[data-home-tutor-card]').length < 3; i++) {
+      await new Promise(r => setTimeout(r, 50));
+    }
+  })()`);
+  const homeTutorPreview = await cdp.evaluate(`(() => {
+    const cards = [...document.querySelectorAll('[data-home-tutor-card]')];
+    cards[0]?.focus();
+    return {
+      count: cards.length,
+      registryIds: cards.map(card => card.dataset.registryId),
+      tags: cards.map(card => card.tagName),
+      hrefs: cards.map(card => card.getAttribute('href')),
+      scoreCounts: cards.map(card => card.querySelectorAll('.home-tutor-card__scores li').length),
+      focusOutline: cards[0] ? getComputedStyle(cards[0]).outlineStyle : 'none',
+      busy: document.querySelector('[data-home-tutors]').getAttribute('aria-busy'),
+      bodyFits: document.documentElement.scrollWidth <= innerWidth,
+    };
+  })()`);
+  assert.equal(homeTutorPreview.count, 3, JSON.stringify(homeTutorPreview));
+  assert.deepEqual(homeTutorPreview.registryIds, ['P-QA1', 'P-QA2', 'P-QA3']);
+  assert.ok(homeTutorPreview.tags.every(tag => tag === 'A'));
+  assert.ok(homeTutorPreview.hrefs.every(href => /^\/tutors#\/t\/P-QA[123]$/.test(href)), JSON.stringify(homeTutorPreview));
+  assert.ok(homeTutorPreview.scoreCounts.every(count => count > 0 && count <= 3));
+  assert.notEqual(homeTutorPreview.focusOutline, 'none');
+  assert.equal(homeTutorPreview.busy, 'false');
+  assert.equal(homeTutorPreview.bodyFits, true);
+  await cdp.evaluate(`(() => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    document.querySelector('[data-cookie-consent]')?.remove();
+    const section = document.querySelector('[data-home-tutors]')?.closest('section');
+    if (section) scrollTo(0, section.getBoundingClientRect().top + scrollY - 40);
+  })()`);
+  await sleep(200);
+  await capture('home-tutor-preview');
+  await cdp.evaluate(`document.querySelector('[data-home-tutor-card]').click()`);
+  for (let i = 0; i < 60 && !await cdp.evaluate(`document.querySelector('#profile-dialog')?.open`); i++) await sleep(50);
+  const homeTutorDestination = await cdp.evaluate(`({
+    path: location.pathname,
+    hash: location.hash,
+    open: document.querySelector('#profile-dialog')?.open,
+    name: document.querySelector('#profile-name')?.textContent.trim(),
+  })`);
+  assert.equal(homeTutorDestination.path, '/tutors/');
+  assert.equal(homeTutorDestination.hash, '#/t/P-QA1');
+  assert.equal(homeTutorDestination.open, true);
+  assert.equal(homeTutorDestination.name, '김아이비');
+  await capture('home-tutor-destination');
+
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 1, mobile: true });
+  await navigate(cdp, '/');
+  await cdp.evaluate(`(async () => {
+    for (let i = 0; i < 60 && document.querySelectorAll('[data-home-tutor-card]').length < 3; i++) {
+      await new Promise(r => setTimeout(r, 50));
+    }
+  })()`);
+  const mobileHomeTutorPreview = await cdp.evaluate(`(() => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    document.querySelector('[data-cookie-consent]')?.remove();
+    const section = document.querySelector('[data-home-tutors]')?.closest('section');
+    if (section) scrollTo(0, section.getBoundingClientRect().top + scrollY - 16);
+    const cards = [...document.querySelectorAll('[data-home-tutor-card]')];
+    return {
+      count: cards.length,
+      columns: getComputedStyle(document.querySelector('[data-home-tutors]')).gridTemplateColumns.split(' ').length,
+      bodyFits: document.documentElement.scrollWidth <= innerWidth,
+      cardsFit: cards.every(card => card.getBoundingClientRect().width <= innerWidth),
+    };
+  })()`);
+  assert.equal(mobileHomeTutorPreview.count, 3, JSON.stringify(mobileHomeTutorPreview));
+  assert.equal(mobileHomeTutorPreview.columns, 1, JSON.stringify(mobileHomeTutorPreview));
+  assert.equal(mobileHomeTutorPreview.bodyFits, true);
+  assert.equal(mobileHomeTutorPreview.cardsFit, true);
+  await sleep(200);
+  await capture('home-tutor-preview-mobile');
+
+  await navigate(cdp, '/en/');
+  await cdp.evaluate(`(async () => {
+    for (let i = 0; i < 60 && document.querySelectorAll('[data-home-tutor-card]').length < 3; i++) {
+      await new Promise(r => setTimeout(r, 50));
+    }
+  })()`);
+  const englishHomeTutorHrefs = await cdp.evaluate(`[...document.querySelectorAll('[data-home-tutor-card]')].map(card => card.getAttribute('href'))`);
+  assert.ok(englishHomeTutorHrefs.every(href => /^\/en\/tutors#\/t\/P-QA[123]$/.test(href)), JSON.stringify(englishHomeTutorHrefs));
+
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false });
+
   await navigate(cdp, '/pricing/?qa-auth=out');
   const signedOutHeader = await cdp.evaluate(`(() => {
     const auth = document.querySelector('.header-auth-link');

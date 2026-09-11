@@ -751,6 +751,19 @@ const filters = [
 
 <script>
   import { rates } from '../data/rates';
+  import {
+    categoriesFor,
+    curriculumNames,
+    curriculumOrder,
+    defaultTutorSort,
+    displayOrderOf,
+    scoreValue,
+    scoresOf,
+    tutorStrength,
+    type CurriculumKey,
+    type PublicTutor,
+    type SubjectScore,
+  } from '../lib/tutor-directory';
 
   const PREVIEW_STORAGE_KEY = 'seonbae:tutor-import-preview:v1';
   const PREVIEW_MAX_AGE_MS = 2 * 60 * 60 * 1000;
@@ -778,28 +791,7 @@ const filters = [
   let activeSort = requestedSort && sortKeys.has(requestedSort) ? requestedSort : 'default';
   let hasDirectoryHistory = initialParams.has('c') || initialParams.has('q') || initialParams.has('sort');
 
-  type Tutor = {
-    registry_id: string;
-    name: string;
-    name_en?: string;
-    exam: string;
-    score: string;
-    category?: string;
-    university?: string;
-    university_en?: string;
-    photo_url?: string | null;
-    banner_url?: string | null;
-    subject_scores?: Array<{ subject: string; score: string }>;
-    availability?: Record<string, string[]>;
-    bio?: string | null;
-    bio_en?: string | null;
-    video_url?: string | null;
-    languages?: string | null;
-    lesson_format?: string | null;
-    display_order?: number;
-    created_at?: string | null;
-    active?: boolean;
-  };
+  type Tutor = PublicTutor;
   type PreviewState = 'existing' | 'new' | 'update';
   type PreviewPayload = {
     version: number;
@@ -827,20 +819,6 @@ const filters = [
     root.querySelectorAll<HTMLElement>('*').forEach((node) => node.setAttribute(scopeAttr, ''));
   };
 
-  const categoriesFor = (tutor: Tutor) => {
-    const subjects = Array.isArray(tutor.subject_scores)
-      ? tutor.subject_scores.map((row) => row?.subject || '').join(' ')
-      : '';
-    const value = `${tutor.exam} ${tutor.category || ''} ${subjects}`.toUpperCase();
-    const categories = new Set<string>();
-    if (/\bIB\b/.test(value)) categories.add('ib');
-    if (/\bAP\b|ADVANCED PLACEMENT/.test(value)) categories.add('ap');
-    if (/A[ -]?LEVEL/.test(value)) categories.add('alevel');
-    if (/IGCSE|\bGCSE\b/.test(value)) categories.add('igcse');
-    if (/SAT|ACT|TOEFL|IELTS|ENGLISH|영어/.test(value)) categories.add('tests');
-    if (!categories.size) categories.add('tests');
-    return [...categories];
-  };
   const escapeHtml = (value: unknown) => String(value ?? '')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -1001,9 +979,6 @@ const filters = [
 
   // A subject with no score yet (carried over from the application) would
   // render an empty badge, so only complete pairs reach the card.
-  const scoresOf = (tutor: Tutor) => Array.isArray(tutor.subject_scores)
-    ? tutor.subject_scores.filter((row) => (row?.subject || '').trim() && (row?.score || '').trim() !== '.')
-    : [];
   const slotsOf = (tutor: Tutor) => (tutor.availability && typeof tutor.availability === 'object') ? tutor.availability : {};
   const hasSlots = (tutor: Tutor) => DAYS.some((day) => (slotsOf(tutor)[day.key] || []).length > 0);
   const bioOf = (tutor: Tutor) => {
@@ -1031,16 +1006,6 @@ const filters = [
     return source || tr('Online 1:1', '온라인 1:1');
   };
 
-  type SubjectScore = { subject: string; score: string };
-  type CurriculumKey = 'ib' | 'ap' | 'alevel' | 'igcse' | 'tests';
-  const curriculumOrder: CurriculumKey[] = ['ib', 'ap', 'alevel', 'igcse', 'tests'];
-  const curriculumNames: Record<CurriculumKey, { en: string; ko: string }> = {
-    ib: { en: 'IB Diploma', ko: 'IB 디플로마' },
-    ap: { en: 'Advanced Placement', ko: 'AP' },
-    alevel: { en: 'A Level', ko: 'A레벨' },
-    igcse: { en: 'IGCSE', ko: 'IGCSE' },
-    tests: { en: 'Tests & English', ko: 'SAT·ACT·영어 시험' },
-  };
   const curriculumTerms: Record<CurriculumKey, string[]> = {
     ib: ['ib', 'ib diploma', 'international baccalaureate', '아이비', '디플로마'],
     ap: ['ap', 'advanced placement', '에이피'],
@@ -1133,18 +1098,6 @@ const filters = [
     const label = String(tutor.exam || '').trim();
     return score && score !== '.' ? { score, subject: label } : null;
   };
-  const scoreValue = (row: SubjectScore) => {
-    const raw = row.score.trim().toUpperCase();
-    const fraction = raw.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
-    if (fraction && Number(fraction[2])) return Number(fraction[1]) / Number(fraction[2]);
-    const stars = (raw.match(/A\*/g) || []).length;
-    if (stars) return 1 + stars / 100;
-    const numeric = Number(raw.match(/\d+(?:\.\d+)?/)?.[0]);
-    if (!Number.isFinite(numeric)) return 0;
-    if (numeric <= 9) return numeric / 9;
-    if (numeric <= 100) return numeric / 100;
-    return numeric / 1600;
-  };
   const bestScore = (rows: SubjectScore[]) => [...rows].sort((a, b) => scoreValue(b) - scoreValue(a))[0] || null;
   const parseAvailabilityRange = (value: string) => {
     const match = value.match(/^\s*(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})\s*$/);
@@ -1218,15 +1171,6 @@ const filters = [
   };
   const formatWon = (value: number) => `₩${Math.round(value).toLocaleString('en-US')}`;
 
-  const displayOrderOf = (tutor: Tutor) => Number.isFinite(Number(tutor.display_order))
-    ? Number(tutor.display_order)
-    : Number.MAX_SAFE_INTEGER;
-  const defaultTutorSort = (a: Tutor, b: Tutor) => displayOrderOf(a) - displayOrderOf(b)
-    || a.registry_id.localeCompare(b.registry_id);
-  const tutorStrength = (tutor: Tutor) => {
-    const rows = scoresOf(tutor);
-    return rows.length * 10 + rows.reduce((total, row) => total + scoreValue(row), 0);
-  };
   const sortedTutors = (tutors: Tutor[]) => [...tutors].sort((a, b) => {
     if (activeSort === 'curriculum') {
       const aKey = curriculumOrder.indexOf(categoriesFor(a)[0] as CurriculumKey);

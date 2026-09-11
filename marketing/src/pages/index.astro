@@ -6,31 +6,10 @@ import MarkedTitle from '../components/MarkedTitle.astro';
 import T from '../components/T.astro';
 import { home, ui } from '../i18n/home';
 import { subjectCount } from '../data/rates';
-import { leadership, TUTOR_CARD_PHOTO } from '../data/people';
 import { localeFromPath, localePath } from '../i18n/locale';
 
 const locale = localeFromPath(Astro.url.pathname);
 const link = (href: string) => localePath(href, locale);
-
-// The preview shows tutors, not the founding team, so it does not track the
-// leadership list one to one. Ian holds the first slot; the other two entries
-// are founders who also teach.
-const tutorPreview = [
-  {
-    name: 'Ian Bae',
-    hangul: '배이안',
-    university: 'Korea University',
-    universityKo: '고려대학교',
-    photo: TUTOR_CARD_PHOTO,
-    credentials: [{ en: 'IB 43/45', ko: 'IB 43/45' }],
-    tutorCopy: {
-      en: 'Sat the IB Diploma recently, so the papers and the marking are still fresh.',
-      ko: 'IB 디플로마를 직접 치른 선배가 시험지와 채점 기준을 그대로 알려드립니다.',
-    },
-  },
-  { ...leadership[1], photo: TUTOR_CARD_PHOTO },
-  { ...leadership[2], photo: TUTOR_CARD_PHOTO },
-];
 
 const steps = [
   { t: { en: 'Tell us your goal', ko: '목표를 알려주세요' }, c: { en: 'Tell us your subject, current level, and the exam or result you are working toward.', ko: '과목, 성적대, 시험 준비까지 전부 말해주세요.' }, icon: 'target' },
@@ -188,24 +167,18 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
       </div>
-      <div class="tutor-row">
-        {tutorPreview.map((t, i) => (
-          <article class="tcard reveal" data-delay={`${i * 80}ms`}>
-            <div class="tcard__photo">
-              <img src={t.photo} alt={t.name} width="800" height="800" loading="lazy" decoding="async" />
-              <span class="tcard__verified"><Icon name="verify" size={15} /> <T en="Verified" ko="검증 완료" /></span>
-            </div>
-            <div class="tcard__body">
-              <h3 class="tcard__name"><T en={t.name} ko={t.hangul} /><span class="tcard__kr"><T en={t.hangul} ko={t.name} /></span></h3>
-              <p class="tcard__uni"><T en={t.university} ko={t.universityKo} /></p>
-              <div class="tcard__accolades">
-                {t.credentials.map((c) => <span class="tag tag--gold"><T en={c.en} ko={c.ko} /></span>)}
-              </div>
-              <p class="tcard__bio"><T en={t.tutorCopy.en} ko={t.tutorCopy.ko} /></p>
-            </div>
+      <div class="tutor-row" data-home-tutors data-tutor-base={link('/tutors')} aria-busy="true">
+        {[0, 1, 2].map(() => (
+          <article class="home-tutor-card home-tutor-card--skeleton" aria-hidden="true">
+            <span class="home-tutor-skeleton home-tutor-skeleton--identity"></span>
+            <span class="home-tutor-skeleton home-tutor-skeleton--tag"></span>
+            <span class="home-tutor-skeleton home-tutor-skeleton--line"></span>
+            <span class="home-tutor-skeleton home-tutor-skeleton--line"></span>
+            <span class="home-tutor-skeleton home-tutor-skeleton--line home-tutor-skeleton--short"></span>
           </article>
         ))}
       </div>
+      <p class="sr-only" role="status" aria-live="polite" data-home-tutor-status></p>
     </div>
   </section>
 
@@ -663,18 +636,49 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 
   /* ======= TUTOR PREVIEW ======= */
   .tutor-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 2vw, 24px); }
-  .tcard { background: var(--white); border: 1px solid var(--line-soft); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
-  .tcard__photo { position: relative; aspect-ratio: 5 / 3; padding: 14px 14px 0; background: linear-gradient(150deg, var(--sage), var(--yellow-soft)); overflow: hidden; }
-  .tcard__photo img { width: 100%; height: 100%; object-fit: contain; border-radius: 18px 18px 0 0; transition: transform 0.35s ease; }
-  .tcard:hover .tcard__photo img { transform: scale(1.015); }
-  .tcard__verified { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 5px; background: var(--white); color: var(--violet); font-size: 0.72rem; font-weight: 700; padding: 5px 10px; border-radius: var(--r-pill); box-shadow: var(--shadow-sm); }
-  .tcard__body { padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-  .tcard__name { font-size: 1.16rem; font-weight: 700; display: flex; align-items: baseline; gap: 8px; }
-  .tcard__kr { font-size: 0.86rem; color: var(--muted); font-weight: 500; }
-  .tcard__uni { font-size: 0.9rem; color: var(--muted); margin-top: -4px; }
-  .tcard__accolades { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
-  .tcard__bio { font-size: 0.92rem; color: var(--muted); line-height: 1.5; }
+  .tutor-row :global(.home-tutor-card) {
+    position: relative; display: flex; min-width: 0; min-height: 410px; flex-direction: column;
+    padding: 22px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-lg);
+    background: var(--white); color: inherit; box-shadow: var(--shadow-sm); text-decoration: none;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  @media (hover: hover) {
+    .tutor-row :global(a.home-tutor-card:hover) { transform: translateY(-3px); border-color: rgba(19, 24, 27, .24); box-shadow: var(--shadow-md); }
+  }
+  .tutor-row :global(a.home-tutor-card:focus-visible) { outline: 3px solid var(--mint); outline-offset: 4px; }
+  .tutor-row :global(.home-tutor-card__verified) {
+    position: absolute; top: 18px; right: 18px; display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 9px; border-radius: var(--r-pill); background: var(--canvas); color: var(--violet);
+    font-size: .68rem; font-weight: 750;
+  }
+  .tutor-row :global(.home-tutor-card__identity) { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 13px; align-items: center; padding-right: 88px; }
+  .tutor-row :global(.home-tutor-card__avatar) { width: 54px; height: 54px; border: 3px solid var(--canvas); border-radius: 50%; background: var(--violet-soft); object-fit: contain; }
+  .tutor-row :global(.home-tutor-card__name) { display: flex; min-width: 0; flex-wrap: wrap; align-items: baseline; gap: 4px 7px; color: var(--violet); font-size: 1.16rem; font-weight: 800; line-height: 1.15; }
+  .tutor-row :global(.home-tutor-card__name small) { overflow: hidden; color: var(--muted); font-size: .75rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+  .tutor-row :global(.home-tutor-card__uni) { margin-top: 5px; color: var(--ink); font-size: .78rem; font-weight: 650; }
+  .tutor-row :global(.home-tutor-card__curricula) { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 0; padding: 0; list-style: none; }
+  .tutor-row :global(.home-tutor-card__curricula li) { padding: 5px 9px; border: 1px solid rgba(52, 63, 114, .18); border-radius: var(--r-pill); background: var(--violet-soft); color: var(--violet); font-size: .66rem; font-weight: 800; }
+  .tutor-row :global(.home-tutor-card__score-head) { margin-top: 16px; color: var(--muted); font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  .tutor-row :global(.home-tutor-card__scores) { display: grid; gap: 0; margin: 7px 0 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
+  .tutor-row :global(.home-tutor-card__scores li) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--line-soft); }
+  .tutor-row :global(.home-tutor-card__scores span) { min-width: 0; color: var(--ink); font-size: .75rem; font-weight: 600; line-height: 1.35; }
+  .tutor-row :global(.home-tutor-card__scores strong) { color: var(--violet); font-size: .82rem; font-weight: 820; font-variant-numeric: tabular-nums; }
+  .tutor-row :global(.home-tutor-card__more) { margin-top: 8px; color: var(--muted-soft); font-size: .68rem; font-weight: 650; }
+  .tutor-row :global(.home-tutor-card__bio) { display: -webkit-box; margin-top: 14px; overflow: hidden; color: var(--muted); font-size: .78rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .tutor-row :global(.home-tutor-card__view) { display: flex; min-height: 46px; align-items: center; justify-content: center; gap: 9px; margin-top: auto; padding: 0 16px; border-radius: 12px; background: var(--canvas); color: var(--violet); font-size: .82rem; font-weight: 750; }
+  .tutor-row :global(.home-tutor-card__view svg) { width: 17px; height: 17px; }
+  .tutor-row :global(.home-tutor-card--skeleton) { gap: 18px; pointer-events: none; }
+  .tutor-row :global(.home-tutor-skeleton) { display: block; height: 18px; border-radius: 8px; background: linear-gradient(90deg, var(--canvas) 25%, var(--violet-soft) 48%, var(--canvas) 72%); background-size: 220% 100%; animation: home-tutor-loading 1.25s ease-in-out infinite; }
+  .tutor-row :global(.home-tutor-skeleton--identity) { width: 68%; height: 54px; }
+  .tutor-row :global(.home-tutor-skeleton--tag) { width: 34%; height: 27px; border-radius: var(--r-pill); }
+  .tutor-row :global(.home-tutor-skeleton--short) { width: 72%; }
+  .tutor-row :global(.home-tutor-error) { grid-column: 1 / -1; padding: 22px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--white); color: var(--muted); line-height: 1.55; }
+  .tutor-row :global(.home-tutor-error a) { color: var(--violet); font-weight: 750; text-decoration: underline; text-underline-offset: 4px; }
+  @keyframes home-tutor-loading { to { background-position: -120% 0; } }
   @media (max-width: 860px) { .tutor-row { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) {
+    .tutor-row :global(.home-tutor-card), .tutor-row :global(.home-tutor-skeleton) { transition: none; animation: none; }
+  }
 
   /* ======= ONE PORTAL ======= */
   .portal-home { background: var(--canvas); }
@@ -773,6 +777,90 @@ const curriculaIcons = ['book', 'spark', 'globe', 'notes', 'star', 'chat'];
 </style>
 
 <script>
+  import {
+    categoriesFor,
+    curriculumNames,
+    recommendedTutorSort,
+    scoresOf,
+    type PublicTutor,
+  } from '../lib/tutor-directory';
+
+  const tutorPreviewRoot = document.querySelector<HTMLElement>('[data-home-tutors]');
+  const tutorPreviewStatus = document.querySelector<HTMLElement>('[data-home-tutor-status]');
+  const previewIsEnglish = document.documentElement.dataset.lang === 'en';
+  const previewText = (en: string, ko: string) => previewIsEnglish ? en : ko;
+  const escapeTutorText = (value: unknown) => String(value ?? '')
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+  const safeTutorAsset = (value: unknown) => {
+    const url = String(value || '');
+    return /^(\/|https:\/\/)/.test(url) ? escapeTutorText(url) : '';
+  };
+  const tutorUniversity = (tutor: PublicTutor) => {
+    const source = `${tutor.university_en || ''} ${tutor.university || ''}`;
+    if (/Seoul National|서울(?:대학교|대)/i.test(source)) return previewText('Seoul National University', '서울대학교');
+    if (/Korea University|고려(?:대학교|대)/i.test(source)) return previewText('Korea University', '고려대학교');
+    if (/Yonsei|연세(?:대학교|대)/i.test(source)) return previewText('Yonsei University', '연세대학교');
+    return previewText(tutor.university_en || tutor.university || '', tutor.university || tutor.university_en || '');
+  };
+  const verifyTutorIcon = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3l7 3v5c0 4.2-2.9 7.4-7 8.5-4.1-1.1-7-4.3-7-8.5V6l7-3z M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const tutorArrow = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  const homeTutorCard = (tutor: PublicTutor) => {
+    const displayName = previewText(tutor.name_en || tutor.name, tutor.name);
+    const alternateName = previewText(tutor.name, tutor.name_en || tutor.name);
+    const photo = safeTutorAsset(tutor.photo_url) || '/images/ian-bae-placeholder.png';
+    const rows = scoresOf(tutor);
+    const fallback = !rows.length && String(tutor.score || '').trim() && tutor.score !== '.'
+      ? [{ subject: tutor.exam || previewText('Verified score', '검증 성적'), score: tutor.score }]
+      : [];
+    const allScores = rows.length ? rows : fallback;
+    const visibleScores = allScores.slice(0, 3);
+    const remaining = allScores.length - visibleScores.length;
+    const categoryItems = categoriesFor(tutor).map((key) => curriculumNames[key]);
+    const bio = previewText(tutor.bio_en || tutor.bio || '', tutor.bio || tutor.bio_en || '');
+    const tutorBase = tutorPreviewRoot?.dataset.tutorBase || '/tutors';
+    const href = `${tutorBase}#/t/${encodeURIComponent(tutor.registry_id)}`;
+
+    return `<a class="home-tutor-card" data-home-tutor-card data-registry-id="${escapeTutorText(tutor.registry_id)}" href="${escapeTutorText(href)}" aria-label="${escapeTutorText(`${displayName} ${previewText('full profile', '전체 프로필')} ${previewText('open', '열기')}`)}">
+      <span class="home-tutor-card__verified">${verifyTutorIcon}${previewText('Verified Tutor', '검증 완료')}</span>
+      <div class="home-tutor-card__identity">
+        <img class="home-tutor-card__avatar" src="${photo}" alt="${escapeTutorText(`${previewText('Portrait of', '프로필 사진')} ${displayName}`)}" width="96" height="96" loading="lazy" decoding="async" />
+        <div><h3 class="home-tutor-card__name"><span>${escapeTutorText(displayName)}</span>${alternateName && alternateName !== displayName ? `<small>${escapeTutorText(alternateName)}</small>` : ''}</h3><p class="home-tutor-card__uni">${escapeTutorText(tutorUniversity(tutor))}</p></div>
+      </div>
+      <ul class="home-tutor-card__curricula" aria-label="${previewText('Curricula taught', '수업 가능 커리큘럼')}">${categoryItems.map((category) => `<li>${escapeTutorText(previewText(category.en, category.ko))}</li>`).join('')}</ul>
+      ${visibleScores.length ? `<p class="home-tutor-card__score-head">${previewText('Subjects and verified scores', '과목 및 검증 성적')}</p><ul class="home-tutor-card__scores">${visibleScores.map((row) => `<li><span>${escapeTutorText(row.subject)}</span><strong>${escapeTutorText(row.score)}</strong></li>`).join('')}</ul>` : ''}
+      ${remaining > 0 ? `<p class="home-tutor-card__more">+${remaining} ${previewText('more verified scores', '개 검증 성적 더 보기')}</p>` : ''}
+      ${bio ? `<p class="home-tutor-card__bio">${escapeTutorText(bio)}</p>` : ''}
+      <span class="home-tutor-card__view">${previewText('View full profile', '전체 프로필 보기')}${tutorArrow}</span>
+    </a>`;
+  };
+
+  if (tutorPreviewRoot) {
+    fetch('/api/tutors', { cache: 'no-store', headers: { Accept: 'application/json' } })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Tutor preview unavailable');
+        const rows = await response.json();
+        if (!Array.isArray(rows)) throw new Error('Tutor preview unavailable');
+        return (rows as PublicTutor[])
+          .filter((tutor) => tutor && typeof tutor.registry_id === 'string' && tutor.registry_id)
+          .sort(recommendedTutorSort)
+          .slice(0, 3);
+      })
+      .then((tutors) => {
+        if (!tutors.length) throw new Error('Tutor preview unavailable');
+        tutorPreviewRoot.innerHTML = tutors.map(homeTutorCard).join('');
+        tutorPreviewRoot.setAttribute('aria-busy', 'false');
+        if (tutorPreviewStatus) tutorPreviewStatus.textContent = previewText(`${tutors.length} tutor profiles loaded.`, `튜터 프로필 ${tutors.length}개를 불러왔습니다.`);
+      })
+      .catch(() => {
+        const tutorBase = tutorPreviewRoot.dataset.tutorBase || '/tutors';
+        tutorPreviewRoot.innerHTML = `<p class="home-tutor-error">${previewText('The tutor preview is temporarily unavailable.', '튜터 미리보기를 잠시 불러오지 못했습니다.')} <a href="${escapeTutorText(tutorBase)}">${previewText('Open the full directory', '전체 튜터 목록 보기')}</a></p>`;
+        tutorPreviewRoot.setAttribute('aria-busy', 'false');
+        if (tutorPreviewStatus) tutorPreviewStatus.textContent = previewText('Tutor preview unavailable.', '튜터 미리보기를 불러오지 못했습니다.');
+      });
+  }
+
   // Count up the numeric stats when the band scrolls into view.
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const nums = document.querySelectorAll<HTMLElement>('[data-count]');
