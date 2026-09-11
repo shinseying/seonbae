@@ -61,35 +61,11 @@ const filters = [
     <T en="Meet your tutors." ko="여러분의 선배를 만나세요." />
   </PageHero>
 
-  <!-- Directory layout: a standing index on the left, the roster on the right.
-       Deliberately unlike the stacked sections used elsewhere on the site. -->
+  <!-- Search and curriculum choices stay together, so the directory can use
+       the full width for tutor profiles. -->
   <section class="section bg-white">
     <div class="container directory-container">
       <div class="roster">
-        <aside class="rail reveal is-in">
-          <h2 class="rail__title"><T en="Curriculum" ko="커리큘럼" /></h2>
-          <div class="rail__list" role="group" aria-label="Filter tutors by curriculum">
-            {filters.map((f, i) => (
-              <button type="button" class="rail__btn" data-filter={f.key} aria-pressed={i === 0 ? 'true' : 'false'}>
-                <span class="rail__label" data-filter-label={f.key}><T en={f.label} ko={f.key === 'all' ? '전체 튜터' : f.key === 'ap' ? 'AP' : f.key === 'alevel' ? 'A레벨' : f.key === 'tests' ? 'SAT·ACT·영어 시험' : f.label} /></span>
-                <span class="rail__n rail__n--loading" aria-hidden="true"></span>
-              </button>
-            ))}
-          </div>
-
-          <div class="rail__note">
-            <span class="rail__note-k"><T en="Every profile on this page" ko="이 페이지의 모든 프로필" /></span>
-            <ul class="rail__facts">
-              <li><T en="Score report read by us" ko="성적표 직접 확인" /></li>
-              <li><T en="Enrolment confirmed in writing" ko="재학 증명 확인" /></li>
-              <li><T en="Background check cleared" ko="신원 확인 완료" /></li>
-            </ul>
-            <a href={link('/verification')} class="textlink rail__link"><T en="Our standard" ko="검증 기준" />
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </a>
-          </div>
-        </aside>
-
         <div class="roster__main">
           <div class="directory-tools reveal is-in">
             <label class="directory-search" for="tutor-search">
@@ -110,6 +86,18 @@ const filters = [
             </label>
           </div>
 
+          <div class="filter-strip reveal is-in">
+            <h2 class="filter-strip__title"><T en="Curriculum" ko="커리큘럼" /></h2>
+            <div class="rail__list" role="group" aria-label={isEnglish ? 'Filter tutors by curriculum' : '커리큘럼별 튜터 필터'}>
+              {filters.map((f, i) => (
+                <button type="button" class="rail__btn" data-filter={f.key} aria-pressed={i === 0 ? 'true' : 'false'}>
+                  <span class="rail__label" data-filter-label={f.key}><T en={f.label} ko={f.key === 'all' ? '전체' : f.key === 'ap' ? 'AP' : f.key === 'alevel' ? 'A레벨' : f.key === 'tests' ? 'SAT·ACT·영어' : f.label} /></span>
+                  <span class="rail__n rail__n--loading" aria-hidden="true"></span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div class="roster__bar reveal is-in">
             <div class="roster__state">
               <p class="roster__count"><strong id="tutor-count" class="count-skeleton" aria-hidden="true"></strong> <span data-count-label><T en="tutors listed" ko="명의 튜터" /></span></p>
@@ -122,10 +110,9 @@ const filters = [
             {Array.from({ length: 6 }).map(() => (
               <div class="tutor-cell tutor-cell--skeleton" aria-hidden="true">
                 <article class="tcardx tcardx--skeleton card">
-                  <span class="skeleton-line skeleton-line--credential"></span>
-                  <span class="skeleton-line skeleton-line--label"></span>
                   <span class="skeleton-identity"><i></i><b><span></span><span></span></b></span>
                   <span class="skeleton-tags"><i></i><i></i><i></i></span>
+                  <span class="skeleton-score-list"><i></i><i></i><i></i></span>
                   <span class="skeleton-line skeleton-line--bio"></span>
                   <span class="skeleton-line skeleton-line--button"></span>
                 </article>
@@ -265,66 +252,44 @@ const filters = [
 
   /* ----- Directory grid --------------------------------------------------- */
   .directory-container {
-    max-width: 1660px;
+    max-width: 1540px;
     padding-inline: clamp(20px, 3vw, 48px);
   }
-  .roster {
-    display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
-    gap: clamp(24px, 2.5vw, 40px);
-    align-items: start;
+  .roster { min-width: 0; }
+  .filter-strip { margin: 18px 0 26px; }
+  .filter-strip__title {
+    margin-bottom: 10px; color: var(--muted); font-size: .72rem; font-weight: 750;
+    letter-spacing: .12em; text-transform: uppercase;
   }
-  .rail { position: sticky; top: var(--header-h); }
-  .rail__title {
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--muted);
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--line);
-  }
-  .rail__list { display: flex; flex-direction: column; }
+  .rail__list { display: flex; flex-wrap: wrap; gap: 8px; }
   .rail__btn {
-    display: flex;
+    display: inline-flex;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    padding: 13px 0;
-    border: none;
-    border-bottom: 1px solid var(--line-soft);
-    background: none;
-    text-align: left;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 9px 15px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: var(--white);
     cursor: pointer;
     color: var(--muted);
-    transition: color 0.16s ease;
+    transition: color .16s ease, border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
   }
-  .rail__label { font-weight: 500; font-size: 0.98rem; }
-  .rail__n { font-family: var(--display); font-size: 0.82rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .rail__btn:hover { color: var(--ink); }
-  .rail__btn[aria-pressed='true'] { color: var(--violet); }
+  .rail__label { font-weight: 650; font-size: .9rem; }
+  .rail__n {
+    min-width: 20px; padding: 1px 5px; border-radius: var(--r-pill); background: var(--canvas);
+    color: var(--muted); font-family: var(--display); font-size: .7rem; font-weight: 700;
+    font-variant-numeric: tabular-nums; text-align: center;
+  }
+  .rail__btn:hover { border-color: var(--violet); color: var(--ink); }
+  .rail__btn:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
+  .rail__btn[aria-pressed='true'] {
+    border-color: var(--violet); background: var(--violet); color: #fff;
+    box-shadow: 0 7px 18px rgba(52,63,114,.18);
+  }
   .rail__btn[aria-pressed='true'] .rail__label { font-weight: 700; }
-  .rail__btn[aria-pressed='true'] .rail__n { color: var(--violet); }
-  /* The active row is marked on the rule itself — no pill, no fill. */
-  .rail__btn[aria-pressed='true'] { border-bottom-color: var(--violet); }
-
-  .rail__note { margin-top: 34px; padding-top: 22px; border-top: 2px solid var(--ink); }
-  .rail__note-k { display: block; font-family: var(--display); font-weight: 700; font-size: 0.98rem; letter-spacing: -0.01em; }
-  .rail__facts { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
-  .rail__facts li { position: relative; padding-left: 20px; font-size: 0.88rem; color: var(--muted); line-height: 1.45; }
-  .rail__facts li::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0.42em;
-    width: 9px;
-    height: 5px;
-    border-left: 1.8px solid var(--violet);
-    border-bottom: 1.8px solid var(--violet);
-    transform: rotate(-45deg);
-  }
-  .rail__link { margin-top: 16px; font-size: 0.9rem; }
+  .rail__btn[aria-pressed='true'] .rail__n { background: rgba(255,255,255,.18); color: #fff; }
 
   /* ----- Roster ----------------------------------------------------------- */
   .directory-tools {
@@ -379,7 +344,7 @@ const filters = [
   .active-filter:hover { border-color: var(--violet); }
   .active-filter:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
 
-  .tutor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: clamp(16px, 1.6vw, 22px); }
+  .tutor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 1.6vw, 22px); align-items: stretch; }
   .tutor-cell.is-hidden { display: none; }
   .live-tutor-card { display: flex; flex-direction: column; min-height: 100%; overflow: hidden; border-radius: 28px; border: 1px solid rgba(22, 48, 69, .12); box-shadow: 0 14px 36px rgba(22, 48, 69, .08); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
   .live-tutor-card:hover { transform: translateY(-4px); border-color: rgba(22, 48, 69, .2); box-shadow: 0 22px 48px rgba(22, 48, 69, .13); }
@@ -415,7 +380,8 @@ const filters = [
   .skeleton-line,
   .skeleton-identity i,
   .skeleton-identity b span,
-  .skeleton-tags i {
+  .skeleton-tags i,
+  .skeleton-score-list i {
     display: block; border-radius: 7px;
     background: linear-gradient(100deg, var(--line-soft) 25%, rgba(255,255,255,.72) 45%, var(--line-soft) 65%);
     background-size: 220% 100%; animation: tutor-skeleton 1.25s ease-in-out infinite;
@@ -424,15 +390,15 @@ const filters = [
   .count-skeleton { display: inline-block; width: 28px; height: 24px; vertical-align: -3px; }
   .unis-skeleton { width: 270px; max-width: 42vw; height: 14px; }
   .tcardx--skeleton { pointer-events: none; }
-  .skeleton-line--credential { width: 42%; height: 40px; }
-  .skeleton-line--label { width: 58%; height: 12px; margin-top: 8px; }
-  .skeleton-identity { display: flex; align-items: center; gap: 12px; margin-top: 22px; }
+  .skeleton-identity { display: flex; align-items: center; gap: 12px; }
   .skeleton-identity i { width: 52px; height: 52px; flex: none; border-radius: 50%; }
   .skeleton-identity b { display: grid; flex: 1; gap: 8px; }
   .skeleton-identity b span:first-child { width: 66%; height: 17px; }
   .skeleton-identity b span:last-child { width: 82%; height: 12px; }
   .skeleton-tags { display: flex; gap: 7px; margin-top: 20px; }
   .skeleton-tags i { width: 30%; height: 30px; border-radius: var(--r-pill); }
+  .skeleton-score-list { display: grid; gap: 1px; margin-top: 18px; }
+  .skeleton-score-list i { width: 100%; height: 38px; }
   .skeleton-line--bio { width: 100%; height: 34px; margin-top: 20px; }
   .skeleton-line--button { width: 100%; height: 50px; margin-top: auto; border-radius: 14px; }
   @keyframes tutor-skeleton { to { background-position: -120% 0; } }
@@ -448,26 +414,6 @@ const filters = [
   }
   .closing__do { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 
-  @media (max-width: 1000px) {
-    .roster { grid-template-columns: 1fr; }
-    .rail {
-      position: sticky; top: var(--header-h); z-index: 18;
-      margin-inline: calc(clamp(20px, 3vw, 48px) * -1); padding: 9px clamp(20px, 3vw, 48px);
-      border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--white) 94%, transparent);
-      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-    }
-    .rail__title { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-    .rail__list { flex-direction: row; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
-    .rail__list::-webkit-scrollbar { display: none; }
-    .rail__btn {
-      width: auto; min-height: 44px; flex: none; scroll-snap-align: start;
-      padding: 9px 16px;
-      border: 1px solid var(--line);
-      border-radius: var(--r-pill);
-    }
-    .rail__btn[aria-pressed='true'] { border-color: var(--violet); background: var(--violet-soft); }
-    .rail__note { display: none; }
-  }
   @media (max-width: 820px) {
     .sandbox-bar__inner { grid-template-columns: 42px minmax(0,1fr); }
     .sandbox-bar__mark { width: 42px; height: 42px; }
@@ -476,6 +422,10 @@ const filters = [
     .sandbox-bar__actions a,.sandbox-bar__actions button { flex: 1; }
     .directory-tools { grid-template-columns: 1fr; }
     .directory-sort { width: min(100%, 230px); }
+    .filter-strip { margin-top: 16px; }
+    .rail__list { flex-wrap: nowrap; max-width: 100%; padding-bottom: 4px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
+    .rail__list::-webkit-scrollbar { display: none; }
+    .rail__btn { flex: none; scroll-snap-align: start; }
     .closing { grid-template-columns: 1fr; align-items: start; }
   }
   @media (max-width: 900px) {
@@ -492,26 +442,26 @@ const filters = [
     flex-direction: column;
     align-items: stretch;
     height: 100%;
-    padding: 22px;
-    border-radius: 16px;
-    border: 1px solid var(--line-soft);
+    padding: 24px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
     background: var(--white);
-    box-shadow: 0 14px 36px rgba(22, 48, 69, .07);
-    transition: transform .24s ease, box-shadow .24s ease;
+    box-shadow: 0 12px 30px rgba(22, 48, 69, .07);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   }
-  .tcardx:hover { transform: translateY(-3px); box-shadow: 0 22px 48px rgba(22, 48, 69, .12); }
+  .tcardx:hover { transform: translateY(-3px); border-color: rgba(52,63,114,.32); box-shadow: 0 20px 42px rgba(22, 48, 69, .12); }
   .tcardx__surface {
     position: absolute; inset: -1px; z-index: 1; padding: 0;
     border: 0; border-radius: inherit; background: transparent; cursor: pointer;
   }
   .tcardx__surface:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
   .tcardx > :not(.tcardx__surface) { z-index: 2; pointer-events: none; }
-  .tcardx__book,.weekgrid__slot { pointer-events: auto; }
 
   .tcardx__verified {
-    position: absolute; top: 18px; right: 18px;
+    position: absolute; top: 20px; right: 20px;
     display: inline-flex; align-items: center; gap: 6px;
-    color: var(--violet); font-size: .7rem; font-weight: 750;
+    padding: 5px 9px; border-radius: var(--r-pill); background: var(--violet-soft);
+    color: var(--violet); font-size: .66rem; font-weight: 750;
   }
   /* Sandbox cards retain the public layout; a restrained outline and a named
      badge expose what will change without making colour carry the meaning. */
@@ -521,127 +471,59 @@ const filters = [
   .tutor-cell[data-preview-state='existing'] .tcardx__verified { border-color: #9fc2df; background: #eaf3fb; color: #24527a; }
   .tutor-cell[data-preview-state='new'] .tcardx__verified { border-color: #9fcbae; background: #e7f4eb; color: #245f3c; }
   .tutor-cell[data-preview-state='update'] .tcardx__verified { border-color: #e3bd7e; background: #fff2d6; color: #7a460d; }
-  .tcardx__credential { min-height: 66px; padding-right: 88px; }
-  .tcardx__credential strong {
-    display: block; font-family: var(--display); font-size: clamp(2rem, 3vw, 2.65rem);
-    font-weight: 850; letter-spacing: -.045em; line-height: .95; color: var(--violet); font-variant-numeric: tabular-nums;
-  }
-  .tcardx__credential > span:not(.tcardx__video-available) { display: block; margin-top: 7px; color: var(--muted); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-  .tcardx__credential .tcardx__video-available { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; color: var(--muted); font-size: .69rem; font-weight: 650; letter-spacing: 0; text-transform: none; }
-  .tcardx__video-available i { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: var(--violet-soft); color: var(--violet); font-style: normal; font-size: .52rem; }
-  .tcardx__identity { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; align-items: center; margin-top: 8px; }
+  .tcardx__identity { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 13px; align-items: center; padding-right: 94px; }
   .tcardx__avatar {
-    width: 52px; height: 52px; border-radius: 50%;
+    width: 54px; height: 54px; border-radius: 50%;
     object-fit: contain; background: var(--violet-soft);
     border: 3px solid var(--canvas);
   }
   .tcardx__identity-copy { min-width: 0; }
   .tcardx__name { margin: 0; font-size: inherit; }
   .tcardx__profile-label {
-    min-height: 44px; max-width: 100%; display: flex; align-items: center; gap: 7px;
+    max-width: 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 8px;
     color: var(--violet); text-align: left;
   }
-  .tcardx__profile-label > span { font-family: var(--display); font-weight: 820; font-size: 1.28rem; letter-spacing: -.025em; line-height: 1.1; }
+  .tcardx__profile-label > span { font-family: var(--display); font-weight: 820; font-size: 1.25rem; letter-spacing: -.025em; line-height: 1.15; }
   .tcardx__profile-label small { overflow: hidden; color: var(--muted); font-size: .78rem; font-weight: 600; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
-  .tcardx__uni { overflow: hidden; margin-top: 5px; color: var(--ink); font-size: .82rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+  .tcardx__uni { margin-top: 4px; color: var(--ink); font-size: .8rem; font-weight: 650; line-height: 1.35; }
 
-  .tcardx__scores { display: flex; flex-wrap: nowrap; gap: 6px; min-height: 32px; margin: 10px 0 0; padding: 0; list-style: none; }
-  .tcardx__scores li {
-    display: inline-flex; flex: 1 1 0; align-items: baseline; justify-content: center; gap: 5px;
-    min-width: 0; max-width: 100%; padding: 6px 8px; border: 1px solid transparent; border-radius: var(--r-pill);
-    background: var(--canvas);
+  .tcardx__curricula { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 0; padding: 0; list-style: none; }
+  .tcardx__curricula li {
+    padding: 5px 9px; border: 1px solid rgba(52,63,114,.18); border-radius: var(--r-pill);
+    background: var(--violet-soft); color: var(--violet); font-size: .66rem; font-weight: 800;
   }
-  .tcardx__scores b { flex: none; font-family: var(--display); font-weight: 800; font-size: .84rem; color: var(--violet); }
-  .tcardx__scores span { overflow: hidden; color: var(--muted); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
-  .tcardx__scores li.is-match { border-color: var(--violet); background: var(--violet); box-shadow: 0 5px 14px rgba(52,63,114,.16); }
-  .tcardx__scores li.is-match b,
-  .tcardx__scores li.is-match span { color: #fff; }
-  .tcardx__scores .tcardx__more { color: var(--muted); font-size: .76rem; font-weight: 750; }
-  .tcardx__scores--empty { visibility: hidden; }
+  .tcardx__score-head { margin-top: 16px; color: var(--muted); font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  .tcardx__scores { display: grid; gap: 0; margin: 7px 0 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
+  .tcardx__scores li {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px;
+    min-width: 0; padding: 9px 2px; border-bottom: 1px solid var(--line-soft);
+  }
+  .tcardx__scores b { grid-column: 2; grid-row: 1; font-family: var(--display); font-size: .86rem; font-weight: 820; color: var(--violet); font-variant-numeric: tabular-nums; }
+  .tcardx__scores span { grid-column: 1; grid-row: 1; min-width: 0; color: var(--ink); font-size: .76rem; font-weight: 600; line-height: 1.35; }
+  .tcardx__scores li.is-match { margin-inline: -8px; padding-inline: 10px; border-color: transparent; border-radius: 8px; background: var(--violet); }
+  .tcardx__scores li.is-match b,.tcardx__scores li.is-match span { color: #fff; }
 
   .tcardx__bio {
-    display: -webkit-box; width: 100%; min-height: 45px; max-height: 45px; margin-top: 8px; padding-top: 8px; overflow: hidden;
-    border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; line-height: 1.45;
+    display: -webkit-box; width: 100%; margin-top: 16px; overflow: hidden;
+    color: var(--muted); font-size: .8rem; line-height: 1.5;
     -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   }
-  .tcardx__bio-space { min-height: 45px; margin-top: 8px; border-top: 1px solid var(--line); }
   .tcardx__meta-line {
-    overflow: hidden; margin-top: 6px; color: var(--muted-soft); font-size: .68rem;
-    line-height: 1.35; text-overflow: ellipsis; white-space: nowrap;
+    margin-top: 8px; color: var(--muted-soft); font-size: .68rem; line-height: 1.4;
   }
 
-  .tcardx__availability {
-    display: grid; gap: 8px; width: 100%; margin-top: 12px; padding-top: 12px;
-    border-top: 1px solid var(--line); text-align: left;
+  .tcardx__foot { width: 100%; margin-top: auto; padding-top: 18px; }
+  .tcardx__view {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; min-height: 46px; padding: 0 18px; border-radius: 12px;
+    background: var(--canvas); color: var(--violet); font-size: .86rem; font-weight: 750;
   }
-  .tcardx__availability-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  .tcardx__availability-head b { color: var(--ink); font-size: .82rem; }
-  .tcardx__availability-head span { color: var(--muted-soft); font-size: .62rem; font-variant-numeric: tabular-nums; }
-
-  .weekgrid {
-    width: 100%; overflow: visible; border: 1px solid var(--line);
-    border-radius: 9px; background: var(--white);
-  }
-  .weekgrid__head {
-    display: grid; grid-template-columns: 29px repeat(7, minmax(0, 1fr));
-    border-bottom: 1px solid var(--line);
-  }
-  .weekgrid__head b {
-    min-width: 0; padding: 6px 0; border-left: 1px solid var(--line-soft);
-    color: var(--muted); font-size: .57rem; font-weight: 750; text-align: center;
-  }
-  .weekgrid__head b:nth-last-child(-n + 2) { color: var(--coral); }
-  .weekgrid__body { height: 148px; display: grid; grid-template-columns: 29px minmax(0, 1fr); }
-  .weekgrid__times { position: relative; }
-  .weekgrid__times span {
-    position: absolute; top: calc(var(--time-top) * 1%); right: 4px;
-    color: var(--muted-soft); font-size: .47rem; font-variant-numeric: tabular-nums;
-    line-height: 1; transform: translateY(-50%);
-  }
-  .weekgrid__times span:first-child { transform: translateY(0); }
-  .weekgrid__times span:last-child { transform: translateY(-100%); }
-  .weekgrid__plot {
-    position: relative; min-width: 0;
-    background-image:
-      linear-gradient(to bottom, var(--line-soft) 1px, transparent 1px),
-      linear-gradient(to right, var(--line-soft) 1px, transparent 1px);
-    background-size: 100% calc(100% / 6), calc(100% / 7) 100%;
-  }
-  .weekgrid__slot {
-    position: absolute;
-    top: calc(var(--slot-top) * 1%);
-    left: calc((100% / 7) * var(--day-index) + 2px);
-    width: calc(100% / 7 - 4px);
-    height: max(4px, calc(var(--slot-height) * 1%));
-    border: 1px solid rgba(255,255,255,.55); border-radius: 3px;
-    background: #315b6f; box-shadow: 0 1px 4px rgba(22,48,69,.18);
-    cursor: help; z-index: 1;
-  }
-  .weekgrid__slot[data-tone="1"] { background: #b65b38; }
-  .weekgrid__slot[data-tone="2"] { background: #8a6b27; }
-  .weekgrid__slot[data-tone="3"] { background: #4f755f; }
-  .weekgrid__slot[data-tone="4"] { background: #765686; }
-  .weekgrid__slot::after {
-    content: attr(data-time-label);
-    position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%) translateY(-2px);
-    padding: 5px 8px; border-radius: 5px; background: var(--ink); color: var(--white);
-    font-size: .68rem; font-weight: 700; line-height: 1.2; white-space: nowrap;
-    opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s ease, transform .12s ease;
-    box-shadow: var(--shadow-sm); z-index: 20;
-  }
-  .weekgrid__slot:hover, .weekgrid__slot:focus { z-index: 10; }
-  .weekgrid__slot:hover::after, .weekgrid__slot:focus::after { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
-  .weekgrid__slot:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
-  .pf .weekgrid__body { height: 236px; }
-
-  .tcardx__foot { width: 100%; margin-top: auto; padding-top: 10px; }
+  .tcardx__view svg { width: 17px; height: 17px; }
   .tcardx__book {
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; min-height: 50px; padding: 0 20px;
-    border: 0; border-radius: 14px;
-    background: var(--violet); color: #fff;
-    font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer;
-    transition: background .16s ease, transform .16s ease;
+    width: 100%; min-height: 50px; padding: 0 20px; border: 0; border-radius: 14px;
+    background: var(--violet); color: #fff; font: inherit; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: background .16s ease, transform .16s ease;
   }
   .tcardx__book:hover:not([disabled]) { background: var(--violet-deep); transform: translateY(-1px); }
   .tcardx__book[disabled] { opacity: .5; cursor: default; }
@@ -692,8 +574,6 @@ const filters = [
   .book__status[data-tone='error'] { background: #fbeeea; color: #8f302b; }
 
   .tcardx__bio.is-empty { color: var(--muted-soft); }
-  .tcardx__book { cursor: pointer; }
-
   .book__gate { margin-top: 14px; padding: 13px 16px; border-radius: var(--r-sm); background: var(--yellow-soft); color: var(--ink); font-size: .92rem; line-height: 1.55; }
   .book__gate a { font-weight: 700; color: var(--violet); }
   .book__calendar .book__slot { margin: 0; }
@@ -703,34 +583,33 @@ const filters = [
   /* Profile dialog */
   .pf { position: fixed; inset: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--white); color: var(--ink); box-shadow: none; }
   .pf::backdrop { background: var(--white); }
-  /* The panel scrolls under a pinned footer, so the match CTA stays reachable
-     however long the profile runs. */
   .pf .book__panel {
     display: flex; flex-direction: column; width: 100%; height: 100%; max-height: none;
-    padding: clamp(18px, 3vw, 40px); padding-bottom: 0; border: 0; border-radius: 0;
-    isolation: isolate; scroll-padding-bottom: 108px;
+    padding: clamp(18px, 3vw, 40px); border: 0; border-radius: 0; isolation: isolate;
   }
   .pf .book__close {
-    position: sticky; top: 0; z-index: 50; align-self: flex-end;
+    position: sticky; top: 0; z-index: 50; align-self: flex-start;
     display: inline-flex; width: auto; min-width: 44px; height: 44px; gap: 9px;
     padding: 0 16px; border-radius: var(--r-pill); font-size: .82rem; font-weight: 750;
   }
   .pf .book__eyebrow,
-  .pf [data-profile-body] { width: min(100%, 1040px); margin-inline: auto; }
+  .pf [data-profile-body] { width: min(100%, 1220px); margin-inline: auto; }
+  .pf__layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 370px); gap: clamp(28px, 5vw, 72px); align-items: start; }
+  .pf__main { min-width: 0; }
 
   .pf__head {
-    display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 24px; align-items: center;
-    margin-top: 16px; padding: 22px; border-radius: var(--r-lg); background: var(--canvas);
+    display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 22px; align-items: center;
+    margin-top: 18px; padding-bottom: 24px; border-bottom: 2px solid var(--ink);
   }
-  .pf__portrait { display: grid; justify-items: center; gap: 10px; }
+  .pf__portrait { display: grid; justify-items: center; gap: 8px; }
   .pf__portrait img {
-    width: 118px; height: 118px; border-radius: 50%; object-fit: contain;
-    background: var(--violet-soft); border: 5px solid var(--white);
+    width: 104px; height: 104px; border-radius: 50%; object-fit: contain;
+    background: var(--violet-soft); border: 4px solid var(--canvas);
   }
   .pf__verified {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 12px; border-radius: var(--r-pill); border: 1px solid var(--line);
-    background: var(--white); color: var(--violet); font-size: .7rem; font-weight: 700;
+    padding: 4px 10px; border-radius: var(--r-pill); background: var(--violet-soft);
+    color: var(--violet); font-size: .66rem; font-weight: 750;
     white-space: nowrap;
   }
   .pf__ident { min-width: 0; }
@@ -738,42 +617,61 @@ const filters = [
     font-family: var(--display); font-weight: 800; font-size: clamp(1.5rem, 3.4vw, 1.95rem);
     letter-spacing: -.03em; line-height: 1.12; color: var(--violet);
   }
-  .pf__uni { margin-top: 5px; font-size: 1rem; font-weight: 600; color: var(--ink); }
-  .pf__ident .tcardx__scores { flex-wrap: wrap; justify-content: flex-start; margin-top: 14px; }
-  .pf__ident .tcardx__scores li { flex: 0 1 auto; }
+  .pf__uni { margin-top: 6px; font-size: 1rem; font-weight: 600; color: var(--ink); }
+  .pf__ident .tcardx__curricula { margin-top: 12px; }
 
   .pf__meta {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
-    margin: 18px 0 0; padding: 0;
+    margin: 18px 0 0; padding: 14px 16px; border-radius: 12px; background: var(--canvas);
   }
   .pf__meta div { display: grid; gap: 3px; }
   .pf__meta dt { font-size: .72rem; color: var(--muted-soft); }
   .pf__meta dd { margin: 0; font-size: .88rem; font-weight: 600; color: var(--ink); }
 
-  /* One hairline per section instead of bare margins, matching the quiet rules
-     the rest of the site separates blocks with. */
   .pf__block { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
   .pf__sub { font-family: var(--display); font-size: 1rem; font-weight: 750; color: var(--ink); }
   .pf__video { margin-top: 14px; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #0d1418; }
   .pf__video :global(video), .pf__video :global(iframe) { width: 100%; height: 100%; border: 0; display: block; }
   .pf__bio { margin-top: 10px; color: var(--muted); line-height: 1.65; white-space: pre-wrap; }
-  /* A tutor with no video, no bio, and no hours used to stack three dashed
-     boxes and read as broken. One quiet line each says the same thing. */
   .pf__empty { margin-top: 10px; color: var(--muted-soft); font-size: .92rem; line-height: 1.55; }
-  .pf__block .book__calendar { margin-top: 14px; }
+  .availability-list { display: grid; gap: 8px; margin-top: 14px; }
+  .availability-list__day {
+    display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; align-items: start;
+    padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas);
+  }
+  .availability-list__day > b { padding-top: 5px; color: var(--violet); font-size: .78rem; }
+  .availability-list__ranges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .availability-list__ranges span {
+    padding: 5px 9px; border-radius: var(--r-pill); background: var(--white); color: var(--ink);
+    font-size: .76rem; font-weight: 650; font-variant-numeric: tabular-nums;
+  }
 
-  .pf__foot {
-    position: sticky; bottom: 0; z-index: 30; margin-top: 26px;
-    padding: 16px 0 clamp(24px, 4vw, 40px);
-    background: linear-gradient(to bottom, transparent, var(--white) 18%);
+  .pf__aside { position: sticky; top: 72px; margin-top: 18px; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--canvas); box-shadow: 0 16px 38px rgba(22,48,69,.08); }
+  .pf__aside-kicker { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+  .pf__aside h3 { margin-top: 7px; font-family: var(--display); font-size: 1.15rem; color: var(--ink); }
+  .pf__rate-list { display: grid; gap: 0; margin: 16px 0 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
+  .pf__rate-list li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .pf__rate-subject { color: var(--ink); font-size: .78rem; font-weight: 650; line-height: 1.4; }
+  .pf__rate-score { display: block; margin-top: 3px; color: var(--violet); font-family: var(--display); font-size: .7rem; font-weight: 800; }
+  .pf__rate-price { color: var(--ink); font-family: var(--display); font-size: .82rem; font-weight: 800; white-space: nowrap; }
+  .pf__rate-price small { display: block; margin-top: 2px; color: var(--muted); font-family: var(--body); font-size: .62rem; font-weight: 600; text-align: right; }
+  .pf__rate-missing { align-self: center; color: var(--violet); font-size: .7rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .pf__rate-note { margin-top: 12px; color: var(--muted); font-size: .7rem; line-height: 1.5; }
+  .pf__aside .tcardx__book { margin-top: 18px; pointer-events: auto; }
+  .pf__aside .textlink { display: inline-flex; margin-top: 12px; font-size: .78rem; }
+
+  @media (max-width: 900px) {
+    .pf__layout { grid-template-columns: 1fr; }
+    .pf__aside { position: static; margin-top: 0; }
   }
 
   @media (max-width: 560px) {
-    .pf .book__panel { padding: 12px 16px 0; }
+    .pf .book__panel { padding: 12px 16px 24px; }
     .pf .book__close { top: 0; }
-    .pf__head { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 20px 16px; }
-    .pf__ident .tcardx__scores { justify-content: center; }
+    .pf__head { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .pf__ident .tcardx__curricula { justify-content: center; }
     .pf__meta { grid-template-columns: 1fr; }
+    .pf__aside { padding: 20px; }
   }
 
   .vid__title { font-size: 1.2rem; padding-right: 48px; }
@@ -787,7 +685,7 @@ const filters = [
   }
   @media (prefers-reduced-motion: reduce) {
     .sandbox-bar__actions a,.sandbox-bar__actions button,.tcardx { transition: none; }
-    .rail__n--loading,.count-skeleton,.unis-skeleton,.skeleton-line,.skeleton-identity i,.skeleton-identity b span,.skeleton-tags i { animation: none; }
+    .rail__n--loading,.count-skeleton,.unis-skeleton,.skeleton-line,.skeleton-identity i,.skeleton-identity b span,.skeleton-tags i,.skeleton-score-list i { animation: none; }
   }
 </style>
 
@@ -963,13 +861,18 @@ const filters = [
     applyTutorFilter(btn.dataset.filter || 'all');
     writeDirectoryUrl();
   }));
+  let searchFrame = 0;
   searchInput?.addEventListener('input', () => {
     activeSearch = searchInput.value.slice(0, 100);
     if (clearSearchButton) clearSearchButton.hidden = !activeSearch;
-    renderDirectory(true);
-    writeDirectoryUrl();
+    cancelAnimationFrame(searchFrame);
+    searchFrame = requestAnimationFrame(() => {
+      renderDirectory(true);
+      writeDirectoryUrl();
+    });
   });
   clearSearchButton?.addEventListener('click', () => {
+    cancelAnimationFrame(searchFrame);
     activeSearch = '';
     if (searchInput) { searchInput.value = ''; searchInput.focus(); }
     clearSearchButton.hidden = true;
@@ -1116,6 +1019,12 @@ const filters = [
       'ib', 'ap', 'hl', 'sl', 'as', 'a', 'level', 'igcse', 'gcse', 'and', 'or', 'the',
       'language', 'exam', 'diploma', 'advanced', 'placement',
     ]).has(token));
+  const rateMatchTokens = (value: string) => normalizeSearch(value)
+    .split(' ')
+    .filter((token) => token.length > 1 && !new Set([
+      'ib', 'ap', 'as', 'a', 'level', 'igcse', 'gcse', 'and', 'or', 'the',
+      'language', 'exam', 'diploma', 'advanced', 'placement',
+    ]).has(token));
   const curriculaForScore = (tutor: Tutor, row: SubjectScore) => {
     const direct = directCurricula(row.subject);
     if (direct.size) return direct;
@@ -1176,15 +1085,6 @@ const filters = [
     return numeric / 1600;
   };
   const bestScore = (rows: SubjectScore[]) => [...rows].sort((a, b) => scoreValue(b) - scoreValue(a))[0] || null;
-  const headlineCredential = (tutor: Tutor, tokens = queryTokens()) => {
-    const matched = matchingScores(tutor, tokens);
-    if (matched.length) return bestScore(matched);
-    return validTopLevelScore(tutor) || bestScore(scoresOf(tutor));
-  };
-
-  const SCHEDULE_START = 6 * 60;
-  const SCHEDULE_END = 24 * 60;
-  const SCHEDULE_SPAN = SCHEDULE_END - SCHEDULE_START;
   const parseAvailabilityRange = (value: string) => {
     const match = value.match(/^\s*(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})\s*$/);
     if (!match) return null;
@@ -1194,46 +1094,59 @@ const filters = [
     const endMinute = Number(match[4]);
     if (startHour > 24 || endHour > 24 || startMinute > 59 || endMinute > 59) return null;
     if ((startHour === 24 && startMinute !== 0) || (endHour === 24 && endMinute !== 0)) return null;
+    if (endHour * 60 + endMinute <= startHour * 60 + startMinute) return null;
     return { start: startHour * 60 + startMinute, end: endHour * 60 + endMinute };
   };
-  const availabilityTimetable = (tutor: Tutor) => {
+  const availabilityList = (tutor: Tutor) => {
     const slots = slotsOf(tutor);
-    const blocks = DAYS.flatMap((day, dayIndex) => {
+    const rows = DAYS.flatMap((day) => {
       const ranges = Array.isArray(slots[day.key]) ? slots[day.key] : [];
-      return ranges.flatMap((range, rangeIndex) => {
-      if (typeof range !== 'string') return [];
-      const parsed = parseAvailabilityRange(range);
-      if (!parsed) return [];
-      const start = Math.max(SCHEDULE_START, parsed.start);
-      const end = Math.min(SCHEDULE_END, parsed.end);
-      if (end <= start) return [];
-      return [{ day, dayIndex, rangeIndex, range, start, end }];
-      });
+      const validRanges = ranges.filter((range) => typeof range === 'string' && parseAvailabilityRange(range));
+      return validRanges.length ? [{ day, ranges: validRanges }] : [];
     });
-    const aria = blocks.length
-      ? `${tr('Weekly availability timetable', '주간 가능 시간표')}: ${blocks.map((block) => `${tr(block.day.en, block.day.ko)} ${block.range}`).join(', ')}`
-      : tr('Empty weekly timetable; no availability has been published', '등록된 가능 시간이 없는 빈 주간 시간표');
-    return `<div class="weekgrid" role="group" aria-label="${escapeHtml(aria)}">
-      <div class="weekgrid__head"><span aria-hidden="true"></span>${DAYS.map((day) => `<b>${tr(day.en, day.ko)}</b>`).join('')}</div>
-      <div class="weekgrid__body">
-        <div class="weekgrid__times" aria-hidden="true">
-          <span style="--time-top:0">06</span><span style="--time-top:33.333">12</span><span style="--time-top:66.667">18</span><span style="--time-top:100">24</span>
-        </div>
-        <div class="weekgrid__plot">${blocks.map((block) => {
-          const label = `${tr(block.day.en, block.day.ko)} ${block.range}`;
-          const top = ((block.start - SCHEDULE_START) / SCHEDULE_SPAN) * 100;
-          const height = ((block.end - block.start) / SCHEDULE_SPAN) * 100;
-          return `<span class="weekgrid__slot" tabindex="0" role="img" data-tone="${(block.dayIndex + block.rangeIndex) % 5}" data-time-label="${escapeHtml(label)}" style="--day-index:${block.dayIndex};--slot-top:${top};--slot-height:${height}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
-        }).join('')}</div>
-      </div>
-    </div>`;
+    if (!rows.length) return `<p class="pf__empty">${tr('This tutor has not published hours yet.', '아직 등록된 가능 시간이 없습니다.')}</p>`;
+    return `<div class="availability-list" role="list" aria-label="${tr('Published weekly availability', '등록된 주간 가능 시간')}">${rows.map(({ day, ranges }) => `
+      <div class="availability-list__day" role="listitem">
+        <b>${tr(day.en, day.ko)}</b>
+        <div class="availability-list__ranges">${ranges.map((range) => `<span>${escapeHtml(range.replace(/\s*[-–—]\s*/, '–'))}</span>`).join('')}</div>
+      </div>`).join('')}</div>`;
   };
+
+  const matchingRateForScore = (tutor: Tutor, row: SubjectScore) => {
+    const rowTokens = rateMatchTokens(row.subject);
+    if (!rowTokens.length) return null;
+    const curricula = curriculaForScore(tutor, row);
+    const ranked = rates
+      .filter((rate) => {
+        const key = curriculumSlugToKey[rate.curriculum];
+        return key && (!curricula.size || curricula.has(key));
+      })
+      .map((rate) => {
+        const rateTokens = [...new Set([rate.name, rate.nameKo || '', ...rate.aliases].flatMap(rateMatchTokens))];
+        const overlap = rowTokens.filter((token) => rateTokens.includes(token)).length;
+        const specificity = overlap ? overlap / Math.max(rowTokens.length, rateTokens.length) : 0;
+        return { rate, overlap, specificity };
+      })
+      .filter(({ overlap }) => overlap > 0)
+      .sort((a, b) => b.overlap - a.overlap || b.specificity - a.specificity || a.rate.name.length - b.rate.name.length);
+    const best = ranked[0];
+    if (!best) return null;
+    const tiedPrices = new Set(ranked
+      .filter((item) => item.overlap === best.overlap && item.specificity === best.specificity)
+      .map((item) => item.rate.price));
+    return tiedPrices.size === 1 ? best.rate : null;
+  };
+  const formatWon = (value: number) => `₩${Math.round(value).toLocaleString('en-US')}`;
 
   const displayOrderOf = (tutor: Tutor) => Number.isFinite(Number(tutor.display_order))
     ? Number(tutor.display_order)
     : Number.MAX_SAFE_INTEGER;
   const defaultTutorSort = (a: Tutor, b: Tutor) => displayOrderOf(a) - displayOrderOf(b)
     || a.registry_id.localeCompare(b.registry_id);
+  const tutorStrength = (tutor: Tutor) => {
+    const rows = scoresOf(tutor);
+    return rows.length * 10 + rows.reduce((total, row) => total + scoreValue(row), 0);
+  };
   const sortedTutors = (tutors: Tutor[]) => [...tutors].sort((a, b) => {
     if (activeSort === 'curriculum') {
       const aKey = curriculumOrder.indexOf(categoriesFor(a)[0] as CurriculumKey);
@@ -1249,7 +1162,7 @@ const filters = [
       const bTime = Date.parse(b.created_at || '') || 0;
       return bTime - aTime || displayOrderOf(b) - displayOrderOf(a) || a.registry_id.localeCompare(b.registry_id);
     }
-    return defaultTutorSort(a, b);
+    return tutorStrength(b) - tutorStrength(a) || defaultTutorSort(a, b);
   });
   const scoreSignature = (row: SubjectScore) => `${row.subject}\u0000${row.score}`;
   const profileCard = (tutor: Tutor, state: PreviewState | null, tokens: string[]) => {
@@ -1273,22 +1186,19 @@ const filters = [
       const bMatch = matchedKeys.has(scoreSignature(b)) ? 1 : 0;
       return bMatch - aMatch;
     });
-    const visibleScores = orderedScores.slice(0, 3);
-    const scoreList = visibleScores.map((row) => {
+    const scoreList = orderedScores.map((row) => {
       const fallbackMatches = !rawScores.length && tokens.length && matchesTokens(scoreSearchText(tutor, row), tokens);
       const isMatch = matchedKeys.has(scoreSignature(row)) || fallbackMatches;
       return `<li${isMatch ? ' class="is-match"' : ''} title="${escapeHtml(`${row.subject}: ${row.score}`)}"><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`;
     }).join('');
-    const videoAvailable = safeAsset(tutor.video_url)
-      ? `<span class="tcardx__video-available"><i aria-hidden="true">&#9658;</i>${tr('Sample lesson available', '샘플 수업 있음')}</span>`
-      : '';
-    const credential = headlineCredential(tutor, tokens);
-    const credentialBlock = credential
-      ? `<div class="tcardx__credential"><strong>${escapeHtml(credential.score)}</strong><span>${escapeHtml(credential.subject)}</span>${videoAvailable}</div>`
-      : `<div class="tcardx__credential tcardx__credential--empty" aria-hidden="true"></div>`;
+    const categoryList = categoriesFor(tutor).map((key) => {
+      const category = curriculumNames[key as CurriculumKey];
+      return category ? `<li>${escapeHtml(tr(category.en, category.ko))}</li>` : '';
+    }).join('');
     const metaParts = [
       tutor.languages ? languagesOf(tutor) : '',
       tutor.lesson_format ? lessonFormatOf(tutor) : '',
+      safeAsset(tutor.video_url) ? tr('Sample lesson available', '샘플 수업 있음') : '',
     ].filter(Boolean);
     const previewState = sandboxMode ? state || 'new' : null;
 
@@ -1296,7 +1206,6 @@ const filters = [
       <article class="tcardx card">
         <button type="button" class="tcardx__surface" data-profile="${escapeHtml(tutor.registry_id)}" aria-label="${escapeHtml(displayName)} ${tr('profile', '프로필')} ${tr('open', '열기')}"></button>
         <span class="tcardx__verified">${verifyIcon}${sandboxMode ? previewLabel : tr('Verified Tutor', '검증 완료')}</span>
-        ${credentialBlock}
         <div class="tcardx__identity">
           <img class="tcardx__avatar" src="${photo}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(displayName)}" width="96" height="96" loading="lazy" decoding="async" />
           <div class="tcardx__identity-copy">
@@ -1304,17 +1213,12 @@ const filters = [
             ${uni ? `<p class="tcardx__uni">${uni}</p>` : ''}
           </div>
         </div>
-        ${scoreList ? `<ul class="tcardx__scores">${scoreList}</ul>` : '<div class="tcardx__scores tcardx__scores--empty" aria-hidden="true"></div>'}
-        ${bio ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>` : '<div class="tcardx__bio-space" aria-hidden="true"></div>'}
+        ${categoryList ? `<ul class="tcardx__curricula" aria-label="${tr('Curricula taught', '수업 가능 커리큘럼')}">${categoryList}</ul>` : ''}
+        ${scoreList ? `<p class="tcardx__score-head">${tr('Subjects and verified scores', '과목 및 검증 성적')}</p><ul class="tcardx__scores">${scoreList}</ul>` : ''}
+        ${bio ? `<p class="tcardx__bio">${escapeHtml(bio)}</p>` : ''}
         ${metaParts.length ? `<p class="tcardx__meta-line">${metaParts.map(escapeHtml).join(' · ')}</p>` : ''}
-        <section class="tcardx__availability">
-          <div class="tcardx__availability-head"><b>${tr('Availability', '가능 시간')}</b><span>${tr('06:00 to 24:00', '06시부터 24시')}</span></div>
-          ${availabilityTimetable(tutor)}
-        </section>
         <div class="tcardx__foot">
-          ${sandboxMode
-            ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
-            : `<button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}" data-tutor-name="${escapeHtml(displayName)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</button>`}
+          <span class="tcardx__view">${tr('View full profile', '전체 프로필 보기')}<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </div>
       </article>
     </div>`;
@@ -1618,56 +1522,75 @@ const filters = [
     const scores = scoresOf(tutor);
     const video = embeddableVideo(safeAsset(tutor.video_url));
     const photo = safeAsset(tutor.photo_url) || cardPhoto;
+    const fallback = validTopLevelScore(tutor);
+    const profileScores = scores.length ? scores : fallback ? [fallback] : [];
+    const categoryList = categoriesFor(tutor).map((key) => {
+      const category = curriculumNames[key as CurriculumKey];
+      return category ? `<li>${escapeHtml(tr(category.en, category.ko))}</li>` : '';
+    }).join('');
+    const pricingHref = tr('/en/pricing/#all-rates', '/pricing/#all-rates');
+    const rateList = profileScores.map((row) => {
+      const rate = matchingRateForScore(tutor, row);
+      return `<li>
+        <span class="pf__rate-subject">${escapeHtml(row.subject)}<small class="pf__rate-score">${tr('Verified score', '검증 성적')} ${escapeHtml(row.score)}</small></span>
+        ${rate
+          ? `<span class="pf__rate-price">${formatWon(rate.price)}<small>${tr('per hour', '시간당')}</small></span>`
+          : `<a class="pf__rate-missing" href="${pricingHref}">${tr('See rate', '요금 확인')}</a>`}
+      </li>`;
+    }).join('');
 
     profileBody.innerHTML = `
-      <header class="pf__head">
-        <div class="pf__portrait">
-          <img src="${photo}" alt="" width="320" height="320" />
-          <span class="pf__verified">${verifyIcon}${sandboxMode ? tr('Preview', '미리보기') : tr('Verified', '검증 완료')}</span>
-        </div>
-        <div class="pf__ident">
-          <h2 class="pf__name" id="profile-name">${escapeHtml(name)}</h2>
-          ${uni ? `<p class="pf__uni">${uni}</p>` : ''}
-          ${(() => {
-            const fallback = validTopLevelScore(tutor);
-            const rows = scores.length ? scores : fallback ? [fallback] : [];
-            return rows.length
-              ? `<ul class="tcardx__scores">${rows.map((row) => `<li><b>${escapeHtml(row.score)}</b><span>${escapeHtml(row.subject)}</span></li>`).join('')}</ul>`
-              : '';
-          })()}
-        </div>
-      </header>
+      <div class="pf__layout">
+        <main class="pf__main">
+          <header class="pf__head">
+            <div class="pf__portrait">
+              <img src="${photo}" alt="${tr('Portrait of', '프로필 사진')} ${escapeHtml(name)}" width="320" height="320" />
+              <span class="pf__verified">${verifyIcon}${sandboxMode ? tr('Preview', '미리보기') : tr('Verified', '검증 완료')}</span>
+            </div>
+            <div class="pf__ident">
+              <h2 class="pf__name" id="profile-name">${escapeHtml(name)}</h2>
+              ${uni ? `<p class="pf__uni">${uni}</p>` : ''}
+              ${categoryList ? `<ul class="tcardx__curricula" aria-label="${tr('Curricula taught', '수업 가능 커리큘럼')}">${categoryList}</ul>` : ''}
+            </div>
+          </header>
 
-      <dl class="pf__meta">
-        <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(languagesOf(tutor))}</dd></div>
-        <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(lessonFormatOf(tutor))}</dd></div>
-      </dl>
+          <dl class="pf__meta">
+            <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(languagesOf(tutor))}</dd></div>
+            <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(lessonFormatOf(tutor))}</dd></div>
+          </dl>
 
-      <section class="pf__block">
-        <h3 class="pf__sub">${tr('Sample lesson', '샘플 수업')}</h3>
-        ${video
-          ? (/\.(mp4|webm|ogg)$/i.test(video)
+          <section class="pf__block">
+            <h3 class="pf__sub">${tr('Introduction', '소개')}</h3>
+            ${bio
+              ? `<p class="pf__bio">${escapeHtml(bio)}</p>`
+              : `<p class="pf__empty">${tr('Introduction coming soon.', '소개글 준비 중입니다.')}</p>`}
+          </section>
+
+          <section class="pf__block">
+            <h3 class="pf__sub">${tr('Available hours', '가능 시간')}</h3>
+            ${availabilityList(tutor)}
+          </section>
+
+          ${video ? `<section class="pf__block">
+            <h3 class="pf__sub">${tr('Sample lesson', '샘플 수업')}</h3>
+            ${/\.(mp4|webm|ogg)$/i.test(video)
               ? `<div class="pf__video"><video src="${video}" controls playsinline preload="metadata"></video></div>`
-              : `<div class="pf__video"><iframe src="${video}" title="${escapeHtml(name)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`)
-          : `<p class="pf__empty">${tr('No sample lesson yet.', '아직 등록된 샘플 수업이 없습니다.')}</p>`}
-      </section>
+              : `<div class="pf__video"><iframe src="${video}" title="${escapeHtml(name)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`}
+          </section>` : ''}
+        </main>
 
-      <section class="pf__block">
-        <h3 class="pf__sub">${tr('Introduction', '소개')}</h3>
-        ${bio
-          ? `<p class="pf__bio">${escapeHtml(bio)}</p>`
-          : `<p class="pf__empty">${tr('Introduction coming soon.', '소개글 준비 중입니다.')}</p>`}
-      </section>
-
-      <section class="pf__block">
-        <h3 class="pf__sub">${tr('Available hours', '가능 시간')}</h3>
-        ${availabilityTimetable(tutor)}
-      </section>
-
-      <div class="pf__foot">
-        ${sandboxMode
-          ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
-          : `<button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</button>`}
+        <aside class="pf__aside" aria-label="${tr('Subjects and hourly rates', '과목 및 시간당 요금')}">
+          <p class="pf__aside-kicker">${tr('Published rate card', '공개 요금표')}</p>
+          <h3>${tr('Subjects and hourly rates', '과목 및 시간당 요금')}</h3>
+          ${rateList
+            ? `<ul class="pf__rate-list">${rateList}</ul>`
+            : `<p class="pf__empty">${tr('Subject details are being prepared.', '수업 과목을 준비 중입니다.')}</p>`}
+          <p class="pf__rate-note">${tr('Rates are taken from Seonbae’s published subject rate card.', '요금은 선배의 공개 과목별 요금표를 기준으로 합니다.')}</p>
+          ${sandboxMode
+            ? `<button type="button" class="tcardx__book" disabled aria-disabled="true">${calendarIcon}${tr('Preview only', '미리보기 전용')}</button>`
+            : `<button type="button" class="tcardx__book" data-book="${escapeHtml(tutor.registry_id)}">${calendarIcon}${tr('Request a match', '매칭 요청하기')}</button>`}
+          <a class="textlink" href="${pricingHref}">${tr('View every subject rate', '전체 과목 요금 보기')}</a>
+        </aside>
       </div>`;
 
     // Injected markup carries no data-astro-cid-*, so every scoped rule in this

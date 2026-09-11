@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -8,6 +8,7 @@ const baseUrl = process.env.SEONBAE_QA_URL || 'http://127.0.0.1:4174';
 const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const debugPort = 9337;
 const profile = await mkdtemp(join(tmpdir(), 'seonbae-chrome-qa-'));
+const artifactDir = process.env.SEONBAE_QA_ARTIFACTS;
 let chrome;
 let cdp;
 
@@ -92,6 +93,13 @@ async function navigate(cdp, path) {
   }
   const state = await cdp.evaluate('({ href: location.href, ready: document.readyState, title: document.title })');
   throw new Error(`Page did not load: ${path}; ${JSON.stringify(state)}`);
+}
+
+async function capture(name) {
+  if (!artifactDir) return;
+  await mkdir(artifactDir, { recursive: true });
+  const shot = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  await writeFile(join(artifactDir, `${name}.png`), Buffer.from(shot.data, 'base64'));
 }
 
 const mockTutors = [
@@ -376,10 +384,12 @@ try {
         };
       }),
       controls: cards.map(card => card.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])').length),
-      periods: [...document.querySelectorAll('.tcardx__credential strong, .tcardx__scores b')].map(node => node.textContent.trim()).filter(value => value === '.'),
+      periods: [...document.querySelectorAll('.tcardx__scores b')].map(node => node.textContent.trim()).filter(value => value === '.'),
       cardTimetables: document.querySelectorAll('.tcardx .weekgrid').length,
-      emptyTimetableSlots: document.querySelectorAll('[data-registry-id="P-QA2"] .weekgrid__slot').length,
-      videoAffordances: document.querySelectorAll('.tcardx__video-available').length,
+      scoreRows: document.querySelectorAll('.tcardx__scores li').length,
+      curriculumBadges: document.querySelectorAll('.tcardx__curricula li').length,
+      hasSidebar: Boolean(document.querySelector('aside.rail')),
+      firstTutor: document.querySelector('.tcardx__profile-label > span')?.textContent.trim(),
       bioClamp: getComputedStyle(document.querySelector('.tcardx__bio')).webkitLineClamp,
       igcsePresent: Boolean(document.querySelector('[data-filter="igcse"]')),
       igcseCount: document.querySelector('[data-filter="igcse"] .rail__n').textContent,
@@ -388,42 +398,43 @@ try {
   assert.equal(desktopDirectory.count, mockTutors.length);
   assert.equal(desktopDirectory.columns, 3, JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.rowsForFirstSix <= 2, JSON.stringify(desktopDirectory));
-  assert.ok(desktopDirectory.minHeight >= 520 && desktopDirectory.maxHeight <= 720, JSON.stringify(desktopDirectory));
-  assert.ok(desktopDirectory.maxHeight - desktopDirectory.minHeight < 40, JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.minHeight >= 260 && desktopDirectory.maxHeight <= 560, JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.overflows.every(value => value <= 1), JSON.stringify(desktopDirectory));
   assert.ok(desktopDirectory.roles.every(([role, tabIndex]) => role === null && tabIndex === null));
   assert.ok(desktopDirectory.cardSurfaces.every(({ tag, widthDelta, heightDelta }) => tag === 'BUTTON' && widthDelta <= 1 && heightDelta <= 1), JSON.stringify(desktopDirectory));
-  assert.ok(desktopDirectory.controls.every(count => count >= 2), JSON.stringify(desktopDirectory));
+  assert.ok(desktopDirectory.controls.every(count => count === 1), JSON.stringify(desktopDirectory));
   assert.deepEqual(desktopDirectory.periods, []);
-  assert.equal(desktopDirectory.cardTimetables, mockTutors.length);
-  assert.equal(desktopDirectory.emptyTimetableSlots, 0);
-  assert.equal(desktopDirectory.videoAffordances, 1);
+  assert.equal(desktopDirectory.cardTimetables, 0);
+  assert.equal(desktopDirectory.scoreRows, mockTutors.reduce((total, tutor) => total + tutor.subject_scores.length, 0));
+  assert.ok(desktopDirectory.curriculumBadges >= mockTutors.length);
+  assert.equal(desktopDirectory.hasSidebar, false);
+  assert.equal(desktopDirectory.firstTutor, '김아이비');
   assert.equal(desktopDirectory.bioClamp, '2');
   assert.equal(desktopDirectory.igcsePresent, true);
   assert.equal(desktopDirectory.igcseCount, '0');
+  await cdp.evaluate(`document.querySelector('.filter-strip').scrollIntoView({ block: 'start' })`);
+  await sleep(80);
+  await capture('tutors-desktop');
 
-  const searchResult = async (query) => cdp.evaluate(`(() => {
+  const searchResult = async (query) => cdp.evaluate(`(async () => {
     const input = document.querySelector('#tutor-search');
     input.value = ${JSON.stringify(query)};
     input.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(requestAnimationFrame);
     return {
       count: Number(document.querySelector('#tutor-count').textContent),
       names: [...document.querySelectorAll('.tcardx__profile-label > span')].map(node => node.textContent.trim()),
       highlighted: [...document.querySelectorAll('.tcardx__scores .is-match span')].map(node => node.textContent.trim()),
-      headlines: [...document.querySelectorAll('.tcardx__credential span:first-of-type')].map(node => node.textContent.trim()),
-      headlineScores: [...document.querySelectorAll('.tcardx__credential strong')].map(node => node.textContent.trim()),
     };
   })()`);
   const chemistry = await searchResult('chemistry');
   assert.equal(chemistry.count, 3, JSON.stringify(chemistry));
   assert.ok(chemistry.highlighted.every(subject => /chemistry/i.test(subject)), JSON.stringify(chemistry));
-  assert.ok(chemistry.headlines.every(subject => /chemistry/i.test(subject)), JSON.stringify(chemistry));
   const koreanChemistry = await searchResult('화학');
   assert.equal(koreanChemistry.count, 3, JSON.stringify(koreanChemistry));
   const ibCurriculum = await searchResult('IB');
   assert.equal(ibCurriculum.count, 2, JSON.stringify(ibCurriculum));
   assert.ok(ibCurriculum.highlighted.length > 0 && ibCurriculum.highlighted.every(subject => /^IB\b/i.test(subject)), JSON.stringify(ibCurriculum));
-  assert.ok(ibCurriculum.headlineScores.every(score => score === '7'), JSON.stringify(ibCurriculum));
   const calculus = await searchResult('calculus');
   assert.deepEqual(calculus.names, ['최에이피']);
   assert.deepEqual(calculus.highlighted, ['AP Calculus BC']);
@@ -466,25 +477,22 @@ try {
     const profileButton = document.querySelector('.tcardx__surface');
     profileButton.click();
     await new Promise(r => setTimeout(r, 50));
-    const blocks=[...document.querySelectorAll('#profile-dialog .weekgrid__slot')];
-    const first=blocks[0]; first?.focus();
-    await new Promise(r => setTimeout(r, 160));
-    const profileFooter = document.querySelector('#profile-dialog .pf__foot');
-    const profileMatchButton = profileFooter?.querySelector('.tcardx__book');
+    const ranges=[...document.querySelectorAll('#profile-dialog .availability-list__ranges span')];
+    const rateItems=[...document.querySelectorAll('#profile-dialog .pf__rate-list li')];
+    const profileAside = document.querySelector('#profile-dialog .pf__aside');
+    const profileMatchButton = profileAside?.querySelector('.tcardx__book');
     const matchButtonBox = profileMatchButton?.getBoundingClientRect();
     const result = {
       active: document.querySelector('[data-filter="ib"]').getAttribute('aria-pressed'),
       count: Number(document.querySelector('#tutor-count').textContent),
       totalCards: document.querySelectorAll('.tutor-cell').length,
-      blockCount: blocks.length,
-      colors: new Set(blocks.map(b => getComputedStyle(b).backgroundColor)).size,
-      tooltip: first ? getComputedStyle(first, '::after').content : '',
-      tooltipVisible: first ? getComputedStyle(first, '::after').opacity : '0',
-      tabIndex: first?.tabIndex,
+      fullScreen: document.querySelector('#profile-dialog').getBoundingClientRect().width === innerWidth,
+      rangeCount: ranges.length,
+      ranges: ranges.map(node => node.textContent.trim()),
+      rateCount: rateItems.length,
+      rates: rateItems.map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
       cardMatchButtons: document.querySelectorAll('.tcardx .tcardx__book[data-book]').length,
       consultationLinks: document.querySelectorAll('.tcardx .tcardx__book[href*="get-matched"]').length,
-      footerZ: Number(getComputedStyle(profileFooter).zIndex),
-      focusedBlockZ: Number(getComputedStyle(first).zIndex),
       matchButtonOnTop: matchButtonBox
         ? document.elementFromPoint(matchButtonBox.left + matchButtonBox.width / 2, matchButtonBox.top + matchButtonBox.height / 2)?.closest('.tcardx__book') === profileMatchButton
         : false,
@@ -497,20 +505,24 @@ try {
   assert.equal(tutors.active, 'true');
   assert.equal(tutors.count, 2);
   assert.equal(tutors.totalCards, 2);
-  assert.ok(tutors.blockCount >= 3);
-  assert.ok(tutors.colors > 1);
-  assert.match(tutors.tooltip, /09:00-10:30/);
-  assert.ok(Number(tutors.tooltipVisible) > 0.9, JSON.stringify(tutors));
-  assert.equal(tutors.tabIndex, 0);
+  assert.equal(tutors.fullScreen, true);
+  assert.equal(tutors.rangeCount, 3);
+  assert.ok(tutors.ranges.includes('09:00–10:30'), JSON.stringify(tutors));
+  assert.equal(tutors.rateCount, 3);
+  assert.ok(tutors.rates.every(value => /₩100,000/.test(value)), JSON.stringify(tutors));
   assert.equal(tutors.focusRestored, true);
-  assert.equal(tutors.cardMatchButtons, 2);
+  assert.equal(tutors.cardMatchButtons, 0);
   assert.equal(tutors.consultationLinks, 0);
-  assert.ok(tutors.footerZ > tutors.focusedBlockZ, JSON.stringify(tutors));
   assert.equal(tutors.matchButtonOnTop, true, JSON.stringify(tutors));
+  await cdp.evaluate(`document.querySelector('.tcardx__surface').click()`);
+  await sleep(80);
+  await capture('tutor-profile');
+  await cdp.evaluate(`document.querySelector('[data-close-profile]').click()`);
 
   const matchRequest = await cdp.evaluate(`(async () => {
-    const button = document.querySelector('.tcardx__book[data-book="P-QA1"]');
-    button.click();
+    document.querySelector('[data-registry-id="P-QA1"] .tcardx__surface').click();
+    await new Promise(r => setTimeout(r, 30));
+    document.querySelector('#profile-dialog .tcardx__book[data-book="P-QA1"]').click();
     await new Promise(r => setTimeout(r, 40));
     const dialog = document.querySelector('#book-dialog');
     const form = dialog.querySelector('.book__form');
@@ -547,15 +559,14 @@ try {
   const mobileDirectory = await cdp.evaluate(`(() => {
     const cards = [...document.querySelectorAll('.tcardx:not(.tcardx--skeleton)')];
     const heights = cards.map(card => card.getBoundingClientRect().height);
-    const rail = document.querySelector('.rail');
     const list = document.querySelector('.rail__list');
     const cells = [...document.querySelectorAll('.tutor-cell')];
     const firstRowTop = Math.round(cells[0].getBoundingClientRect().top);
     return {
       columns: cells.filter(cell => Math.round(cell.getBoundingClientRect().top) === firstRowTop).length,
       minHeight: Math.min(...heights), maxHeight: Math.max(...heights),
-      railPosition: getComputedStyle(rail).position,
-      railWrap: getComputedStyle(list).flexWrap,
+      filterWrap: getComputedStyle(list).flexWrap,
+      filterScrollable: list.scrollWidth > list.clientWidth,
       chipMinHeight: Math.min(...[...document.querySelectorAll('.rail__btn')].map(button => button.getBoundingClientRect().height)),
       bodyFits: document.documentElement.scrollWidth <= innerWidth,
       innerWidth,
@@ -565,11 +576,13 @@ try {
     };
   })()`);
   assert.equal(mobileDirectory.columns, 1, JSON.stringify(mobileDirectory));
-  assert.ok(mobileDirectory.maxHeight - mobileDirectory.minHeight < 40, JSON.stringify(mobileDirectory));
-  assert.equal(mobileDirectory.railPosition, 'sticky');
-  assert.equal(mobileDirectory.railWrap, 'nowrap');
+  assert.equal(mobileDirectory.filterWrap, 'nowrap');
+  assert.equal(mobileDirectory.filterScrollable, true);
   assert.ok(mobileDirectory.chipMinHeight >= 44);
   assert.equal(mobileDirectory.bodyFits, true);
+  await cdp.evaluate(`document.querySelector('.filter-strip').scrollIntoView({ block: 'start' })`);
+  await sleep(80);
+  await capture('tutors-mobile');
 
   await cdp.send('Emulation.setEmulatedMedia', {
     media: '',
@@ -584,11 +597,11 @@ try {
   const landscapeDirectory = await cdp.evaluate(`({
     bodyFits: document.documentElement.scrollWidth <= innerWidth,
     searchVisible: document.querySelector('#tutor-search').getBoundingClientRect().width > 0,
-    railPosition: getComputedStyle(document.querySelector('.rail')).position,
+    filterVisible: document.querySelector('.filter-strip').getBoundingClientRect().width > 0,
   })`);
   assert.equal(landscapeDirectory.bodyFits, true, JSON.stringify(landscapeDirectory));
   assert.equal(landscapeDirectory.searchVisible, true);
-  assert.equal(landscapeDirectory.railPosition, 'sticky');
+  assert.equal(landscapeDirectory.filterVisible, true);
 
   await cdp.evaluate(`sessionStorage.removeItem('seonbae-match-draft')`);
   await navigate(cdp, '/get-matched/?tutor=P-QA1');
@@ -604,7 +617,7 @@ try {
   assert.equal(tutorCarry.value, '김아이비');
   assert.equal(tutorCarry.options, mockTutors.length);
 
-  console.log('Marketing browser QA passed: mobile layout, search/deep links, form history/draft, timezone, roster, timetable tooltips, and match requests.');
+  console.log('Marketing browser QA passed: mobile layout, search/deep links, roster density, profile rates and availability, and match requests.');
 } finally {
   try { await cdp?.send('Browser.close'); } catch {}
   if (chrome && chrome.exitCode === null) {
