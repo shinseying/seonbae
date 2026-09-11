@@ -111,7 +111,7 @@ const mockTutors = [
       { subject: 'IB Mathematics AA HL', score: '7' },
       { subject: 'IB Physics HL', score: '6' },
     ],
-    bio: '학생이 스스로 풀이의 논리를 설명할 수 있도록 개념과 기출을 연결합니다. 긴 소개글도 카드에서는 두 줄까지만 보여야 합니다. 이 문장은 줄임 처리를 검증하기 위해 일부러 더 길게 작성했습니다.',
+    bio: '학생이 스스로 풀이의 논리를 설명할 수 있도록 개념과 기출을 연결합니다. 긴 소개글도 카드에서는 두 줄까지만 보여야 합니다. 이 문장은 줄임 처리를 검증하기 위해 일부러 더 길게 작성했습니다. 학생별 학습 계획과 매주 달라지는 우선순위를 함께 점검하며, 오답의 원인을 말로 설명한 뒤 비슷한 문제에 다시 적용하도록 지도합니다. 시험 직전에는 시간 관리와 실전 풀이 순서를 함께 다듬습니다.',
     bio_en: 'I connect concepts with past-paper reasoning until students can explain each step independently. This deliberately long biography must stay clamped to two lines on the directory card.',
     video_url: '/sample.mp4', languages: 'Korean, English', lesson_format: 'Online 1:1',
     availability: { mon: ['09:00-10:30', '17:00-18:00'], wed: ['12:00-13:00'] },
@@ -481,6 +481,7 @@ try {
     const rateItems=[...document.querySelectorAll('#profile-dialog .pf__rate-list li')];
     const profileAside = document.querySelector('#profile-dialog .pf__aside');
     const profileMatchButton = profileAside?.querySelector('.tcardx__book');
+    const bioToggle = document.querySelector('#profile-dialog [data-expand-bio]');
     const matchButtonBox = profileMatchButton?.getBoundingClientRect();
     const result = {
       active: document.querySelector('[data-filter="ib"]').getAttribute('aria-pressed'),
@@ -491,12 +492,17 @@ try {
       ranges: ranges.map(node => node.textContent.trim()),
       rateCount: rateItems.length,
       rates: rateItems.map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
+      bioTogglePresent: Boolean(bioToggle),
+      bioCollapsed: document.querySelector('#profile-dialog [data-profile-bio]')?.classList.contains('is-collapsed'),
       cardMatchButtons: document.querySelectorAll('.tcardx .tcardx__book[data-book]').length,
       consultationLinks: document.querySelectorAll('.tcardx .tcardx__book[href*="get-matched"]').length,
       matchButtonOnTop: matchButtonBox
         ? document.elementFromPoint(matchButtonBox.left + matchButtonBox.width / 2, matchButtonBox.top + matchButtonBox.height / 2)?.closest('.tcardx__book') === profileMatchButton
         : false,
     };
+    bioToggle?.click();
+    result.bioExpanded = !document.querySelector('#profile-dialog [data-profile-bio]')?.classList.contains('is-collapsed')
+      && bioToggle?.getAttribute('aria-expanded') === 'true';
     document.querySelector('[data-close-profile]').click();
     await new Promise(requestAnimationFrame);
     result.focusRestored = document.activeElement === profileButton;
@@ -510,6 +516,9 @@ try {
   assert.ok(tutors.ranges.includes('09:00–10:30'), JSON.stringify(tutors));
   assert.equal(tutors.rateCount, 3);
   assert.ok(tutors.rates.every(value => /₩100,000/.test(value)), JSON.stringify(tutors));
+  assert.equal(tutors.bioTogglePresent, true);
+  assert.equal(tutors.bioCollapsed, true);
+  assert.equal(tutors.bioExpanded, true);
   assert.equal(tutors.focusRestored, true);
   assert.equal(tutors.cardMatchButtons, 0);
   assert.equal(tutors.consultationLinks, 0);

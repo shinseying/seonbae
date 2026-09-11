@@ -633,6 +633,12 @@ const filters = [
   .pf__video { margin-top: 14px; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #0d1418; }
   .pf__video :global(video), .pf__video :global(iframe) { width: 100%; height: 100%; border: 0; display: block; }
   .pf__bio { margin-top: 10px; color: var(--muted); line-height: 1.65; white-space: pre-wrap; }
+  .pf__bio.is-collapsed { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 5; white-space: normal; }
+  .pf__bio-toggle {
+    min-height: 44px; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--violet);
+    font: inherit; font-size: .8rem; font-weight: 750; text-decoration: underline; text-underline-offset: 4px; cursor: pointer;
+  }
+  .pf__bio-toggle:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
   .pf__empty { margin-top: 10px; color: var(--muted-soft); font-size: .92rem; line-height: 1.55; }
   .availability-list { display: grid; gap: 8px; margin-top: 14px; }
   .availability-list__day {
@@ -1524,6 +1530,7 @@ const filters = [
     const photo = safeAsset(tutor.photo_url) || cardPhoto;
     const fallback = validTopLevelScore(tutor);
     const profileScores = scores.length ? scores : fallback ? [fallback] : [];
+    const bioNeedsToggle = bio.length > 180;
     const categoryList = categoriesFor(tutor).map((key) => {
       const category = curriculumNames[key as CurriculumKey];
       return category ? `<li>${escapeHtml(tr(category.en, category.ko))}</li>` : '';
@@ -1562,7 +1569,9 @@ const filters = [
           <section class="pf__block">
             <h3 class="pf__sub">${tr('Introduction', '소개')}</h3>
             ${bio
-              ? `<p class="pf__bio">${escapeHtml(bio)}</p>`
+              ? `<p class="pf__bio${bioNeedsToggle ? ' is-collapsed' : ''}" data-profile-bio>${escapeHtml(bio)}</p>${bioNeedsToggle
+                  ? `<button type="button" class="pf__bio-toggle" data-expand-bio data-collapsed-label="${tr('View full introduction', '소개 전체 보기')}" data-expanded-label="${tr('Show less', '간단히 보기')}" aria-expanded="false">${tr('View full introduction', '소개 전체 보기')}</button>`
+                  : ''}`
               : `<p class="pf__empty">${tr('Introduction coming soon.', '소개글 준비 중입니다.')}</p>`}
           </section>
 
@@ -1697,6 +1706,18 @@ const filters = [
       slot.classList.add('is-on');
       if (bookDay) bookDay.value = slot.dataset.day || '';
       if (bookTime) bookTime.value = slot.dataset.time || '';
+      return;
+    }
+
+    const bioToggle = target.closest('[data-expand-bio]') as HTMLButtonElement | null;
+    if (bioToggle) {
+      const bio = profileBody?.querySelector('[data-profile-bio]');
+      const expanded = bioToggle.getAttribute('aria-expanded') === 'true';
+      bio?.classList.toggle('is-collapsed', expanded);
+      bioToggle.setAttribute('aria-expanded', String(!expanded));
+      bioToggle.textContent = expanded
+        ? bioToggle.dataset.collapsedLabel || ''
+        : bioToggle.dataset.expandedLabel || '';
       return;
     }
 
