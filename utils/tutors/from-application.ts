@@ -20,7 +20,7 @@ const CATEGORY_BY_CURRICULUM: Record<string, string> = {
   ap: "ap",
   "a-level": "alevel",
   alevel: "alevel",
-  igcse: "alevel",
+  igcse: "igcse",
   sat: "sat",
   act: "sat",
   toefl: "english",

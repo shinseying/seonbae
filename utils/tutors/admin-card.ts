@@ -3,7 +3,7 @@ import { parseProfile } from "./profile-patch.ts";
 export const TUTOR_FIELDS =
   "registry_id,roster_number,name,exam,score,category,categories,university,university_en,photo_url,photo_path,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages";
 
-const ALLOWED_CATEGORIES = new Set(["ib", "ap", "alevel", "sat", "english"]);
+const ALLOWED_CATEGORIES = new Set(["ib", "ap", "alevel", "igcse", "sat", "english"]);
 
 /** One tutor often teaches SAT and IB and AP, so the card carries a set. The
  *  first entry stays in `category` for readers that predate the array. */

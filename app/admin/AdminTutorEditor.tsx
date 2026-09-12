@@ -18,7 +18,7 @@ export type AdminTutor = {
   name: string;
   exam: string;
   score: string;
-  category: "ib" | "ap" | "alevel" | "sat" | "english";
+  category: "ib" | "ap" | "alevel" | "igcse" | "sat" | "english";
   categories?: string[] | null;
   university: string | null;
   university_en: string | null;
@@ -136,6 +136,7 @@ const CATEGORY_OPTIONS = [
   { value: "ib", label: "IB" },
   { value: "ap", label: "AP" },
   { value: "alevel", label: "A-Level" },
+  { value: "igcse", label: "IGCSE" },
   { value: "sat", label: "SAT / ACT" },
   { value: "english", label: "영어 시험" },
 ] as const;

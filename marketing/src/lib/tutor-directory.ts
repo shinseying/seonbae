@@ -39,7 +39,7 @@ export const curriculumNames: Record<CurriculumKey, { en: string; ko: string }> 
 // The registry column maps onto the five public filters. `sat` and `english`
 // are one filter here, which is why two keys land on 'tests'.
 const declaredCategories: Record<string, CurriculumKey> = {
-  ib: 'ib', ap: 'ap', alevel: 'alevel', sat: 'tests', english: 'tests',
+  ib: 'ib', ap: 'ap', alevel: 'alevel', igcse: 'igcse', sat: 'tests', english: 'tests',
 };
 
 // A card can carry several categories now. Whatever the tutor picked is

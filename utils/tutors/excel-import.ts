@@ -1,6 +1,6 @@
 import { createTutorRegistryId } from "./registry-id.ts";
 
-export type TutorImportCategory = "ib" | "ap" | "alevel" | "sat" | "english";
+export type TutorImportCategory = "ib" | "ap" | "alevel" | "igcse" | "sat" | "english";
 
 export type TutorImportRow = {
   registry_id: string;
@@ -265,7 +265,8 @@ function parseCategory(value: string, exam: string): TutorImportCategory | null 
   const source = (value || exam).normalize("NFKC").toLowerCase().replace(/[\s_-]/g, "");
   if (source === "ib" || source.startsWith("ib") || source.includes("internationalbaccalaureate")) return "ib";
   if (source === "ap" || source.startsWith("ap") || source.includes("advancedplacement")) return "ap";
-  if (source.includes("alevel") || source.includes("igcse") || source.includes("gcse")) return "alevel";
+  if (source.includes("igcse") || source.includes("gcse")) return "igcse";
+  if (source.includes("alevel")) return "alevel";
   if (source.includes("sat") || source.includes("act")) return "sat";
   if (source.includes("ielts") || source.includes("toefl") || source.includes("영어")) return "english";
   return null;
