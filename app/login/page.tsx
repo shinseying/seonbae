@@ -14,7 +14,6 @@ import {
   MAX_TUTOR_CREDENTIAL_FILES,
   MAX_TUTOR_SUBJECTS,
   TUTOR_CURRICULA,
-  TUTOR_LESSON_FORMATS,
   TUTOR_UNIVERSITIES,
   tutorSignupErrorKo,
   validateTutorCredentialCount,
@@ -88,9 +87,8 @@ export default function LoginPage() {
   const [accountRole, setAccountRole] = useState<"student" | "parent" | "tutor">("student");
   const [tutorUniversity, setTutorUniversity] = useState("");
   const [tutorMajorYear, setTutorMajorYear] = useState("");
-  const [tutorCurriculum, setTutorCurriculum] = useState("");
+  const [tutorCurricula, setTutorCurricula] = useState<string[]>([]);
   const [tutorLanguages, setTutorLanguages] = useState("");
-  const [tutorLessonFormat, setTutorLessonFormat] = useState("");
   const [tutorSubjectScores, setTutorSubjectScores] = useState<EditableSubjectScore[]>([
     { id: 1, subject: "", score: "" },
   ]);
@@ -147,12 +145,11 @@ export default function LoginPage() {
     const english: Record<TutorSignupErrorCode, string> = {
       university: "Select your current or accepted university.",
       majorYear: "Enter your course and year in 120 characters or fewer.",
-      curriculum: "Select the curriculum you want to teach.",
+      curriculum: "Select every curriculum you can teach.",
       languages: "Enter the languages you can teach in, using 80 characters or fewer.",
-      lessonFormat: "Select your preferred lesson format.",
       subjectCount: `Add between 1 and ${MAX_TUTOR_SUBJECTS} subjects.`,
       subjectRows: "Enter both the subject and result for every row.",
-      introduction: "Describe your teaching experience in 2,000 characters or fewer.",
+      introduction: "Keep your teaching experience to 2,000 characters or fewer.",
       credentialCount: `Attach between 1 and ${MAX_TUTOR_CREDENTIAL_FILES} score reports or credentials.`,
     };
     return locale === "ko" ? tutorSignupErrorKo(code) : english[code];
@@ -218,6 +215,17 @@ export default function LoginPage() {
     }
   }
 
+  // The order in TUTOR_CURRICULA decides how the picks are listed, so the
+  // application reads the same way whichever box was ticked first.
+  function toggleCurriculum(value: string, checked: boolean) {
+    setTutorCurricula((current) => {
+      const next = new Set(current);
+      if (checked) next.add(value);
+      else next.delete(value);
+      return TUTOR_CURRICULA.filter((entry) => next.has(entry));
+    });
+  }
+
   function updateSubjectScore(id: number, key: keyof TutorSubjectScore, value: string) {
     setTutorSubjectScores((rows) => rows.map((row) => (
       row.id === id ? { ...row, [key]: value } : row
@@ -265,9 +273,8 @@ export default function LoginPage() {
         const detailError = validateTutorSignupDetails({
           university: tutorUniversity.trim(),
           majorYear: tutorMajorYear.trim(),
-          curriculum: tutorCurriculum.trim(),
+          curricula: tutorCurricula,
           languages: tutorLanguages.trim(),
-          lessonFormat: tutorLessonFormat.trim(),
           subjectScores: tutorSubjectScores.map(({ subject, score }) => ({
             subject: subject.trim(),
             score: score.trim(),
@@ -351,9 +358,8 @@ export default function LoginPage() {
         if (accountRole === "tutor" && acceptanceLetter) {
           signupForm.set("university", tutorUniversity);
           signupForm.set("majorYear", tutorMajorYear);
-          signupForm.set("curriculum", tutorCurriculum);
+          for (const entry of tutorCurricula) signupForm.append("curriculum", entry);
           signupForm.set("languages", tutorLanguages);
-          signupForm.set("lessonFormat", tutorLessonFormat);
           signupForm.set("introduction", tutorIntroduction);
           for (const row of tutorSubjectScores) {
             signupForm.append("subjectName", row.subject);
@@ -544,9 +550,8 @@ export default function LoginPage() {
     setAccountRole("student");
     setTutorUniversity("");
     setTutorMajorYear("");
-    setTutorCurriculum("");
+    setTutorCurricula([]);
     setTutorLanguages("");
-    setTutorLessonFormat("");
     setTutorSubjectScores([{ id: 1, subject: "", score: "" }]);
     setNextSubjectId(2);
     setTutorIntroduction("");
@@ -712,7 +717,7 @@ export default function LoginPage() {
                       checked={accountRole === "tutor"}
                       onChange={() => selectAccountRole("tutor")}
                     />
-                    <span><b>{l("튜터 계정", "Tutor")}</b></span>
+                    <span><b>{l("튜터 계정", "Tutor")}</b><small>{l("학교 이메일 인증, 성적 증빙 제출 후 심사", "School email, score documents, and a review")}</small></span>
                   </label>
                 </fieldset>
               </>
@@ -816,16 +821,24 @@ export default function LoginPage() {
                       required
                     />
                   </label>
-                  <label>
-                    <span>{l("지원 커리큘럼", "Curriculum")}<RequiredMark /></span>
-                    <select value={tutorCurriculum} onChange={(event) => setTutorCurriculum(event.target.value)} required>
-                      <option value="" disabled>{l("커리큘럼 선택", "Select curriculum")}</option>
-                      {TUTOR_CURRICULA.map((curriculum) => <option value={curriculum} key={curriculum}>{curriculum}</option>)}
-                    </select>
+                  <fieldset className={styles.curriculumSet}>
+                    <legend>{l("지원 커리큘럼", "Curriculum")}<RequiredMark /></legend>
+                    <div className={styles.curriculumOptions}>
+                      {TUTOR_CURRICULA.map((curriculum) => (
+                        <label key={curriculum} className={styles.curriculumOption}>
+                          <input
+                            type="checkbox"
+                            checked={tutorCurricula.includes(curriculum)}
+                            onChange={(event) => toggleCurriculum(curriculum, event.target.checked)}
+                          />
+                          <span>{curriculum}</span>
+                        </label>
+                      ))}
+                    </div>
                     <small className={styles.fieldNote}>
-                      {l("가장 자신 있게 가르칠 수 있는 커리큘럼을 선택해 주세요.", "Choose the curriculum you are best prepared to teach.")}
+                      {l("가르칠 수 있는 커리큘럼을 모두 선택해 주세요. SAT, IB, AP를 함께 가르치는 선배도 많습니다.", "Pick every one you teach. Plenty of tutors take SAT, IB and AP.")}
                     </small>
-                  </label>
+                  </fieldset>
                   <label>
                     <span>{l("수업 가능 언어", "Teaching languages")}<RequiredMark /></span>
                     <input
@@ -835,15 +848,6 @@ export default function LoginPage() {
                       placeholder={l("예: 한국어, 영어", "e.g. Korean, English")}
                       required
                     />
-                  </label>
-                  <label className={styles.fullField}>
-                    <span>{l("선호 수업 형식", "Preferred lesson format")}<RequiredMark /></span>
-                    <select value={tutorLessonFormat} onChange={(event) => setTutorLessonFormat(event.target.value)} required>
-                      <option value="" disabled>{l("수업 형식 선택", "Select lesson format")}</option>
-                      {TUTOR_LESSON_FORMATS.map((format) => (
-                        <option value={format} key={format}>{lessonFormatLabel(format, locale)}</option>
-                      ))}
-                    </select>
                   </label>
                 </div>
 
@@ -898,15 +902,17 @@ export default function LoginPage() {
                 </fieldset>
 
                 <label>
-                  <span>{l("소개 및 수업 경험", "Teaching experience")}<RequiredMark /></span>
+                  <span>{l("소개 및 수업 경험", "Teaching experience")}<small className={styles.optionalMark}>{l("선택", "Optional")}</small></span>
                   <textarea
                     value={tutorIntroduction}
                     onChange={(event) => setTutorIntroduction(event.target.value)}
                     rows={5}
                     maxLength={2000}
-                    placeholder={l("지원 동기, 수업 경험과 가르칠 때 중요하게 생각하는 점을 적어 주세요.", "Describe why you are applying, your teaching experience, and your approach to lessons.")}
-                    required
+                    placeholder={l("수업 경험과 가르칠 때 중요하게 생각하는 점을 적어 주세요.", "Describe your teaching experience and your approach to lessons.")}
                   />
+                  <small className={styles.fieldNote}>
+                    {l("지금 비워 두셔도 됩니다. 계정이 만들어진 뒤 포털의 카드 변경 요청으로 보내주시면 반영해 드립니다.", "Leave it blank if you would rather write it later. Once your account exists you can send it in from the portal as a card change request.")}
+                  </small>
                   <small className={styles.fieldNote}>{tutorIntroduction.length.toLocaleString()} / 2,000</small>
                 </label>
 
@@ -1200,13 +1206,6 @@ function universityLabel(university: (typeof TUTOR_UNIVERSITIES)[number], locale
   return "Yonsei University";
 }
 
-function lessonFormatLabel(format: (typeof TUTOR_LESSON_FORMATS)[number], locale: SeonbaeLocale) {
-  if (locale === "ko") return format;
-  if (format === "온라인 1:1") return "Online 1:1";
-  if (format === "온라인 소그룹") return "Online small group";
-  if (format === "대면 1:1") return "In person 1:1";
-  return "Online or in person";
-}
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;

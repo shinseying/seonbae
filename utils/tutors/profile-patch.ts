@@ -71,7 +71,6 @@ export function parseProfile(body: Record<string, unknown>) {
     bio_en: nullable(body.bioEn, 600),
     video_url: video || null,
     languages: nullable(body.languages, 80),
-    lesson_format: nullable(body.lessonFormat, 80),
   };
 }
 

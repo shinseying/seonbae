@@ -124,7 +124,6 @@ function describe(payload: Record<string, unknown>) {
     ["bio_en", "소개 (영어)"],
     ["video_url", "샘플 영상"],
     ["languages", "언어"],
-    ["lesson_format", "수업 형식"],
   ];
   for (const [key, label] of simple) {
     const value = payload[key];

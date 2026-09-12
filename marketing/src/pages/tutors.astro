@@ -999,13 +999,6 @@ const filters = [
       ? known.map((item) => language() === 'en' ? item.en : item.ko).join(', ')
       : source || tr('Korean, English', '한국어, 영어');
   };
-  const lessonFormatOf = (tutor: Tutor) => {
-    const source = tutor.lesson_format || '';
-    const imported = /^온라인 1:1 · 주당 (.+)시간 가능$/.exec(source);
-    if (imported) return tr(`Online 1:1 · ${imported[1]} hours/week available`, source);
-    return source || tr('Online 1:1', '온라인 1:1');
-  };
-
   const curriculumTerms: Record<CurriculumKey, string[]> = {
     ib: ['ib', 'ib diploma', 'international baccalaureate', '아이비', '디플로마'],
     ap: ['ap', 'advanced placement', '에이피'],
@@ -1224,7 +1217,6 @@ const filters = [
     }).join('');
     const metaParts = [
       tutor.languages ? languagesOf(tutor) : '',
-      tutor.lesson_format ? lessonFormatOf(tutor) : '',
       safeAsset(tutor.video_url) ? tr('Sample lesson available', '샘플 수업 있음') : '',
     ].filter(Boolean);
     const previewState = sandboxMode ? state || 'new' : null;
@@ -1357,7 +1349,9 @@ const filters = [
       bio_en: text(raw.bioEn ?? raw.bio_en) || null,
       video_url: text(raw.videoUrl ?? raw.video_url) || null,
       languages: text(raw.languages) || null,
-      lesson_format: text(raw.lessonFormat ?? raw.lesson_format) || null,
+      categories: Array.isArray(raw.categories)
+        ? raw.categories.map((value: unknown) => text(value)).filter(Boolean)
+        : [],
       display_order: Number.isFinite(Number(raw.display_order)) ? Number(raw.display_order) : 0,
       created_at: text(raw.created_at) || null,
       active: raw.active === true,
@@ -1586,7 +1580,6 @@ const filters = [
 
           <dl class="pf__meta">
             <div><dt>${tr('Languages', '언어')}</dt><dd>${escapeHtml(languagesOf(tutor))}</dd></div>
-            <div><dt>${tr('Format', '형식')}</dt><dd>${escapeHtml(lessonFormatOf(tutor))}</dd></div>
           </dl>
 
           <section class="pf__block">

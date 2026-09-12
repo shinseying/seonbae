@@ -10,6 +10,7 @@ export type PublicTutor = {
   exam: string;
   score: string;
   category?: string;
+  categories?: string[];
   university?: string;
   university_en?: string;
   photo_url?: string | null;
@@ -20,7 +21,6 @@ export type PublicTutor = {
   bio_en?: string | null;
   video_url?: string | null;
   languages?: string | null;
-  lesson_format?: string | null;
   display_order?: number;
   created_at?: string | null;
   active?: boolean;
@@ -36,12 +36,27 @@ export const curriculumNames: Record<CurriculumKey, { en: string; ko: string }> 
   tests: { en: 'Tests & English', ko: 'SAT·ACT·영어 시험' },
 };
 
+// The registry column maps onto the five public filters. `sat` and `english`
+// are one filter here, which is why two keys land on 'tests'.
+const declaredCategories: Record<string, CurriculumKey> = {
+  ib: 'ib', ap: 'ap', alevel: 'alevel', sat: 'tests', english: 'tests',
+};
+
+// A card can carry several categories now. Whatever the tutor picked is
+// authoritative; the text sweep still runs so a row written before the column
+// existed, or one whose scores name a curriculum nobody ticked, keeps turning
+// up under the right filter.
 export const categoriesFor = (tutor: PublicTutor) => {
   const subjects = Array.isArray(tutor.subject_scores)
     ? tutor.subject_scores.map((row) => row?.subject || '').join(' ')
     : '';
   const value = `${tutor.exam} ${tutor.category || ''} ${subjects}`.toUpperCase();
-  const categories = new Set<CurriculumKey>();
+  const declared = Array.isArray(tutor.categories)
+    ? tutor.categories
+      .map((key) => declaredCategories[String(key).toLowerCase()])
+      .filter(Boolean)
+    : [];
+  const categories = new Set<CurriculumKey>(declared);
   if (/\bIB\b/.test(value)) categories.add('ib');
   if (/\bAP\b|ADVANCED PLACEMENT/.test(value)) categories.add('ap');
   if (/A[ -]?LEVEL/.test(value)) categories.add('alevel');

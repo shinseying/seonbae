@@ -25,7 +25,6 @@ export type AccountApplication = {
   curriculum: string | null;
   official_score: string | null;
   languages: string | null;
-  lesson_format: string | null;
   subject_scores: Array<{ subject: string; score: string }>;
   referral_code: string | null;
   contract_signed: boolean;
@@ -161,7 +160,7 @@ export default function ApplicationReviewClient({
               )}
               {item.requested_role === "tutor" && (item.university || item.curriculum) && (
                 <span className={styles.sent}>
-                  {[item.university, item.curriculum, item.languages, item.lesson_format].filter(Boolean).join(" · ")}
+                  {[item.university, item.curriculum, item.languages].filter(Boolean).join(" · ")}
                 </span>
               )}
               {item.requested_role === "tutor" && item.subject_scores.length > 0 && (

@@ -109,7 +109,6 @@ test("Google Forms tutor applications map to private, inactive card drafts", () 
     bioEn: null,
     videoUrl: null,
     languages: "Korean 한국어, English 영어",
-    lessonFormat: "온라인 1:1 · 주당 6–10시간 가능",
     sourceRow: 2,
   });
   assert.match(result.rows[0].registry_id, /^T-[A-F0-9]{8}$/);

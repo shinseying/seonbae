@@ -24,7 +24,7 @@ export default async function AdminApplicationsPage() {
   const admin = createAdminClient();
   const { data: accountRows } = await admin
     .from("account_creation_requests")
-    .select("id,user_id,full_name,email,phone,requested_role,acceptance_letter_path,acceptance_letter_name,credential_path,credential_name,university,subjects,subject_scores,languages,lesson_format,curriculum,official_score,referral_code,status,notification_sent_at,notification_error,created_at")
+    .select("id,user_id,full_name,email,phone,requested_role,acceptance_letter_path,acceptance_letter_name,credential_path,credential_name,university,subjects,subject_scores,languages,curriculum,official_score,referral_code,status,notification_sent_at,notification_error,created_at")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
 

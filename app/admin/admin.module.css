@@ -126,3 +126,7 @@
 
 @media(max-width:680px){.actionButtons{width:100%;flex-direction:column-reverse;align-items:stretch}.actions .applyButton{width:100%;min-width:0}.deleteButton{width:100%;justify-content:center!important}}
 @media(prefers-reduced-motion:reduce){.actions .applyButton{transition:none}}
+
+.categorySet{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:6px}
+.categoryOption{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer}
+.categoryOption input{width:15px;height:15px;margin:0;flex:none}

@@ -91,7 +91,10 @@ try {
   const subjectsHtml = await fetch(`${origin}/subjects`).then((response) => response.text());
   assert.match(subjectsHtml, /data-lang="ko"/);
   assert.match(subjectsHtml, /꼭 맞는 도움/);
-  assert.match(subjectsHtml, /Verified tutors from SNU, Korea and Yonsei/);
+  // Public routes carry one language each now, so the English strip lives on
+  // the /en copy rather than beside the Korean one in the same document.
+  const subjectsHtmlEn = await fetch(`${origin}/en/subjects`).then((response) => response.text());
+  assert.match(subjectsHtmlEn, /Verified tutors from SNU, Korea and Yonsei/);
 
   const googleSignup = await fetch(`${origin}/api/auth/google`, {
     method: 'POST',

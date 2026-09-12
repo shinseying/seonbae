@@ -1,14 +1,31 @@
 import { parseProfile } from "./profile-patch.ts";
 
 export const TUTOR_FIELDS =
-  "registry_id,roster_number,name,exam,score,category,university,university_en,photo_url,photo_path,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format";
+  "registry_id,roster_number,name,exam,score,category,categories,university,university_en,photo_url,photo_path,banner_url,zoom_host_email,display_order,active,subject_scores,availability,bio,bio_en,video_url,languages";
 
 const ALLOWED_CATEGORIES = new Set(["ib", "ap", "alevel", "sat", "english"]);
 
+/** One tutor often teaches SAT and IB and AP, so the card carries a set. The
+ *  first entry stays in `category` for readers that predate the array. */
+export function normalizeCategories(value: unknown, fallback?: unknown) {
+  const raw = Array.isArray(value) ? value : [];
+  const seen = new Set<string>();
+  for (const entry of raw) {
+    const key = cleanText(entry, 20);
+    if (ALLOWED_CATEGORIES.has(key)) seen.add(key);
+  }
+  if (!seen.size) {
+    const single = cleanText(fallback, 20);
+    if (ALLOWED_CATEGORIES.has(single)) seen.add(single);
+  }
+  return [...seen];
+}
+
 /** Validates and normalises the public card columns shared by single and Excel imports. */
 export function buildTutorRow(body: Record<string, unknown>) {
-  const category = cleanText(body.category, 20);
-  if (!ALLOWED_CATEGORIES.has(category)) return "분류 값이 올바르지 않습니다.";
+  const categories = normalizeCategories(body.categories, body.category);
+  if (!categories.length) return "분류를 하나 이상 선택해 주세요.";
+  const category = categories[0];
 
   const displayOrder = Number(body.display_order);
   if (!Number.isInteger(displayOrder) || displayOrder < 0 || displayOrder > 9999) {
@@ -25,7 +42,6 @@ export function buildTutorRow(body: Record<string, unknown>) {
     subjectScores: body.subjectScores ?? body.subject_scores,
     bioEn: body.bioEn ?? body.bio_en,
     videoUrl: body.videoUrl ?? body.video_url,
-    lessonFormat: body.lessonFormat ?? body.lesson_format,
   });
   if (typeof profilePatch === "string") return profilePatch;
 
@@ -45,6 +61,7 @@ export function buildTutorRow(body: Record<string, unknown>) {
     exam: cleanText(body.exam, 80),
     score: cleanText(body.score, 80),
     category,
+    categories,
     university: nullableText(body.university, 120),
     university_en: nullableText(body.university_en, 160),
     photo_url: safeAssetUrl(body.photo_url),

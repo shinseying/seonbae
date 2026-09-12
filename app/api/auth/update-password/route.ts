@@ -6,6 +6,7 @@ import {
   authRateLimitResponse,
   consumeAuthRateLimit,
 } from "../../../../utils/auth/rate-limit";
+import { clearDeviceTrust } from "../../../../utils/auth/step-up-server";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,10 @@ export async function POST(request: NextRequest) {
   }
 
   await supabase.auth.signOut({ scope: "others" });
+
+  // Signing the other sessions out means nothing if the browser holding them
+  // can still skip the code, so a new password starts a new trust window.
+  await clearDeviceTrust();
 
   const { data: profile } = await supabase
     .from("profiles")

@@ -18,24 +18,19 @@ export const TUTOR_CURRICULA = [
   "IELTS",
 ] as const;
 
-export const TUTOR_LESSON_FORMATS = [
-  "온라인 1:1",
-  "온라인 소그룹",
-  "대면 1:1",
-  "온라인·대면 모두",
-] as const;
-
 export type TutorSubjectScore = {
   subject: string;
   score: string;
 };
 
+export const MAX_TUTOR_CURRICULA = 8;
+
 export type TutorSignupDetails = {
   university: string;
   majorYear: string;
-  curriculum: string;
+  /** One applicant commonly teaches SAT and IB and AP, so this is a set. */
+  curricula: string[];
   languages: string;
-  lessonFormat: string;
   subjectScores: TutorSubjectScore[];
   introduction: string;
 };
@@ -45,7 +40,6 @@ export type TutorSignupErrorCode =
   | "majorYear"
   | "curriculum"
   | "languages"
-  | "lessonFormat"
   | "subjectCount"
   | "subjectRows"
   | "introduction"
@@ -53,7 +47,6 @@ export type TutorSignupErrorCode =
 
 const universitySet = new Set<string>(TUTOR_UNIVERSITIES);
 const curriculumSet = new Set<string>(TUTOR_CURRICULA);
-const lessonFormatSet = new Set<string>(TUTOR_LESSON_FORMATS);
 
 export function tutorSignupDetailsFromForm(form: FormData): TutorSignupDetails {
   const subjects = form.getAll("subjectName");
@@ -63,9 +56,10 @@ export function tutorSignupDetailsFromForm(form: FormData): TutorSignupDetails {
   return {
     university: formText(form, "university"),
     majorYear: formText(form, "majorYear"),
-    curriculum: formText(form, "curriculum"),
+    curricula: [...new Set(
+      form.getAll("curriculum").map(entryText).filter(Boolean),
+    )].slice(0, MAX_TUTOR_CURRICULA),
     languages: formText(form, "languages"),
-    lessonFormat: formText(form, "lessonFormat"),
     subjectScores: Array.from({ length: rowCount }, (_, index) => ({
       subject: entryText(subjects[index]),
       score: entryText(scores[index]),
@@ -77,9 +71,14 @@ export function tutorSignupDetailsFromForm(form: FormData): TutorSignupDetails {
 export function validateTutorSignupDetails(details: TutorSignupDetails): TutorSignupErrorCode | null {
   if (!universitySet.has(details.university)) return "university";
   if (details.majorYear.length < 2 || details.majorYear.length > 120) return "majorYear";
-  if (!curriculumSet.has(details.curriculum)) return "curriculum";
+  if (
+    !details.curricula.length
+    || details.curricula.length > MAX_TUTOR_CURRICULA
+    || details.curricula.some((entry) => !curriculumSet.has(entry))
+  ) {
+    return "curriculum";
+  }
   if (details.languages.length < 2 || details.languages.length > 80) return "languages";
-  if (!lessonFormatSet.has(details.lessonFormat)) return "lessonFormat";
   if (details.subjectScores.length < 1 || details.subjectScores.length > MAX_TUTOR_SUBJECTS) {
     return "subjectCount";
   }
@@ -88,7 +87,7 @@ export function validateTutorSignupDetails(details: TutorSignupDetails): TutorSi
   ))) {
     return "subjectRows";
   }
-  if (!details.introduction || details.introduction.length > 2000) return "introduction";
+  if (details.introduction.length > 2000) return "introduction";
   return null;
 }
 
@@ -102,12 +101,11 @@ export function tutorSignupErrorKo(code: TutorSignupErrorCode) {
   const messages: Record<TutorSignupErrorCode, string> = {
     university: "대학교를 선택해 주세요.",
     majorYear: "전공과 학년을 120자 이내로 입력해 주세요.",
-    curriculum: "지원할 커리큘럼을 선택해 주세요.",
+    curriculum: "가르칠 커리큘럼을 하나 이상 선택해 주세요.",
     languages: "수업 가능 언어를 80자 이내로 입력해 주세요.",
-    lessonFormat: "선호하는 수업 형식을 선택해 주세요.",
     subjectCount: `가르칠 과목을 1개 이상 ${MAX_TUTOR_SUBJECTS}개 이하로 입력해 주세요.`,
     subjectRows: "모든 과목의 이름과 성적을 입력해 주세요.",
-    introduction: "소개 및 수업 경험을 2,000자 이내로 입력해 주세요.",
+    introduction: "소개 및 수업 경험은 2,000자 이내로 입력해 주세요.",
     credentialCount: `성적표 또는 자격 증빙을 1개 이상 ${MAX_TUTOR_CREDENTIAL_FILES}개 이하로 첨부해 주세요.`,
   };
   return messages[code];

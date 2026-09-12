@@ -141,33 +141,23 @@ const keep = [
 
         <div class="form-grid">
           <div class="form-field">
-            <label for="ap-curriculum"><T en="Curriculum" ko="지원 커리큘럼" /></label>
-            <select id="ap-curriculum" name="curriculum" class="form-control" required>
-              <option>IB</option>
-              <option>AP</option>
-              <option>A-Level</option>
-              <option>IGCSE</option>
-              <option>SAT</option>
-              <option>ACT</option>
-              <option>TOEFL</option>
-              <option>IELTS</option>
-            </select>
-          </div>
-          <div class="form-field">
             <label for="ap-languages"><T en="Languages you teach in" ko="수업 가능 언어" /></label>
             <input id="ap-languages" name="languages" class="form-control" type="text" required maxlength="80" placeholder={isEnglish ? 'Korean, English' : '한국어, 영어'} />
           </div>
         </div>
 
-        <div class="form-field">
-          <label for="ap-format"><T en="Lesson format you prefer" ko="선호하는 수업 형식" /></label>
-          <select id="ap-format" name="lessonFormat" class="form-control" required>
-            <option value="온라인 1:1">{isEnglish ? 'Online 1:1' : '온라인 1:1'}</option>
-            <option value="온라인 소그룹">{isEnglish ? 'Online small group' : '온라인 소그룹'}</option>
-            <option value="대면 1:1">{isEnglish ? 'In person 1:1' : '대면 1:1'}</option>
-            <option value="온라인·대면 모두">{isEnglish ? 'Online or in person' : '온라인·대면 모두'}</option>
-          </select>
-        </div>
+        <fieldset class="form-field curriculum-set">
+          <legend><T en="Curriculum" ko="지원 커리큘럼" /></legend>
+          <p class="apply-hint"><T en="Pick every one you teach. Plenty of tutors take SAT, IB and AP." ko="가르칠 수 있는 커리큘럼을 모두 선택해 주세요. SAT, IB, AP를 함께 가르치는 선배도 많습니다." /></p>
+          <div class="curriculum-options">
+            {['IB', 'AP', 'A-Level', 'IGCSE', 'SAT', 'ACT', 'TOEFL', 'IELTS'].map((option) => (
+              <label class="curriculum-option">
+                <input type="checkbox" name="curriculum" value={option} />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         <fieldset class="form-field subject-scores">
           <legend><T en="Scores for the subjects you want to teach" ko="가르칠 과목의 과목별 성적" /></legend>
@@ -191,8 +181,9 @@ const keep = [
         </div>
 
         <div class="form-field">
-          <label for="ap-intro"><T en="Teaching experience" ko="소개 및 수업 경험" /></label>
-          <textarea id="ap-intro" name="introduction" class="form-control" required rows="5" maxlength="2000" placeholder={isEnglish ? 'Why you are applying, what you have taught, and when you are free.' : '지원 동기와 수업 경험, 가능한 시간대를 적어 주세요.'}></textarea>
+          <label for="ap-intro"><T en="Teaching experience" ko="소개 및 수업 경험" /><span class="apply-optional"><T en="Optional" ko="선택" /></span></label>
+          <textarea id="ap-intro" name="introduction" class="form-control" rows="5" maxlength="2000" placeholder={isEnglish ? 'What you have taught, and when you are free.' : '수업 경험과 가능한 시간대를 적어 주세요.'} aria-describedby="ap-intro-hint"></textarea>
+          <p class="apply-hint" id="ap-intro-hint"><T en="Leave it blank if you would rather write it later. Once your account exists you can send it in from the portal as a card change request." ko="지금 비워 두셔도 됩니다. 계정이 만들어진 뒤 포털의 카드 변경 요청으로 보내주시면 반영해 드립니다." /></p>
         </div>
 
         <button type="submit" class="btn btn--primary btn--lg apply-submit">
@@ -267,6 +258,14 @@ const keep = [
   .apply-status[data-tone='ok'] { background: var(--sage); color: var(--sage-ink); }
   .apply-note { color: var(--muted); font-size: 0.86rem; line-height: 1.55; }
   .apply-form .form-control:invalid:not(:placeholder-shown) { border-color: #bd332d; }
+
+  /* Curriculum is a set, not a choice: one tutor commonly teaches SAT, IB and
+     AP, and the card carries all of them. */
+  .curriculum-set { border: 0; padding: 0; margin: 0; }
+  .curriculum-set legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
+  .curriculum-options { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 10px; }
+  .curriculum-option { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
+  .curriculum-option input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--violet); }
 
   /* Scores by subject. The rows are built in JS, so these selectors have to be
      global: Astro's scoping attribute is only stamped on server-rendered

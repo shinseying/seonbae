@@ -10,8 +10,11 @@ import {
 } from "../../../../utils/auth/access-gate";
 import {
   clearAccessGateCookies,
+  deviceIsTrusted,
   issueUserChallenge,
+  setUserVerified,
 } from "../../../../utils/auth/step-up-server";
+import { resolvePortalDestination } from "../../../../utils/auth/portal-destination";
 import {
   authRateLimitResponse,
   consumeAuthRateLimit,
@@ -92,6 +95,24 @@ export async function POST(request: NextRequest) {
       { error: "로그인 보안 세션을 만들지 못했습니다. 다시 시도해 주세요." },
       { status: 500 },
     );
+  }
+
+  // A browser that entered a code for this account inside the trust window is
+  // let straight through. The check runs after the password and the role check,
+  // so a trusted browser still cannot get in on a wrong password.
+  if (await deviceIsTrusted(data.user.id)) {
+    await setUserVerified({
+      userId: data.user.id,
+      sessionId,
+      remember,
+      // The window runs from the verification that earned it. Refreshing it on
+      // every login would keep one code alive forever.
+      trustDevice: false,
+    });
+    return NextResponse.json({
+      destination: await resolvePortalDestination(data.user.id, profile ?? null),
+      secondStepRequired: false,
+    });
   }
 
   try {

@@ -235,12 +235,14 @@ export async function POST(request: NextRequest) {
     const schoolDocument = uploadedDocuments.find((document) => document.kind === "school_proof")!;
     const firstCredential = uploadedDocuments.find((document) => document.kind === "credential")!;
     const subjects = tutorDetails.subjectScores.map(({ subject }) => subject).join(", ");
+    const curriculum = tutorDetails.curricula.join(", ");
     const applicantNote = [
       `전공/학년: ${tutorDetails.majorYear}`,
-      `지원 커리큘럼: ${tutorDetails.curriculum}`,
+      `지원 커리큘럼: ${curriculum}`,
       `수업 가능 언어: ${tutorDetails.languages}`,
-      `수업 형식: ${tutorDetails.lessonFormat}`,
-      `소개: ${tutorDetails.introduction}`,
+      tutorDetails.introduction
+        ? `소개: ${tutorDetails.introduction}`
+        : "소개: 계정 생성 후 카드 변경 요청으로 제출 예정",
     ].join("\n");
     const { data: application, error: applicationError } = await admin
       .from("account_creation_requests")
@@ -257,11 +259,10 @@ export async function POST(request: NextRequest) {
         university: tutorDetails.university,
         major_year: tutorDetails.majorYear,
         subjects,
-        curriculum: tutorDetails.curriculum,
+        curriculum,
         subject_scores: tutorDetails.subjectScores,
         languages: tutorDetails.languages,
-        lesson_format: tutorDetails.lessonFormat,
-        introduction: tutorDetails.introduction,
+        introduction: tutorDetails.introduction || null,
         applicant_note: applicantNote,
         referral_code: referralCode || null,
       })

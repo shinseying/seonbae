@@ -27,11 +27,30 @@ export async function GET() {
   let { data, error } = await supabase
     .from("tutors")
     .select(
-      "registry_id,roster_number,name,exam,score,category,university,university_en,photo_url,banner_url,display_order,subject_scores,availability,bio,bio_en,video_url,languages,lesson_format,created_at",
+      "registry_id,roster_number,name,exam,score,category,categories,university,university_en,photo_url,banner_url,display_order,subject_scores,availability,bio,bio_en,video_url,languages,created_at",
     )
     .eq("active", true)
     .order("display_order", { ascending: true })
     .order("registry_id", { ascending: true });
+
+  // `categories` arrives with its migration. Until that has run the directory
+  // asks for the same card without it rather than dropping to the stub below,
+  // which has no photographs, bios or scores in it.
+  if (error) {
+    const withoutCategories = await supabase
+      .from("tutors")
+      .select(
+        "registry_id,roster_number,name,exam,score,category,university,university_en,photo_url,banner_url,display_order,subject_scores,availability,bio,bio_en,video_url,languages,created_at",
+      )
+      .eq("active", true)
+      .order("display_order", { ascending: true })
+      .order("registry_id", { ascending: true });
+
+    if (!withoutCategories.error) {
+      data = withoutCategories.data as typeof data;
+      error = null;
+    }
+  }
 
   if (error) {
     const fallback = await supabase

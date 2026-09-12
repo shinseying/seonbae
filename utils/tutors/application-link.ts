@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const TUTOR_APPLICATION_SELECT =
-  "id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,subject_scores,languages,lesson_format,created_at";
+  "id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,subject_scores,languages,created_at";
 
 export type TutorApplicationLinkProfile = {
   full_name: string | null;
@@ -28,7 +28,6 @@ export type TutorApplicationRecord = {
   introduction: string | null;
   subject_scores: unknown;
   languages: string | null;
-  lesson_format: string | null;
   created_at: string;
 };
 

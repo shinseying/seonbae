@@ -21,7 +21,6 @@ export type TutorImportRow = {
   bioEn: string | null;
   videoUrl: string | null;
   languages: string | null;
-  lessonFormat: string | null;
   sourceRow: number;
 };
 
@@ -40,7 +39,7 @@ type ColumnKey =
   | "registry_id" | "name" | "exam" | "score" | "category" | "display_order" | "active"
   | "university" | "university_en" | "banner_url" | "photo_url" | "zoom_host_email"
   | "subject_scores" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
-  | "bio" | "bio_en" | "video_url" | "languages" | "lesson_format" | "major_year" | "weekly_hours";
+  | "bio" | "bio_en" | "video_url" | "languages" | "major_year";
 
 const COLUMN_ALIASES: Record<ColumnKey, string[]> = {
   registry_id: ["명부번호", "튜터번호", "카드번호", "내부연결id", "registryid", "registry", "cardid"],
@@ -70,9 +69,7 @@ const COLUMN_ALIASES: Record<ColumnKey, string[]> = {
   bio_en: ["소개영어", "소개영문", "영어소개", "bioen"],
   video_url: ["샘플수업영상url", "영상url", "video", "videourl"],
   languages: ["언어", "가능언어", "languages", "language", "languagesyouteachin수업가능언어"],
-  lesson_format: ["수업형식", "수업방식", "lessonformat", "format"],
   major_year: ["전공과학년", "전공과학년courseandyear"],
-  weekly_hours: ["주당수업가능시간hoursperweekyoucanteach"],
 };
 
 const REQUIRED_COLUMNS: Array<{ key: ColumnKey; label: string }> = [
@@ -190,9 +187,6 @@ export function parseTutorSpreadsheet(
     }
 
     const languages = optionalText(row, columns.languages, sourceRow, "언어", 80, rowErrors);
-    const rawLessonFormat = optionalText(row, columns.lesson_format, sourceRow, "수업 형식", 80, rowErrors);
-    const weeklyHours = optionalText(row, columns.weekly_hours, sourceRow, "주당 가능 시간", 40, rowErrors);
-    const lessonFormat = rawLessonFormat || (weeklyHours ? `온라인 1:1 · 주당 ${weeklyHours}시간 가능`.slice(0, 80) : null);
     errors.push(...rowErrors);
     if (rowErrors.length || !category || typeof activeResult === "string") return;
 
@@ -215,7 +209,6 @@ export function parseTutorSpreadsheet(
       bioEn,
       videoUrl: videoUrl || null,
       languages,
-      lessonFormat,
       sourceRow,
     });
   });

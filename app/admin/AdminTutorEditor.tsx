@@ -19,6 +19,7 @@ export type AdminTutor = {
   exam: string;
   score: string;
   category: "ib" | "ap" | "alevel" | "sat" | "english";
+  categories?: string[] | null;
   university: string | null;
   university_en: string | null;
   photo_url: string | null;
@@ -33,7 +34,6 @@ export type AdminTutor = {
   bio_en?: string | null;
   video_url?: string | null;
   languages?: string | null;
-  lesson_format?: string | null;
 };
 
 export type AdminAccount = {
@@ -86,6 +86,7 @@ function emptyTutor(registryId: string, displayOrder: number): AdminTutor {
     exam: "",
     score: "",
     category: "ib",
+    categories: ["ib"],
     university: null,
     university_en: null,
     photo_url: null,
@@ -100,7 +101,6 @@ function emptyTutor(registryId: string, displayOrder: number): AdminTutor {
     bio_en: null,
     video_url: null,
     languages: null,
-    lesson_format: null,
   };
 }
 
@@ -115,6 +115,7 @@ function tutorPreviewSnapshot(tutor: AdminTutor) {
     exam: tutor.exam,
     score: tutor.score,
     category: tutor.category,
+    categories: tutor.categories?.length ? tutor.categories : [tutor.category],
     university: tutor.university,
     university_en: tutor.university_en,
     photo_url: tutor.photo_url,
@@ -128,9 +129,16 @@ function tutorPreviewSnapshot(tutor: AdminTutor) {
     bio_en: tutor.bio_en,
     video_url: tutor.video_url,
     languages: tutor.languages,
-    lesson_format: tutor.lesson_format,
   };
 }
+
+const CATEGORY_OPTIONS = [
+  { value: "ib", label: "IB" },
+  { value: "ap", label: "AP" },
+  { value: "alevel", label: "A-Level" },
+  { value: "sat", label: "SAT / ACT" },
+  { value: "english", label: "영어 시험" },
+] as const;
 
 export default function AdminTutorEditor({
   adminName,
@@ -184,6 +192,29 @@ export default function AdminTutorEditor({
       cleanupEveryPhotoDraft();
     };
   }, []);
+
+  // Rows written before the card carried a set still only have `category`.
+  function categoriesOf(tutor: AdminTutor) {
+    return tutor.categories?.length ? tutor.categories : [tutor.category];
+  }
+
+  // The first one stays in `category`, which is what readers that predate the
+  // array still use, so the order the boxes are listed in decides it.
+  function toggleCategory(value: string, checked: boolean) {
+    if (!selected) return;
+    const current = new Set(categoriesOf(selected));
+    if (checked) current.add(value);
+    else current.delete(value);
+    const next = CATEGORY_OPTIONS
+      .map((option) => option.value as string)
+      .filter((option) => current.has(option));
+    if (!next.length) {
+      setMessage("카테고리는 하나 이상 선택해야 합니다.");
+      return;
+    }
+    updateSelected("categories", next);
+    updateSelected("category", next[0] as AdminTutor["category"]);
+  }
 
   function updateSelected<K extends keyof AdminTutor>(key: K, value: AdminTutor[K]) {
     if (isDraft) setDraft((current) => current && { ...current, [key]: value });
@@ -368,7 +399,6 @@ export default function AdminTutorEditor({
         availability: selected.availability ?? {},
         bioEn: selected.bio_en ?? "",
         videoUrl: selected.video_url ?? "",
-        lessonFormat: selected.lesson_format ?? "",
       }),
     });
     const result = await response.json();
@@ -585,7 +615,6 @@ export default function AdminTutorEditor({
                     bioEn: selected.bio_en,
                     videoUrl: selected.video_url,
                     languages: selected.languages,
-                    lessonFormat: selected.lesson_format,
                   }}
                 />
               </div>
@@ -595,7 +624,21 @@ export default function AdminTutorEditor({
                 <label><span>표시 순서 <b className={styles.required}>필수</b></span><input type="number" min="0" max="9999" value={selected.display_order} onChange={(event) => updateSelected("display_order", Number(event.target.value))} /></label>
                 <label><span>튜터 이름 <b className={styles.required}>필수</b></span><input required value={selected.name} onChange={(event) => updateSelected("name", event.target.value)} /></label>
                 <label><span>시험 / 커리큘럼 <b className={styles.required}>필수</b></span><input required placeholder="예: IB Diploma" value={selected.exam} onChange={(event) => updateSelected("exam", event.target.value)} /></label>
-                <label><span>카테고리 <b className={styles.required}>필수</b></span><select value={selected.category} onChange={(event) => updateSelected("category", event.target.value as AdminTutor["category"])}><option value="ib">IB</option><option value="ap">AP</option><option value="alevel">A-Level</option><option value="sat">SAT / ACT</option><option value="english">영어 시험</option></select></label>
+                <div className={styles.full}>
+                  <span className={styles.groupLabel}>카테고리 <b className={styles.required}>필수</b></span>
+                  <div className={styles.categorySet}>
+                    {CATEGORY_OPTIONS.map((option) => (
+                      <label key={option.value} className={styles.categoryOption}>
+                        <input
+                          type="checkbox"
+                          checked={categoriesOf(selected).includes(option.value)}
+                          onChange={(event) => toggleCategory(option.value, event.target.checked)}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <label><span>대학교 (한국어)</span><input value={selected.university || ""} onChange={(event) => updateSelected("university", event.target.value || null)} /></label>
                 <label><span>대학교 (영문)</span><input value={selected.university_en || ""} onChange={(event) => updateSelected("university_en", event.target.value || null)} /></label>
                 <label><span>대학교 배너</span><select value={selected.banner_url || ""} onChange={(event) => updateSelected("banner_url", event.target.value || null)}><option value="">배너 없음</option>{bannerOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
@@ -662,7 +705,6 @@ export default function AdminTutorEditor({
                 <label className={styles.full}><span>소개 (영어)</span><textarea rows={3} maxLength={600} value={selected.bio_en || ""} onChange={(event) => updateSelected("bio_en", event.target.value || null)} /></label>
                 <label className={styles.full}><span>샘플 수업 영상 URL</span><input type="url" placeholder="https://www.youtube.com/embed/... 또는 https://.../lesson.mp4" value={selected.video_url || ""} onChange={(event) => updateSelected("video_url", event.target.value || null)} /></label>
                 <label><span>언어</span><input placeholder="한국어, 영어" value={selected.languages || ""} onChange={(event) => updateSelected("languages", event.target.value || null)} /></label>
-                <label><span>수업 형식</span><input placeholder="온라인 1:1" value={selected.lesson_format || ""} onChange={(event) => updateSelected("lesson_format", event.target.value || null)} /></label>
 
                 <div className={styles.full}>
                   <span className={styles.groupLabel}>연결된 튜터 계정</span>

@@ -1,17 +1,20 @@
 export const USER_CHALLENGE_COOKIE = "seonbae-user-challenge";
 export const USER_VERIFIED_COOKIE = "seonbae-user-verified";
 export const ADMIN_STEP_COOKIE = "seonbae-admin-step";
+export const DEVICE_TRUST_COOKIE = "seonbae-device-trust";
 export const ADMIN_AUTH_EMAIL = "ssapgoadmin@seonbae.internal";
 export const INVALID_LOGIN_MESSAGE = "입력한 로그인 정보가 일치하지 않습니다.";
 
 export type AccessGateKind =
   | "user-challenge"
   | "user-verified"
-  | "admin-step";
+  | "admin-step"
+  | "device-trust";
 
 export type AccessGatePayload = {
   kind: AccessGateKind;
   userId: string;
+  /** Empty for "device-trust": that token outlives the session that earned it. */
   sessionId: string;
   expiresAt: number;
   codeDigest?: string;

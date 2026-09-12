@@ -12,7 +12,6 @@ export type TutorApplicationRow = {
   official_score?: string | null;
   introduction?: string | null;
   languages?: string | null;
-  lesson_format?: string | null;
   subject_scores?: unknown;
 };
 
@@ -29,8 +28,19 @@ const CATEGORY_BY_CURRICULUM: Record<string, string> = {
 };
 
 export function tutorCategoryFor(curriculum?: string | null) {
-  const key = (curriculum || "").trim().toLowerCase();
-  return CATEGORY_BY_CURRICULUM[key] || "english";
+  return tutorCategoriesFor(curriculum)[0];
+}
+
+/** An applicant picks every curriculum they teach; the row stores them comma
+ *  separated, and the card keeps all of them. */
+export function tutorCategoriesFor(curriculum?: string | null) {
+  const keys = (curriculum || "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean)
+    .map((entry) => CATEGORY_BY_CURRICULUM[entry])
+    .filter(Boolean);
+  return keys.length ? [...new Set(keys)] : ["english"];
 }
 
 // The application stores a proof path beside each score. The public card only
@@ -68,12 +78,12 @@ export function registryRowFromApplication(
     name: application.full_name,
     exam: (application.curriculum || "").trim(),
     score: "",
-    category: tutorCategoryFor(application.curriculum),
+    category: tutorCategoriesFor(application.curriculum)[0],
+    categories: tutorCategoriesFor(application.curriculum),
     university: application.university?.trim() || null,
     bio: application.introduction?.trim() || null,
     subject_scores: scores,
     languages: application.languages?.trim() || null,
-    lesson_format: application.lesson_format?.trim() || null,
     zoom_host_email: application.email,
     active: false,
     updated_at: new Date().toISOString(),

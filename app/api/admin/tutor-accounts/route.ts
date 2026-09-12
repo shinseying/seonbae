@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
     official_score?: string | null;
     introduction?: string | null;
     languages?: string | null;
-    lesson_format?: string | null;
     subject_scores?: unknown;
     status: string;
   };
@@ -81,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
     const { data: row } = await admin
       .from("account_creation_requests")
-      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,subject_scores,languages,lesson_format,phone")
+      .select("id,user_id,email,full_name,requested_role,status,university,subjects,curriculum,official_score,introduction,subject_scores,languages,phone")
       .eq("id", requestId)
       .single();
 

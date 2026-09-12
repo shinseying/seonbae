@@ -35,7 +35,6 @@ type ApplicationRecord = {
   introduction: string | null;
   subject_scores: unknown;
   languages: string | null;
-  lesson_format: string | null;
   referral_code: string | null;
   applicant_note: string | null;
   status: "pending" | "approved" | "rejected";
@@ -116,7 +115,7 @@ export default async function AdminTutorDetailPage({
   const admin = createAdminClient();
   const { data: applicationRow, error: applicationError } = await admin
     .from("account_creation_requests")
-    .select("id,user_id,full_name,email,phone,acceptance_letter_path,acceptance_letter_name,credential_path,credential_name,university,major_year,subjects,curriculum,official_score,introduction,subject_scores,languages,lesson_format,referral_code,applicant_note,status,notification_sent_at,notification_error,review_note,reviewed_at,reviewed_by,created_at")
+    .select("id,user_id,full_name,email,phone,acceptance_letter_path,acceptance_letter_name,credential_path,credential_name,university,major_year,subjects,curriculum,official_score,introduction,subject_scores,languages,referral_code,applicant_note,status,notification_sent_at,notification_error,review_note,reviewed_at,reviewed_by,created_at")
     .eq("id", requestId)
     .eq("requested_role", "tutor")
     .maybeSingle();
@@ -249,7 +248,6 @@ export default async function AdminTutorDetailPage({
               <DataRow label="지원 커리큘럼" value={application.curriculum} />
               <DataRow label="지원 과목" value={application.subjects} />
               <DataRow label="수업 가능 언어" value={application.languages} />
-              <DataRow label="수업 형식" value={application.lesson_format} />
               <DataRow label="추천 경로·추천인" value={application.referral_code} />
               {application.official_score && <DataRow label="기존 대표 성적" value={application.official_score} />}
             </dl>

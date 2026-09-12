@@ -18,7 +18,6 @@ export type TutorCardData = {
   bioEn?: string | null;
   videoUrl?: string | null;
   languages?: string | null;
-  lessonFormat?: string | null;
 };
 
 const SCHEDULE_START = 6 * 60;
@@ -74,7 +73,6 @@ export default function TutorCard({ tutor }: { tutor: TutorCardData }) {
       </span>
       <dl className={styles.meta}>
         <div><dt>언어</dt><dd>{tutor.languages || "한국어, 영어"}</dd></div>
-        <div><dt>형식</dt><dd>{tutor.lessonFormat || "온라인 1:1"}</dd></div>
       </dl>
       <AvailabilityTimetable availability={tutor.availability} />
     </article>

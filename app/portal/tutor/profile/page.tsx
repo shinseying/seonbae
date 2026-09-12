@@ -29,7 +29,7 @@ export default async function TutorProfilePage() {
 
   const { data: row } = await supabase
     .from("tutors")
-    .select("roster_number,name,university,photo_url,exam,score,availability,subject_scores,bio,bio_en,video_url,languages,lesson_format")
+    .select("roster_number,name,university,photo_url,exam,score,availability,subject_scores,bio,bio_en,video_url,languages")
     .eq("registry_id", profile.tutor_registry_id)
     .single();
 
@@ -47,7 +47,6 @@ export default async function TutorProfilePage() {
     bioEn: row?.bio_en ?? "",
     videoUrl: row?.video_url ?? "",
     languages: row?.languages ?? "",
-    lessonFormat: row?.lesson_format ?? "",
   };
 
   const { data: openRequest } = await supabase

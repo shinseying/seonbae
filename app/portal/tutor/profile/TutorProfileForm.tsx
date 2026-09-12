@@ -19,7 +19,6 @@ export type TutorProfile = {
   bioEn: string;
   videoUrl: string;
   languages: string;
-  lessonFormat: string;
 };
 
 export type PendingRequest = { createdAt: string; note: string | null } | null;
@@ -78,7 +77,6 @@ export default function TutorProfileForm({
           bioEn: form.get("bioEn"),
           videoUrl: form.get("videoUrl"),
           languages: form.get("languages"),
-          lessonFormat: form.get("lessonFormat"),
           note: form.get("note"),
         }),
       });
@@ -133,7 +131,6 @@ export default function TutorProfileForm({
                 bioEn: profile.bioEn,
                 videoUrl: profile.videoUrl,
                 languages: profile.languages,
-                lessonFormat: profile.lessonFormat,
               }}
             />
           </div>
@@ -195,7 +192,6 @@ export default function TutorProfileForm({
         </label>
         <div className={styles.grid2}>
           <label className={styles.field}><span>{l("언어", "Languages")}</span><input name="languages" maxLength={80} defaultValue={profile.languages} placeholder={l("한국어, 영어", "Korean, English")} /></label>
-          <label className={styles.field}><span>{l("수업 형식", "Lesson format")}</span><input name="lessonFormat" maxLength={80} defaultValue={profile.lessonFormat} placeholder={l("온라인 1:1", "Online 1:1")} /></label>
         </div>
       </fieldset>
 
