@@ -1,0 +1,40 @@
+/* Placeholder frame shared by the portal's route-level loading.tsx files.
+   It carries its own copy of the sidebar offset because each portal tab styles
+   .page in its own module, and a skeleton that skipped the offset would sit
+   under the rail and then jump sideways when the real page arrived. */
+.page{min-height:100dvh;padding-left:304px;background:linear-gradient(135deg,rgba(214,160,43,.06),transparent 30%),#fbf7ef;color:#15303f;transition:padding-left .22s ease}
+:global(.portal-shell-collapsed) .page{padding-left:112px}
+
+.shell{width:min(1120px,calc(100% - 64px));margin:0 auto;padding:clamp(40px,6vh,72px) 0 80px;display:flex;flex-direction:column;gap:18px}
+
+.bar{display:block;border-radius:8px;background:linear-gradient(90deg,#e8e0d2 24%,#f7f1e7 48%,#e8e0d2 72%);background-size:220% 100%;animation:routeShimmer 1.25s ease-in-out infinite}
+.kicker{width:108px;height:10px}
+.title{width:min(430px,72%);height:clamp(38px,5vw,56px);margin:12px 0 10px}
+.copy{width:min(520px,80%);height:14px}
+.back{width:82px;height:12px;margin-bottom:16px}
+
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:26px}
+.stat{height:66px}
+
+.rows{display:flex;flex-direction:column;gap:10px;margin-top:26px}
+.row{height:88px;border-radius:12px}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:26px}
+.card{height:210px;border-radius:14px}
+
+.fields{display:grid;gap:14px;margin-top:26px;padding:26px;border:1px solid rgba(19,24,27,.11);border-radius:12px;background:#fffdf7}
+.label{width:120px;height:11px}
+.field{height:46px;border-radius:9px}
+
+.stage{height:min(52vh,420px);border-radius:16px;margin-top:26px}
+
+@keyframes routeShimmer{to{background-position:-220% 0}}
+
+@media(max-width:860px){
+  .page,:global(.portal-shell-collapsed) .page{padding-left:0;padding-top:66px}
+  .shell{width:calc(100% - 32px);padding:28px 0 60px}
+  .stats{grid-template-columns:1fr}
+  .stat{height:52px}
+  .row{height:74px}
+}
+@media(prefers-reduced-motion:reduce){.page,.bar{transition:none;animation:none}}
