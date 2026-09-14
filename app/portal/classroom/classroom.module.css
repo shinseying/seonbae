@@ -153,3 +153,19 @@
 .cancelActions button:disabled{opacity:.55;cursor:default}
 .cancelGhost{background:transparent!important;color:var(--muted)!important;border:1px solid var(--line)!important}
 @media(max-width:640px){.calCell{min-height:60px}.calLesson,.calCancelled{font-size:.6rem}}
+
+/* ----- Loading skeletons (loading.tsx for this route and the room page) ----- */
+.skeleton{display:block;border-radius:8px;background:linear-gradient(90deg,#e8e0d2 24%,#f7f1e7 48%,#e8e0d2 72%);background-size:220% 100%;animation:classroomShimmer 1.25s ease-in-out infinite}
+.skelBack{width:78px;height:12px;margin-bottom:14px}
+.skelKicker{width:104px;height:10px}
+.skelTitle{width:min(440px,74%);height:clamp(38px,5vw,58px);margin:10px 0}
+.skelLine{width:min(320px,60%);height:13px}
+.skelTag{width:56px;height:9px;margin-bottom:7px}
+.skelValue{width:104px;height:17px}
+.skelHeading{width:132px;height:15px;margin-bottom:12px}
+.skelDay{min-height:74px;border:1px solid var(--line);border-radius:10px;background:#f2ece1}
+.skelRow{height:56px;margin-bottom:8px;border-radius:11px}
+.skelRoom{height:132px;border-radius:16px}
+@keyframes classroomShimmer{to{background-position:-220% 0}}
+@media(max-width:760px){.skelDay{min-height:60px}.skelRoom{height:110px}}
+@media(prefers-reduced-motion:reduce){.skeleton{animation:none}}
