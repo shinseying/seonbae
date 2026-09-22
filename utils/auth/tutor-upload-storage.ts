@@ -1,5 +1,6 @@
 import "server-only";
 
+import { readDocumentHeaderFromUrl } from "../files/document-header";
 import { hasDocumentMagic } from "../files/document-rules";
 import { createAdminClient } from "../supabase/admin";
 import {
@@ -55,27 +56,5 @@ async function readDocumentHeader(admin: AdminClient, path: string) {
     .from(TUTOR_UPLOAD_BUCKET)
     .createSignedUrl(path, 60);
   if (error || !data?.signedUrl) return null;
-
-  try {
-    const response = await fetch(data.signedUrl, {
-      cache: "no-store",
-      headers: { Range: "bytes=0-15" },
-    });
-    if (!response.ok || !response.body) return null;
-
-    const reader = response.body.getReader();
-    const bytes: number[] = [];
-    while (bytes.length < 16) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      for (const byte of chunk.value) {
-        bytes.push(byte);
-        if (bytes.length === 16) break;
-      }
-    }
-    await reader.cancel().catch(() => undefined);
-    return new Uint8Array(bytes);
-  } catch {
-    return null;
-  }
+  return readDocumentHeaderFromUrl(data.signedUrl);
 }
