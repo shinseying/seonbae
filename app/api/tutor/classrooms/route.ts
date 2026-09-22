@@ -37,9 +37,8 @@ export async function POST(request: NextRequest) {
   ]);
 
   const limit = tutor?.classroom_limit ?? 3;
-  if ((count ?? 0) >= limit) {
-    return error(`교실은 최대 ${limit}개까지 만들 수 있습니다. 추가가 필요하면 관리자에게 요청해 주세요.`, 409);
-  }
+  const limitReached = error(`교실은 최대 ${limit}개까지 만들 수 있습니다. 추가가 필요하면 관리자에게 요청해 주세요.`, 409);
+  if ((count ?? 0) >= limit) return limitReached;
 
   const { data, error: writeError } = await admin
     .from("classrooms")
@@ -52,6 +51,9 @@ export async function POST(request: NextRequest) {
     })
     .select("id,join_code,join_password,title")
     .single();
+  // The count above is advisory. Parallel requests can all pass it, so the
+  // insert trigger (private.enforce_classroom_limit) holds the real limit.
+  if (writeError?.code === "23514") return limitReached;
   if (writeError || !data) return error("교실을 만들지 못했습니다.", 500);
 
   return NextResponse.json(data, { status: 201 });
