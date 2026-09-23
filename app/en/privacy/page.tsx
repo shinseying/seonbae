@@ -220,7 +220,7 @@ function LegalHeader() {
         <img src="/logo.png" alt="" width="40" height="40" />
         <strong>Seonbae</strong><span>EST. 2026</span>
       </Link>
-      <nav><Link href="/en/terms">Terms</Link><Link href="/privacy">KO</Link><Link href="/en/">Home ↗</Link></nav>
+      <nav><Link href="/en/terms">Terms</Link><Link href="/privacy?lang=ko">KO</Link><Link href="/en/">Home ↗</Link></nav>
     </header>
   );
 }

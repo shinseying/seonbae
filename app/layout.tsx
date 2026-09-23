@@ -58,7 +58,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var p=location.pathname;var q=new URLSearchParams(location.search).get('lang');var requested=q==='en'||q==='ko'?q:'';if(requested)localStorage.setItem('seonbae-lang',requested);var fixed=requested||(p==='/en'||p.indexOf('/en/')===0?'en':p==='/privacy'||p==='/terms'?'ko':'');var l=fixed||(localStorage.getItem('seonbae-lang')==='en'?'en':'ko');document.documentElement.dataset.lang=l;document.documentElement.lang=l;document.documentElement.dataset.theme=localStorage.getItem('seonbae-theme')==='dark'?'dark':'light'}catch(e){}",
+              "try{var p=location.pathname,s=null;try{s=localStorage}catch(e){}var q=new URLSearchParams(location.search).get('lang');var requested=q==='en'||q==='ko'?q:'';var m=document.cookie.match(/(?:^|; )seonbae-lang=(ko|en)(?:;|$)/);var cookie=m?m[1]:'';var stored=s?s.getItem('seonbae-lang'):'';stored=stored==='en'||stored==='ko'?stored:'';var urlLang=p==='/en'||p.indexOf('/en/')===0?'en':p==='/privacy'||p==='/terms'?'ko':'';var chosen=requested||cookie||stored||urlLang;var pref=chosen||'ko';if(chosen&&chosen!==cookie)document.cookie='seonbae-lang='+chosen+'; path=/; max-age=31536000; samesite=lax'+(location.protocol==='https:'?'; secure':'');if(s&&chosen&&chosen!==stored)s.setItem('seonbae-lang',chosen);if(urlLang&&urlLang!==pref)location.replace((pref==='en'?'/en'+p:p.slice(3)||'/')+location.hash);var l=urlLang||pref;document.documentElement.dataset.lang=l;document.documentElement.lang=l;document.documentElement.dataset.theme=s&&s.getItem('seonbae-theme')==='dark'?'dark':'light'}catch(e){}",
           }}
         />
       </head>

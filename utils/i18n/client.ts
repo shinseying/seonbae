@@ -7,8 +7,12 @@ export type SeonbaeLocale = "ko" | "en";
 const STORAGE_KEY = "seonbae-lang";
 const CHANGE_EVENT = "seonbae:language-change";
 
+// The cookie is the site-wide choice (utils/i18n/locale-routing.ts); the
+// localStorage copy covers browsers that block cookies.
 function readLocale(): SeonbaeLocale {
   if (typeof window === "undefined") return "ko";
+  const cookie = document.cookie.match(/(?:^|; )seonbae-lang=(ko|en)(?:;|$)/)?.[1];
+  if (cookie === "en" || cookie === "ko") return cookie;
   try {
     return window.localStorage.getItem(STORAGE_KEY) === "en" ? "en" : "ko";
   } catch {
@@ -33,6 +37,7 @@ export function useSeonbaeLocale() {
 }
 
 export function setSeonbaeLocale(locale: SeonbaeLocale) {
+  document.cookie = `${STORAGE_KEY}=${locale}; path=/; max-age=31536000; samesite=lax${location.protocol === "https:" ? "; secure" : ""}`;
   try {
     window.localStorage.setItem(STORAGE_KEY, locale);
   } catch {

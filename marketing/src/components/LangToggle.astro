@@ -6,17 +6,26 @@ const { class: cls = '' } = Astro.props;
 import { localeFromPath, pathForLocale } from '../i18n/locale';
 const locale = localeFromPath(Astro.url.pathname);
 ---
+<!-- ?lang= makes the switch work without JavaScript: middleware stores the
+     choice in the seonbae-lang cookie and strips the parameter. -->
 <div class:list={['langtoggle', cls]} role="group" aria-label="Language">
-  <a href={pathForLocale(Astro.url.pathname, 'ko')} lang="ko" data-set-lang="ko" aria-label="한국어" aria-current={locale === 'ko' ? 'page' : undefined}>KO</a>
-  <a href={pathForLocale(Astro.url.pathname, 'en')} lang="en" data-set-lang="en" aria-label="English" aria-current={locale === 'en' ? 'page' : undefined}>EN</a>
+  <a href={`${pathForLocale(Astro.url.pathname, 'ko')}?lang=ko`} lang="ko" data-set-lang="ko" data-clean-href={pathForLocale(Astro.url.pathname, 'ko')} aria-label="한국어" aria-current={locale === 'ko' ? 'page' : undefined}>KO</a>
+  <a href={`${pathForLocale(Astro.url.pathname, 'en')}?lang=en`} lang="en" data-set-lang="en" data-clean-href={pathForLocale(Astro.url.pathname, 'en')} aria-label="English" aria-current={locale === 'en' ? 'page' : undefined}>EN</a>
 </div>
 
 <script>
-  document.querySelectorAll<HTMLElement>('[data-set-lang]').forEach((link) => {
+  document.querySelectorAll<HTMLAnchorElement>('[data-set-lang]').forEach((link) => {
     if (link.dataset.localePreferenceBound) return;
     link.dataset.localePreferenceBound = 'true';
-    link.addEventListener('click', () => {
-      try { localStorage.setItem('seonbae-lang', link.dataset.setLang === 'en' ? 'en' : 'ko'); } catch {}
+    link.addEventListener('click', (event) => {
+      const lang = link.dataset.setLang === 'en' ? 'en' : 'ko';
+      document.cookie = `seonbae-lang=${lang}; path=/; max-age=31536000; samesite=lax${location.protocol === 'https:' ? '; secure' : ''}`;
+      try { localStorage.setItem('seonbae-lang', lang); } catch {}
+      // With the cookie set, go straight to the clean URL and skip the
+      // middleware hop. Modified clicks keep the ?lang= link for a new tab.
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      location.assign(link.dataset.cleanHref || link.pathname);
     });
   });
 </script>

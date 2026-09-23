@@ -85,6 +85,33 @@ const still = Astro.url.searchParams.has('still');
     <meta name="theme-color" content="#f2f0ea" />
     {still && <style is:global>.reveal{opacity:1 !important;transform:none !important;transition:none !important;} html{scroll-behavior:auto !important;}</style>}
 
+    <!-- One language for the whole site: the seonbae-lang cookie. Middleware
+         already sends a visitor with the cookie to the right twin; this covers
+         a choice saved only in localStorage (before 2026-09-24) and adopts the
+         page's language when nothing has been chosen yet. -->
+    <script is:inline>
+      (function () {
+        try {
+          var p = location.pathname;
+          var urlLang = p === '/en' || p.indexOf('/en/') === 0 ? 'en' : 'ko';
+          var m = document.cookie.match(/(?:^|; )seonbae-lang=(ko|en)(?:;|$)/);
+          var cookie = m ? m[1] : '';
+          var stored = '';
+          try { stored = localStorage.getItem('seonbae-lang') || ''; } catch (e) {}
+          if (stored !== 'en' && stored !== 'ko') stored = '';
+          var pref = cookie || stored || urlLang;
+          if (pref !== cookie) {
+            document.cookie = 'seonbae-lang=' + pref + '; path=/; max-age=31536000; samesite=lax' + (location.protocol === 'https:' ? '; secure' : '');
+          }
+          if (pref !== stored) { try { localStorage.setItem('seonbae-lang', pref); } catch (e) {} }
+          if (pref !== urlLang) {
+            var target = pref === 'en' ? (p === '/' ? '/en' : '/en' + p) : (p.slice(3) || '/');
+            location.replace(target + location.search + location.hash);
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Start the session check before paint. Auth controls render as a fixed
          skeleton until this settles, so a returning user never sees a brief
          and incorrect Log in label. -->
