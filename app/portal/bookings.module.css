@@ -30,4 +30,5 @@
 .tutorActions select{padding:9px 11px;border:1px solid var(--line,#e5ddcd);border-radius:8px;background:#fff;font:inherit;font-size:.8rem;max-width:200px}
 .tutorActions button{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border:0;border-radius:8px;background:#163a51;color:#fff;font-weight:700;font-size:.8rem;cursor:pointer}
 .tutorActions button:disabled{opacity:.6;cursor:default}
+.createRoom{font-size:.8rem;font-weight:700;color:#163a51;text-decoration:underline;text-underline-offset:3px}
 .declineButton{background:transparent!important;color:#b3452a!important;border:1px solid rgba(179,69,42,.4)!important}

@@ -82,9 +82,24 @@ export default function BookingsPanel({
       window.alert(
         classrooms.length === 0
           ? l("먼저 교실을 만들어 주세요. 내 교실에서 만들 수 있습니다.", "Create a classroom first. You can make one in My classroom.")
-          : l("비어 있는 교실이 없습니다. 내 교실에서 새 교실을 만들어 주세요.", "No classroom has a free seat. Create one in My classroom."),
+          : openRooms.length === 0
+            ? l("비어 있는 교실이 없습니다. 내 교실에서 새 교실을 만들어 주세요.", "No classroom has a free seat. Create one in My classroom.")
+            : l("배정할 교실을 먼저 선택해 주세요.", "Choose a classroom first."),
       );
       return;
+    }
+    // Seating a student is not undone from this screen, so name the room and
+    // the requester before it happens.
+    if (decision === "accepted") {
+      const room = openRooms.find((option) => option.id === classroomId);
+      const requester = items.find((row) => row.id === id)?.name || l("요청자", "the requester");
+      const confirmed = window.confirm(
+        l(
+          `'${room?.title ?? ""}' 교실에 ${requester} 님을 배정할까요?`,
+          `Place ${requester} in the classroom '${room?.title ?? ""}'?`,
+        ),
+      );
+      if (!confirmed) return;
     }
     setDecidingId(id);
     try {
@@ -157,16 +172,27 @@ export default function BookingsPanel({
               {item.note && <p className={styles.note}>{item.note}</p>}
               {tutorActions && (
                 <div className={styles.tutorActions}>
+                  {/* No room is preselected: the tutor picks one on purpose. */}
                   <select
                     id={`match-room-${item.id}`}
-                    defaultValue={openRooms[0]?.id ?? ""}
+                    defaultValue=""
                     disabled={openRooms.length === 0}
                     aria-label={l("배정할 교실", "Classroom")}
                   >
-                    {openRooms.length
-                      ? openRooms.map((room) => <option value={room.id} key={room.id}>{room.title}</option>)
-                      : <option value="">{l("빈 교실 없음", "No free classroom")}</option>}
+                    {openRooms.length ? (
+                      <>
+                        <option value="" disabled>{l("교실 선택", "Choose a classroom")}</option>
+                        {openRooms.map((room) => <option value={room.id} key={room.id}>{room.title}</option>)}
+                      </>
+                    ) : (
+                      <option value="">{l("빈 교실 없음", "No free classroom")}</option>
+                    )}
                   </select>
+                  {openRooms.length === 0 && (
+                    <a className={styles.createRoom} href="/portal/classroom">
+                      {l("교실 만들기", "Create a classroom")}
+                    </a>
+                  )}
                   <button
                     type="button"
                     disabled={decidingId === item.id}

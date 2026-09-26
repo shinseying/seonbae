@@ -163,6 +163,8 @@ export default function ClassroomView({
   }
 
   const open = classrooms.find((room) => room.id === openId) ?? null;
+  // A classroom seats one student; the rest can only take parents.
+  const openRooms = classrooms.filter((room) => !room.studentName);
 
   return (
     <section className={styles.shell}>
@@ -216,21 +218,40 @@ export default function ClassroomView({
                 {request.note && <p className={styles.matchNote}>{request.note}</p>}
               </div>
               <div className={styles.requestActions}>
+                {/* Only rooms with a free seat, and none preselected: the
+                    tutor picks one on purpose. */}
                 <select
-                  defaultValue={classrooms[0]?.id ?? ""}
+                  defaultValue=""
                   id={`match-room-${request.id}`}
                   aria-label={l("배정할 교실", "Classroom")}
+                  disabled={openRooms.length === 0}
                 >
-                  {classrooms.map((room) => (
-                    <option value={room.id} key={room.id}>{room.title}</option>
-                  ))}
+                  {openRooms.length ? (
+                    <>
+                      <option value="" disabled>{l("교실 선택", "Choose a classroom")}</option>
+                      {openRooms.map((room) => (
+                        <option value={room.id} key={room.id}>{room.title}</option>
+                      ))}
+                    </>
+                  ) : (
+                    <option value="">{l("빈 교실 없음 · 아래에서 만들기", "No free classroom · create one below")}</option>
+                  )}
                 </select>
                 <button
                   type="button"
-                  disabled={busy || classrooms.length === 0}
+                  disabled={busy || openRooms.length === 0}
                   onClick={() => {
                     const select = document.getElementById(`match-room-${request.id}`) as HTMLSelectElement | null;
-                    decideMatch(request.id, "accepted", Number(select?.value));
+                    const room = openRooms.find((option) => option.id === Number(select?.value));
+                    if (!room) {
+                      setMessage(l("배정할 교실을 먼저 선택해 주세요.", "Choose a classroom first."));
+                      return;
+                    }
+                    if (!window.confirm(l(
+                      `'${room.title}' 교실에 ${request.name} 님을 배정할까요?`,
+                      `Place ${request.name} in the classroom '${room.title}'?`,
+                    ))) return;
+                    decideMatch(request.id, "accepted", room.id);
                   }}
                 >
                   {l("수락", "Accept")}
