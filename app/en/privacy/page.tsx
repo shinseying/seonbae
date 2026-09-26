@@ -160,7 +160,10 @@ export default function EnglishPrivacyPage() {
             <h2>7. Cookies and automatic collection</h2>
             <p>
               We use essential cookies for sessions and the stay signed in feature.
-              We do not currently use advertising or behavioral marketing cookies.
+              We also use a language cookie (seonbae-lang, kept for one year) so
+              every page shows the language you chose, Korean or English. It
+              stores only “ko” or “en” and does not identify you. We do not
+              currently use advertising or behavioral marketing cookies.
               Blocking cookies can prevent login and portal functions from working.
             </p>
           </section>
