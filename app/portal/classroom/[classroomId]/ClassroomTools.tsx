@@ -67,7 +67,7 @@ export default function ClassroomTools({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: studentId,
+          studentId,
           sessionDate: form.get("sessionDate"),
           startsAt: form.get("startsAt"),
           durationMinutes: Number(form.get("durationMinutes")),
