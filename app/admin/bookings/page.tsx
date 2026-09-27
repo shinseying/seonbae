@@ -23,21 +23,28 @@ export default async function AdminBookingsPage() {
   if (profile?.role !== "admin") redirect("/portal");
 
   const admin = createAdminClient();
-  const [{ data: rows }, { data: tutors }] = await Promise.all([
+  const [{ data: rows }, { data: tutors }, { data: tutorAccounts }] = await Promise.all([
     admin
       .from("booking_requests")
       .select("id,tutor_registry_id,name,email,phone,subject,preferred_day,preferred_time,note,status,seen_by_admin,forwarded_at,created_at")
       .order("created_at", { ascending: false })
       .limit(100),
-    admin.from("tutors").select("registry_id,roster_number,name"),
+    admin.from("tutors").select("registry_id,roster_number,name,active"),
+    admin.from("profiles").select("tutor_registry_id").eq("role", "tutor").eq("account_status", "approved"),
   ]);
 
   const tutorLabels = new Map((tutors ?? []).map((row) => [
     row.registry_id,
     `${row.name} · ${row.roster_number || "명부 번호 준비 중"}`,
   ]));
+  // A rematch can only go to a tutor who can sign in and answer it.
+  const withAccount = new Set((tutorAccounts ?? []).map((row) => row.tutor_registry_id).filter(Boolean));
+  const rematchTutors = (tutors ?? [])
+    .filter((row) => row.active && withAccount.has(row.registry_id))
+    .map((row) => ({ registryId: row.registry_id, label: tutorLabels.get(row.registry_id) || row.registry_id }));
   const bookings: PortalBooking[] = (rows ?? []).map((row) => ({
     id: row.id,
+    tutorRegistryId: row.tutor_registry_id,
     tutorName: tutorLabels.get(row.tutor_registry_id) || "튜터 카드 · 명부 번호 준비 중",
     name: row.name,
     email: row.email,
@@ -68,7 +75,7 @@ export default async function AdminBookingsPage() {
           </div>
           <b>{bookings.filter((booking) => booking.unread).length}건 신규</b>
         </header>
-        <BookingsPanel bookings={bookings} showTutor />
+        <BookingsPanel bookings={bookings} showTutor rematchTutors={rematchTutors} />
       </section>
     </main>
   );

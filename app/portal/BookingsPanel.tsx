@@ -8,6 +8,7 @@ import styles from "./bookings.module.css";
 
 export type PortalBooking = {
   id: number;
+  tutorRegistryId?: string;
   tutorName: string;
   name: string;
   email: string;
@@ -27,6 +28,9 @@ export type PortalBooking = {
 // cannot host another student, which is what `hasSeat` marks.
 export type ClassroomOption = { id: number; title: string; hasSeat: boolean };
 
+// Tutors the admin can hand a declined match to.
+export type RematchTutor = { registryId: string; label: string };
+
 const DAY_KO: Record<string, string> = {
   mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일",
 };
@@ -41,11 +45,13 @@ export default function BookingsPanel({
   showTutor = false,
   tutorActions = false,
   classrooms = [],
+  rematchTutors = [],
 }: {
   bookings: PortalBooking[];
   showTutor?: boolean;
   tutorActions?: boolean;
   classrooms?: ClassroomOption[];
+  rematchTutors?: RematchTutor[];
 }) {
   const { locale, text: l } = usePortalText();
   const router = useRouter();
@@ -70,6 +76,36 @@ export default function BookingsPanel({
     } finally {
       setForwardingId(null);
     }
+  }
+
+  // A declined match comes back here: move it to another tutor, then forward
+  // it the usual way so the new tutor gets the email.
+  async function rematch(id: number, tutorRegistryId: string) {
+    const tutor = rematchTutors.find((option) => option.registryId === tutorRegistryId);
+    if (!tutor) {
+      window.alert(l("다시 배정할 튜터를 선택해 주세요.", "Choose a tutor to rematch with."));
+      return;
+    }
+    if (!window.confirm(l(`${tutor.label} 튜터에게 이 매칭 요청을 전달할까요?`, `Forward this match request to ${tutor.label}?`))) return;
+    setForwardingId(id);
+    try {
+      const moved = await fetch("/api/admin/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, tutorRegistryId }),
+      });
+      const movedResult = await moved.json().catch(() => null);
+      if (!moved.ok) {
+        window.alert(movedResult?.error || l("다시 배정하지 못했습니다.", "Could not reassign."));
+        return;
+      }
+      setItems((rows) => rows.map((row) => (row.id === id
+        ? { ...row, tutorRegistryId, tutorName: tutor.label, status: "new", forwardedAt: null }
+        : row)));
+    } finally {
+      setForwardingId(null);
+    }
+    await forward(id);
   }
 
   const [decidingId, setDecidingId] = useState<number | null>(null);
@@ -214,7 +250,31 @@ export default function BookingsPanel({
                   </button>
                 </div>
               )}
-              {showTutor && (
+              {showTutor && item.status === "declined" && (
+                <div className={styles.tutorActions}>
+                  <span className={styles.declined}>{l("튜터가 거절함 · 다른 튜터를 배정해 주세요", "Declined by the tutor · choose another tutor")}</span>
+                  <select id={`rematch-${item.id}`} defaultValue="" aria-label={l("다시 배정할 튜터", "Tutor to rematch with")}>
+                    <option value="" disabled>{l("튜터 선택", "Choose a tutor")}</option>
+                    {rematchTutors
+                      .filter((option) => option.registryId !== item.tutorRegistryId)
+                      .map((option) => <option value={option.registryId} key={option.registryId}>{option.label}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={forwardingId === item.id}
+                    onClick={() => {
+                      const select = document.getElementById(`rematch-${item.id}`) as HTMLSelectElement | null;
+                      void rematch(item.id, select?.value || "");
+                    }}
+                  >
+                    {forwardingId === item.id ? <Spinner label={l("전달 중", "Forwarding")} /> : l("다른 튜터에게 전달", "Forward to another tutor")}
+                  </button>
+                </div>
+              )}
+              {showTutor && item.status === "accepted" && (
+                <span className={styles.forwarded}>{l("튜터가 수락함", "Accepted by the tutor")}</span>
+              )}
+              {showTutor && item.status !== "declined" && item.status !== "accepted" && (
                 item.forwardedAt ? (
                   <span className={styles.forwarded}>{l("튜터에게 전달됨", "Forwarded to tutor")}</span>
                 ) : (

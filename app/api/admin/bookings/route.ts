@@ -83,6 +83,74 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true, forwardedAt });
 }
 
+// Rematch: a tutor declined, so the admin hands the request to another tutor.
+// The row goes back to the forwardable state; the admin then forwards it with
+// POST as usual, which emails the new tutor.
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return error("로그인이 필요합니다.", 401);
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") return error("관리자 권한이 필요합니다.", 403);
+
+  let body: { id?: unknown; tutorRegistryId?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return error("요청 형식이 올바르지 않습니다.", 400);
+  }
+  const id = Number(body.id);
+  const tutorRegistryId = typeof body.tutorRegistryId === "string" ? body.tutorRegistryId.trim().slice(0, 24) : "";
+  if (!Number.isInteger(id) || !tutorRegistryId) return error("매칭 요청과 튜터를 선택해 주세요.", 400);
+
+  let admin: ReturnType<typeof createAdminClient>;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return error("매칭 요청 시스템이 아직 설정되지 않았습니다.", 503);
+  }
+
+  const { data: tutorAccount } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("tutor_registry_id", tutorRegistryId)
+    .eq("role", "tutor")
+    .eq("account_status", "approved")
+    .maybeSingle();
+  if (!tutorAccount) return error("승인된 튜터 계정이 있는 튜터만 배정할 수 있습니다.", 409);
+
+  // Only a declined request can move; the status filter keeps two admins from
+  // reassigning the same request at once.
+  const { data: moved } = await admin
+    .from("booking_requests")
+    .update({
+      tutor_registry_id: tutorRegistryId,
+      status: "new",
+      forwarded_at: null,
+      forwarded_by: null,
+      decided_at: null,
+      classroom_id: null,
+      seen_by_tutor: false,
+      seen_by_admin: true,
+      notification_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("status", "declined")
+    .select("id")
+    .maybeSingle();
+  if (!moved) return error("거절된 매칭 요청만 다른 튜터에게 배정할 수 있습니다.", 409);
+
+  return NextResponse.json({ ok: true });
+}
+
 function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }

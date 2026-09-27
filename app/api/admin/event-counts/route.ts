@@ -13,7 +13,8 @@ export async function GET() {
   const [applications, tutorAccounts, bookings, cards, slots, sessions, consultations, complaints] = await Promise.all([
     count(admin.from("account_creation_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
     count(admin.from("account_creation_requests").select("id", { count: "exact", head: true }).eq("requested_role", "tutor").is("user_id", null).neq("status", "rejected")),
-    count(admin.from("booking_requests").select("id", { count: "exact", head: true }).eq("status", "new")),
+    // A declined match waits on the admin for a rematch, so it counts too.
+    count(admin.from("booking_requests").select("id", { count: "exact", head: true }).in("status", ["new", "declined"])),
     count(admin.from("tutor_profile_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
     count(admin.from("classroom_slot_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
     count(admin.from("portal_sessions").select("id", { count: "exact", head: true }).gte("updated_at", recentLessonCutoff)),
