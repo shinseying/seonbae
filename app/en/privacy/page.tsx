@@ -71,6 +71,14 @@ export default function EnglishPrivacyPage() {
               </table>
             </div>
             <p>
+              When a tutor-student match ends, that classroom&apos;s lesson records,
+              homework, feedback, and submitted files may be deleted earlier than
+              the retention periods above, seven days after the match ends.
+              Students and parents can download these records from the portal
+              before then. Information that law requires us to keep is retained
+              for the required period.
+            </p>
+            <p>
               Where Korean consumer protection law applies, contract and payment
               records may be retained for five years, complaint and dispute records
               for three years, and display or advertising records for six months.
