@@ -12,6 +12,7 @@ export type AdminSection =
   | "bookings"
   | "card-requests"
   | "classroom-slots"
+  | "classroom-ends"
   | "sessions"
   | "consultations"
   | "complaints"
@@ -75,6 +76,7 @@ export default function AdminSidebar({
       links: [
         { key: "bookings", href: "/admin/bookings", label: "매칭 요청" },
         { key: "sessions", href: "/admin/sessions", label: "Zoom 수업" },
+        { key: "classroom-ends", href: "/admin/classroom-ends", label: "매칭 종료" },
       ],
     },
     {

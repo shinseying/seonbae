@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 
 // A tutor schedules a Zoom lesson for a student they already work with. Admins
 // keep their own route; this one is scoped to the caller's registry id and can
-// only target a student seated in one of the tutor's classrooms (an accepted
-// match) or one the tutor has taught before.
+// only target a student seated in one of the tutor's active classrooms (an
+// accepted match that has not ended). The insert policy enforces the same.
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
@@ -78,26 +78,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Both reads run under the tutor's own RLS, so an unrelated student simply
-  // returns nothing rather than leaking that the row exists.
-  const [{ data: seat }, { data: priorSession }] = await Promise.all([
-    supabase
-      .from("classrooms")
-      .select("id")
-      .eq("tutor_registry_id", registryId)
-      .eq("student_id", studentId)
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("portal_sessions")
-      .select("id")
-      .eq("tutor_registry_id", registryId)
-      .eq("user_id", studentId)
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  // Runs under the tutor's own RLS, so an unrelated student simply returns
+  // nothing rather than leaking that the row exists.
+  const { data: seat } = await supabase
+    .from("classrooms")
+    .select("id")
+    .eq("tutor_registry_id", registryId)
+    .eq("student_id", studentId)
+    .is("ended_at", null)
+    .limit(1)
+    .maybeSingle();
 
-  if (!seat && !priorSession) {
+  if (!seat) {
     return NextResponse.json(
       { error: "담당 학생만 수업을 개설할 수 있습니다." },
       { status: 403 },

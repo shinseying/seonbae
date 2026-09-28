@@ -37,7 +37,7 @@ export default async function ClassroomDetailPage({
   const admin = createAdminClient();
   const { data: room } = await admin
     .from("classrooms")
-    .select("id,title,join_code,join_password,student_id,tutor_registry_id")
+    .select("id,title,join_code,join_password,student_id,tutor_registry_id,ended_at,purge_after")
     .eq("id", classroomId)
     .maybeSingle();
   if (!room) notFound();
@@ -57,6 +57,9 @@ export default async function ClassroomDetailPage({
     isMember = Boolean(membership);
   }
   if (!isTutor && !isStudent && !isMember) notFound();
+  // An ended match is an archive for the student and parents only.
+  const ended = Boolean(room.ended_at);
+  if (ended && !isStudent && !isMember) notFound();
 
   const [{ data: tutor }, { data: student }, { data: memberRows }] = await Promise.all([
     admin.from("tutors").select("name").eq("registry_id", room.tutor_registry_id).maybeSingle(),
@@ -91,6 +94,7 @@ export default async function ClassroomDetailPage({
           .select("id,session_date,starts_at,duration_minutes,subject,title,notes,zoom_status,zoom_meeting_number,zoom_join_url,recording_url,cancellation_reason")
           .eq("user_id", room.student_id)
           .eq("tutor_registry_id", room.tutor_registry_id)
+          .lte("created_at", room.ended_at ?? "infinity")
           .order("session_date", { ascending: false })
       : Promise.resolve({ data: [] as any[] }),
     room.student_id
@@ -99,6 +103,7 @@ export default async function ClassroomDetailPage({
           .select("id,title,due_date,status,feedback,instructions,student_attachment_name,submitted_at")
           .eq("student_id", room.student_id)
           .eq("tutor_registry_id", room.tutor_registry_id)
+          .lte("created_at", room.ended_at ?? "infinity")
           .order("due_date", { ascending: false })
       : Promise.resolve({ data: [] as any[] }),
   ]);
@@ -117,7 +122,17 @@ export default async function ClassroomDetailPage({
           </span>
         </header>
 
-        {(isTutor || isStudent) && (
+        {ended && (
+          <div className={styles.archiveBox}>
+            <p>
+              {archiveDay(room.ended_at)}에 매칭이 종료된 교실입니다. 수업, 숙제와 피드백은{" "}
+              {archiveDay(room.purge_after)}까지 보관되며 그 뒤 삭제됩니다.
+            </p>
+            <a href={`/api/classroom/archive?classroomId=${room.id}`} download>기록 전체 내려받기 (ZIP)</a>
+          </div>
+        )}
+
+        {!ended && (isTutor || isStudent) && (
           <div className={styles.codeBox}>
             <div><small>교실 ID</small><b>{room.join_code}</b></div>
             <div><small>비밀번호</small><b>{room.join_password}</b></div>
@@ -125,7 +140,7 @@ export default async function ClassroomDetailPage({
           </div>
         )}
 
-        {isTutor && (
+        {isTutor && !ended && (
           <ClassroomTools
             studentId={room.student_id}
             assignments={(homework ?? []).map((item) => ({
@@ -157,7 +172,7 @@ export default async function ClassroomDetailPage({
           <h3>Zoom 수업</h3>
           {(lessons ?? []).length ? (lessons ?? []).map((lesson) => {
             const joinUrl = zoomJoinUrl(lesson.zoom_join_url, lesson.zoom_meeting_number);
-            const joinable = joinUrl && lesson.zoom_status !== "cancelled" && lesson.zoom_status !== "ended";
+            const joinable = !ended && joinUrl && lesson.zoom_status !== "cancelled" && lesson.zoom_status !== "ended";
             return (
               <article key={lesson.id} className={styles.item}>
                 <div>
@@ -208,4 +223,9 @@ export default async function ClassroomDetailPage({
       </section>
     </main>
   );
+}
+
+function archiveDay(value: string | null) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" }).format(new Date(value));
 }

@@ -10,7 +10,7 @@ export async function GET() {
   const admin = createAdminClient();
 
   const recentLessonCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const [applications, tutorAccounts, bookings, cards, slots, sessions, consultations, complaints] = await Promise.all([
+  const [applications, tutorAccounts, bookings, cards, slots, sessions, consultations, complaints, classroomEnds] = await Promise.all([
     count(admin.from("account_creation_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
     count(admin.from("account_creation_requests").select("id", { count: "exact", head: true }).eq("requested_role", "tutor").is("user_id", null).neq("status", "rejected")),
     // A declined match waits on the admin for a rematch, so it counts too.
@@ -20,6 +20,7 @@ export async function GET() {
     count(admin.from("portal_sessions").select("id", { count: "exact", head: true }).gte("updated_at", recentLessonCutoff)),
     count(admin.from("consultation_requests").select("id", { count: "exact", head: true }).eq("status", "new")),
     count(admin.from("complaints").select("id", { count: "exact", head: true }).eq("status", "new")),
+    count(admin.from("classroom_end_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
   ]);
 
   return NextResponse.json({
@@ -31,6 +32,7 @@ export async function GET() {
     sessions,
     consultations,
     complaints,
+    "classroom-ends": classroomEnds,
   }, noStore());
 }
 

@@ -42,10 +42,12 @@ export default async function ClassroomPage() {
     const { data } = await admin.from("classrooms").select("id").eq("student_id", user.id);
     classroomIds = (data ?? []).map((row) => row.id);
   } else if (role === "tutor" && profile.tutor_registry_id) {
+    // An ended match leaves the tutor's list; the student and parents keep it.
     const { data } = await admin
       .from("classrooms")
       .select("id")
-      .eq("tutor_registry_id", profile.tutor_registry_id);
+      .eq("tutor_registry_id", profile.tutor_registry_id)
+      .is("ended_at", null);
     classroomIds = (data ?? []).map((row) => row.id);
     const { data: tutorRow } = await admin
       .from("tutors")
@@ -91,7 +93,7 @@ export default async function ClassroomPage() {
   if (classroomIds.length) {
     const { data: rows } = await admin
       .from("classrooms")
-      .select("id,join_code,join_password,student_id,tutor_registry_id,title")
+      .select("id,join_code,join_password,student_id,tutor_registry_id,title,ended_at,purge_after")
       .in("id", classroomIds);
 
     const studentIds = Array.from(
@@ -99,7 +101,7 @@ export default async function ClassroomPage() {
     );
     const registryIds = Array.from(new Set((rows ?? []).map((row) => row.tutor_registry_id)));
 
-    const [{ data: students }, { data: tutors }, { data: sessions }, { data: homework }, { data: members }] =
+    const [{ data: students }, { data: tutors }, { data: sessions }, { data: homework }, { data: members }, { data: endRequests }] =
       await Promise.all([
         studentIds.length
           ? admin.from("profiles").select("id,full_name,email").in("id", studentIds)
@@ -108,14 +110,14 @@ export default async function ClassroomPage() {
         studentIds.length
           ? admin
               .from("portal_sessions")
-              .select("id,user_id,tutor_registry_id,session_date,starts_at,subject,title,notes,zoom_status,recording_url")
+              .select("id,user_id,tutor_registry_id,session_date,starts_at,subject,title,notes,zoom_status,recording_url,created_at")
               .in("user_id", studentIds)
               .order("session_date", { ascending: false })
           : Promise.resolve({ data: [] as any[] }),
         studentIds.length
           ? admin
               .from("portal_assignments")
-              .select("id,student_id,tutor_registry_id,title,due_date,status,feedback")
+              .select("id,student_id,tutor_registry_id,title,due_date,status,feedback,created_at")
               .in("student_id", studentIds)
               .order("due_date", { ascending: false })
           : Promise.resolve({ data: [] as any[] }),
@@ -123,7 +125,13 @@ export default async function ClassroomPage() {
           .from("classroom_members")
           .select("id,classroom_id,user_id,role,status,requested_at")
           .in("classroom_id", classroomIds),
+        admin
+          .from("classroom_end_requests")
+          .select("classroom_id")
+          .in("classroom_id", classroomIds)
+          .eq("status", "pending"),
       ]);
+    const pendingEnd = new Set((endRequests ?? []).map((row) => row.classroom_id));
 
     const studentName = new Map((students ?? []).map((row) => [row.id, row.full_name || row.email || "학생"]));
     const tutorName = new Map((tutors ?? []).map((row) => [row.registry_id, row.name]));
@@ -150,19 +158,25 @@ export default async function ClassroomPage() {
     }
 
     classrooms = (rows ?? []).map((row) => {
-      const belongs = (item: { user_id?: string; student_id?: string; tutor_registry_id: string }) =>
+      // An archive holds what existed when the match ended, not a later re-match.
+      const belongs = (item: { user_id?: string; student_id?: string; tutor_registry_id: string; created_at?: string }) =>
         Boolean(row.student_id)
         && (item.user_id ?? item.student_id) === row.student_id
-        && item.tutor_registry_id === row.tutor_registry_id;
+        && item.tutor_registry_id === row.tutor_registry_id
+        && (!row.ended_at || !item.created_at || Date.parse(item.created_at) <= Date.parse(row.ended_at));
 
       return {
         id: row.id,
         title: row.title || `${row.student_id ? studentName.get(row.student_id) : "빈 자리"} · ${tutorName.get(row.tutor_registry_id) || row.tutor_registry_id}`,
         studentName: row.student_id ? (studentName.get(row.student_id) || "학생") : "",
         tutorName: tutorName.get(row.tutor_registry_id) || row.tutor_registry_id,
-        // Only the tutor and the student hand the code out.
-        joinCode: role === "parent" ? null : row.join_code,
-        joinPassword: role === "parent" ? null : row.join_password,
+        // Only the tutor and the student hand the code out, and only while the
+        // match is running.
+        joinCode: role === "parent" || row.ended_at ? null : row.join_code,
+        joinPassword: role === "parent" || row.ended_at ? null : row.join_password,
+        endedAt: row.ended_at,
+        availableUntil: row.purge_after,
+        endRequestPending: pendingEnd.has(row.id),
         lessons: (sessions ?? []).filter(belongs).map((item) => ({
           id: item.id,
           date: item.session_date,

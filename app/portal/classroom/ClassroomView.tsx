@@ -32,6 +32,11 @@ export type Classroom = {
     feedback: string | null;
   }>;
   members: Array<{ id: number; name: string; role: string }>;
+  /** Set once the match ends; the room is then a read-only archive. */
+  endedAt: string | null;
+  /** Last moment the archive can be downloaded before it is deleted. */
+  availableUntil: string | null;
+  endRequestPending: boolean;
 };
 
 export type MatchRequest = {
@@ -149,6 +154,17 @@ export default function ClassroomView({
     const form = new FormData(event.currentTarget);
     const ok = await post("/api/tutor/classrooms", { title: form.get("title") });
     if (ok) setMessage(l("교실을 만들었습니다.", "Classroom created."));
+  }
+
+  async function requestEnd(event: FormEvent<HTMLFormElement>, room: Classroom) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    if (!window.confirm(l(
+      `'${room.title}' 매칭 종료를 관리자에게 요청할까요? 관리자가 승인하면 예정된 수업이 취소되고 교실은 보관 상태가 됩니다.`,
+      `Ask the admin to end the match for '${room.title}'? Once approved, upcoming lessons are cancelled and the classroom is archived.`,
+    ))) return;
+    const ok = await post("/api/classroom/end-request", { classroomId: room.id, reason: form.get("reason") });
+    if (ok) setMessage(l("매칭 종료 요청을 보냈습니다. 관리자가 확인한 뒤 처리합니다.", "End request sent. The admin will review it."));
   }
 
   async function requestSlot(event: FormEvent<HTMLFormElement>) {
@@ -305,7 +321,7 @@ export default function ClassroomView({
         </section>
       )}
 
-      {role !== "tutor" && (
+      {role === "parent" && (
         <form className={styles.joinForm} onSubmit={join}>
           <div>
             <h2>{l("교실 참여하기", "Join a classroom")}</h2>
@@ -334,7 +350,10 @@ export default function ClassroomView({
                 onClick={() => setOpenId(room.id)}
               >
                 <b>{room.title}</b>
-                <small>{l(`숙제 ${room.homework.length} · 수업 ${room.lessons.length}`, `${room.homework.length} homework · ${room.lessons.length} lessons`)}</small>
+                <small>
+                  {room.endedAt ? `${l("종료됨", "Ended")} · ` : ""}
+                  {l(`숙제 ${room.homework.length} · 수업 ${room.lessons.length}`, `${room.homework.length} homework · ${room.lessons.length} lessons`)}
+                </small>
               </button>
             ))}
           </aside>
@@ -353,6 +372,41 @@ export default function ClassroomView({
                   {l("교실 열기", "Open classroom")} →
                 </Link>
               </header>
+
+              {open.endedAt && (
+                <div className={styles.archiveBox}>
+                  <p>
+                    {l(
+                      `${formatDay(open.endedAt)}에 매칭이 종료된 교실입니다. 수업, 숙제와 피드백은 ${formatDay(open.availableUntil)}까지 보관되며 그 뒤 삭제됩니다.`,
+                      `This match ended on ${formatDay(open.endedAt, "en")}. Lessons, homework and feedback are kept until ${formatDay(open.availableUntil, "en")} and deleted after that.`,
+                    )}
+                  </p>
+                  {role !== "tutor" && (
+                    <a href={`/api/classroom/archive?classroomId=${open.id}`} download>
+                      {l("기록 전체 내려받기 (ZIP)", "Download everything (ZIP)")}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {!open.endedAt && open.studentName && (
+                open.endRequestPending ? (
+                  <p className={styles.matchNote}>
+                    {l("매칭 종료 요청이 접수되어 관리자가 검토하고 있습니다.", "An end request is with the admin.")}
+                  </p>
+                ) : (
+                  <details className={styles.endRequest}>
+                    <summary>{l("매칭 종료 요청", "Ask to end this match")}</summary>
+                    <form onSubmit={(event) => requestEnd(event, open)}>
+                      <label>
+                        <span>{l("종료 사유 (선택)", "Reason (optional)")}</span>
+                        <textarea name="reason" rows={3} maxLength={1000} />
+                      </label>
+                      <button type="submit" disabled={busy}>{l("관리자에게 종료 요청", "Send to the admin")}</button>
+                    </form>
+                  </details>
+                )
+              )}
 
               {open.joinCode && (
                 <div className={styles.codeBox}>
@@ -410,6 +464,15 @@ export default function ClassroomView({
       )}
     </section>
   );
+}
+
+function formatDay(value: string | null, locale: "ko" | "en" = "ko") {
+  if (!value) return "";
+  return new Intl.DateTimeFormat(locale === "ko" ? "ko-KR" : "en-US", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(value));
 }
 
 function homeworkLabel(status: string) {

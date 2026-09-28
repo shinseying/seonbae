@@ -72,6 +72,7 @@ export default async function TutorPortalPage() {
     .from("classrooms")
     .select("id,title,student_id")
     .eq("tutor_registry_id", profile.tutor_registry_id)
+    .is("ended_at", null)
     .order("created_at", { ascending: true });
   const classroomOptions: ClassroomOption[] = (roomRows ?? []).map((row) => ({
     id: row.id,

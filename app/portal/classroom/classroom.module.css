@@ -169,3 +169,16 @@
 @keyframes classroomShimmer{to{background-position:-220% 0}}
 @media(max-width:760px){.skelDay{min-height:60px}.skelRoom{height:110px}}
 @media(prefers-reduced-motion:reduce){.skeleton{animation:none}}
+
+/* An ended match: read-only archive with a download window. */
+.archiveBox{margin-top:16px;padding:14px 16px;border-radius:12px;background:#eef1f4;display:grid;gap:10px}
+.archiveBox p{margin:0;font-size:.84rem;line-height:1.55}
+.archiveBox a{justify-self:start;padding:10px 16px;border-radius:9px;background:#163a51;color:#fff;font-size:.82rem;font-weight:700;text-decoration:none}
+.endRequest{margin-top:14px;font-size:.84rem}
+.endRequest summary{cursor:pointer;color:#b3452a;font-weight:700}
+.endRequest form{display:grid;gap:10px;margin-top:10px}
+.endRequest label{display:grid;gap:6px}
+.endRequest label span{font-size:.76rem;color:var(--muted)}
+.endRequest textarea{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font:inherit;font-size:.84rem;resize:vertical}
+.endRequest button{justify-self:start;padding:10px 16px;border:1px solid rgba(179,69,42,.4);border-radius:9px;background:transparent;color:#b3452a;font-weight:700;cursor:pointer}
+.endRequest button:disabled{opacity:.6}

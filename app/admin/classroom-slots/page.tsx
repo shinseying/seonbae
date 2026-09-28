@@ -37,7 +37,7 @@ export default async function AdminClassroomSlotsPage() {
   if (registryIds.length) {
     const [{ data: tutors }, { data: rooms }] = await Promise.all([
       admin.from("tutors").select("registry_id,roster_number,name,classroom_limit").in("registry_id", registryIds),
-      admin.from("classrooms").select("tutor_registry_id").in("tutor_registry_id", registryIds),
+      admin.from("classrooms").select("tutor_registry_id").in("tutor_registry_id", registryIds).is("ended_at", null),
     ]);
     for (const tutor of tutors ?? []) {
       tutorName.set(tutor.registry_id, tutor.name);

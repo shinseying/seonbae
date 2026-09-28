@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
     admin
       .from("classrooms")
       .select("id", { count: "exact", head: true })
-      .eq("tutor_registry_id", auth.registryId),
+      .eq("tutor_registry_id", auth.registryId)
+      // Archived rooms from ended matches do not count toward the cap.
+      .is("ended_at", null),
   ]);
 
   const limit = tutor?.classroom_limit ?? 3;
