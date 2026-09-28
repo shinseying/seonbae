@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  canReplaceSubmission,
   canTurnIn,
   canUndoTurnIn,
   homeworkGroup,
@@ -218,7 +219,7 @@ export default function HomeworkList({
                   )}
                 </div>
 
-                {role === "student" && canTurnIn(selected.status) && (
+                {role === "student" && (canTurnIn(selected.status) || canReplaceSubmission(selected.status)) && (
                   <form className={styles.turnInForm} onSubmit={(event) => turnIn(event, selected)}>
                     <label>
                       <span>{l("작업 파일", "Work file")}</span>
@@ -228,9 +229,11 @@ export default function HomeworkList({
                     <button type="submit" disabled={busyId === selected.id}>
                       {busyId === selected.id
                         ? l("제출 중…", "Turning in…")
-                        : selected.status === "needs_revision"
-                          ? l("다시 제출", "Turn in again")
-                          : l("제출", "Turn in")}
+                        : selected.status === "submitted"
+                          ? l("새 파일로 교체 제출", "Replace my submission")
+                          : selected.status === "needs_revision"
+                            ? l("다시 제출", "Turn in again")
+                            : l("제출", "Turn in")}
                     </button>
                   </form>
                 )}

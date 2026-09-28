@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  canReplaceSubmission,
   canTurnIn,
   canUndoTurnIn,
   homeworkGroup,
@@ -18,5 +19,8 @@ test("turn-in actions are limited to appropriate states", () => {
   assert.equal(canTurnIn("needs_revision"), true);
   assert.equal(canTurnIn("submitted"), false);
   assert.equal(canUndoTurnIn("submitted"), true);
+  assert.equal(canReplaceSubmission("submitted"), true);
+  assert.equal(canReplaceSubmission("graded"), false);
+  assert.equal(canReplaceSubmission("todo"), false);
   assert.equal(canUndoTurnIn("graded"), false);
 });

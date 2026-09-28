@@ -90,8 +90,18 @@ export async function POST(request: NextRequest) {
     if (profile.role !== "student") return jsonError("학생 계정만 숙제를 제출할 수 있습니다.", 403);
     const assignmentId = Number(body.assignmentId);
     if (!Number.isInteger(assignmentId)) return jsonError("숙제 번호를 확인해 주세요.", 400);
+    const admin = createAdminClient();
+    const { data: owned } = await admin
+      .from("portal_assignments")
+      .select("tutor_registry_id")
+      .eq("id", assignmentId)
+      .eq("student_id", user.id)
+      .maybeSingle();
+    if (owned && await matchHasEnded(admin, user.id, owned.tutor_registry_id)) {
+      return jsonError("매칭이 종료된 숙제는 제출할 수 없습니다.", 400);
+    }
     const submittedAt = new Date().toISOString();
-    const { data, error } = await createAdminClient()
+    const { data, error } = await admin
       .from("portal_assignments")
       .update({
         status: "submitted",
@@ -100,7 +110,7 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", assignmentId)
       .eq("student_id", user.id)
-      .in("status", ["todo", "needs_revision"])
+      .in("status", SUBMITTABLE_STATUSES)
       .select("*")
       .single();
     if (error) return jsonError("제출할 수 없는 숙제입니다.", 400);
@@ -223,6 +233,24 @@ async function createAssignment(
   return NextResponse.json(data, { status: 201, headers: { "Cache-Control": "no-store" } });
 }
 
+// A student may resubmit until the tutor returns the work: a new file replaces
+// the previous one, which is deleted below once the update lands.
+const SUBMITTABLE_STATUSES = ["todo", "needs_revision", "submitted"];
+
+// True when the pair's match was ended and no active room joins them again.
+async function matchHasEnded(
+  admin: ReturnType<typeof createAdminClient>,
+  studentId: string,
+  tutorRegistryId: string,
+) {
+  const { data: rooms } = await admin
+    .from("classrooms")
+    .select("ended_at")
+    .eq("student_id", studentId)
+    .eq("tutor_registry_id", tutorRegistryId);
+  return Boolean(rooms?.length) && rooms!.every((room) => room.ended_at);
+}
+
 async function submitStudentWork(form: FormData, userId: string) {
   const assignmentId = Number(formText(form, "assignmentId"));
   if (!Number.isInteger(assignmentId)) return jsonError("숙제 번호를 확인해 주세요.", 400);
@@ -236,12 +264,15 @@ async function submitStudentWork(form: FormData, userId: string) {
 
   const { data: assignment } = await admin
     .from("portal_assignments")
-    .select("id,status,student_attachment_name,student_attachment_path")
+    .select("id,status,tutor_registry_id,student_attachment_name,student_attachment_path")
     .eq("id", assignmentId)
     .eq("student_id", userId)
     .maybeSingle();
-  if (!assignment || !["todo", "needs_revision"].includes(assignment.status)) {
+  if (!assignment || !SUBMITTABLE_STATUSES.includes(assignment.status)) {
     return jsonError("현재 제출할 수 없는 숙제입니다.", 400);
+  }
+  if (await matchHasEnded(admin, userId, assignment.tutor_registry_id)) {
+    return jsonError("매칭이 종료된 숙제는 제출할 수 없습니다.", 400);
   }
 
   const attachment = form.get("studentAttachment");
@@ -276,7 +307,7 @@ async function submitStudentWork(form: FormData, userId: string) {
     })
     .eq("id", assignmentId)
     .eq("student_id", userId)
-    .in("status", ["todo", "needs_revision"])
+    .in("status", SUBMITTABLE_STATUSES)
     .select("id,status,submitted_at,student_attachment_name")
     .single();
 

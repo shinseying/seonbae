@@ -16,3 +16,9 @@ export function canTurnIn(status: HomeworkStatus) {
 export function canUndoTurnIn(status: HomeworkStatus) {
   return status === "submitted";
 }
+
+// Work that is turned in but not yet returned can be replaced: the new file
+// overwrites the previous submission.
+export function canReplaceSubmission(status: HomeworkStatus) {
+  return status === "submitted";
+}
