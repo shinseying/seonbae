@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sendMatchEndedEmail } from "../email/match-ended";
 import { deleteZoomMeeting, ZoomApiError } from "../zoom/server";
 
 // Ending a tutor-student match (migration 20260928030039). The classroom is
@@ -160,4 +161,80 @@ export async function purgeEndedClassrooms(admin: SupabaseClient, limit = 25) {
     }
   }
   return { purged, failed };
+}
+
+/**
+ * Tells the student, every approved parent in the room and the tutor that the
+ * match ended. Best effort: the end is already saved, so a failed mail is
+ * logged and the rest still go out.
+ */
+export async function notifyMatchEnded(
+  admin: SupabaseClient,
+  input: { classroomId: number; cancelledLessons: number; endedAt: string; purgeAfter: string; origin: string },
+) {
+  const { data: room } = await admin
+    .from("classrooms")
+    .select("id,title,student_id,tutor_registry_id")
+    .eq("id", input.classroomId)
+    .maybeSingle();
+  if (!room?.student_id) return { sent: 0, failed: 0 };
+
+  const [{ data: members }, { data: tutor }, { data: tutorAccount }] = await Promise.all([
+    admin
+      .from("classroom_members")
+      .select("user_id")
+      .eq("classroom_id", room.id)
+      .eq("role", "parent")
+      .eq("status", "approved"),
+    admin.from("tutors").select("name").eq("registry_id", room.tutor_registry_id).maybeSingle(),
+    admin
+      .from("profiles")
+      .select("id")
+      .eq("tutor_registry_id", room.tutor_registry_id)
+      .eq("role", "tutor")
+      .maybeSingle(),
+  ]);
+  const ids = [room.student_id, ...(members ?? []).map((row) => row.user_id), ...(tutorAccount ? [tutorAccount.id] : [])];
+  const { data: people } = await admin.from("profiles").select("id,full_name,email").in("id", ids);
+  const byId = new Map((people ?? []).map((row) => [row.id, row]));
+  const studentName = byId.get(room.student_id)?.full_name || "학생";
+  const tutorName = tutor?.name || "담당 튜터";
+  const title = room.title || `교실 ${room.id}`;
+
+  const recipients: Array<{ id: string; audience: "student" | "parent" | "tutor"; path: string }> = [
+    { id: room.student_id, audience: "student", path: "/portal/classroom" },
+    ...(members ?? []).map((row) => ({ id: row.user_id, audience: "parent" as const, path: "/portal/classroom" })),
+    ...(tutorAccount ? [{ id: tutorAccount.id, audience: "tutor" as const, path: "/portal/tutor" }] : []),
+  ];
+
+  let sent = 0;
+  let failed = 0;
+  for (const recipient of recipients) {
+    const person = byId.get(recipient.id);
+    if (!person?.email) continue;
+    try {
+      await sendMatchEndedEmail({
+        eventKey: `${room.id}-${Date.parse(input.endedAt)}-${recipient.id}`,
+        to: person.email,
+        name: person.full_name || person.email,
+        audience: recipient.audience,
+        classroomTitle: title,
+        studentName,
+        tutorName,
+        endedAt: input.endedAt,
+        availableUntil: input.purgeAfter,
+        cancelledLessons: input.cancelledLessons,
+        portalUrl: new URL(recipient.path, input.origin).toString(),
+      });
+      sent += 1;
+    } catch (mailError) {
+      failed += 1;
+      console.error("Match-ended email failed", {
+        classroomId: room.id,
+        audience: recipient.audience,
+        message: mailError instanceof Error ? mailError.message : "Unknown error",
+      });
+    }
+  }
+  return { sent, failed };
 }

@@ -54,7 +54,11 @@ export default function ClassroomEndList({
         setMessage(result?.error || "처리하지 못했습니다.");
         return;
       }
-      if (result?.cancelledLessons) setMessage(`매칭을 종료했습니다. 예정된 수업 ${result.cancelledLessons}건을 취소했습니다.`);
+      if (result?.endedAt) {
+        const mails = result.notified ? ` 학생·보호자·튜터에게 안내 메일 ${result.notified.sent}건을 보냈습니다.` : "";
+        const failedMails = result.notified?.failed ? ` (${result.notified.failed}건 발송 실패)` : "";
+        setMessage(`매칭을 종료했습니다. 예정된 수업 ${result.cancelledLessons}건을 취소했습니다.${mails}${failedMails}`);
+      }
       router.refresh();
     } catch {
       setMessage("네트워크 연결을 확인한 뒤 다시 시도해 주세요.");
@@ -96,7 +100,7 @@ export default function ClassroomEndList({
           <p className={styles.reason}>{request.reason || "사유 없음"}</p>
           {request.status === "pending" ? (
             <div className={styles.actions}>
-              <button type="button" disabled={busy !== null} onClick={() => approve(request)}>
+              <button type="button" className={styles.approve} disabled={busy !== null} onClick={() => approve(request)}>
                 승인하고 종료
               </button>
               <button

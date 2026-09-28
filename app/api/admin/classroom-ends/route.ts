@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { endClassroomMatch } from "../../../../utils/classrooms/match-end";
+import { endClassroomMatch, notifyMatchEnded } from "../../../../utils/classrooms/match-end";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { createClient } from "../../../../utils/supabase/server";
 
 export const dynamic = "force-dynamic";
-// Ending cancels each future lesson's Zoom meeting in turn.
+// Ending cancels each future lesson's Zoom meeting in turn, then mails the
+// student, parents and tutor.
 export const maxDuration = 60;
 
 // Approve or reject an end request. Approving ends the match.
@@ -38,7 +39,12 @@ export async function PATCH(request: NextRequest) {
     });
     if ("error" in ended) return error(ended.error, ended.status);
     await markDecided(auth.admin, endRequest.id, "approved", auth.userId);
-    return NextResponse.json({ ok: true, ...ended });
+    const notified = await notifyMatchEnded(auth.admin, {
+      classroomId: endRequest.classroom_id,
+      ...ended,
+      origin: request.nextUrl.origin,
+    });
+    return NextResponse.json({ ok: true, ...ended, notified });
   }
 
   await markDecided(auth.admin, endRequest.id, "rejected", auth.userId);
@@ -76,7 +82,12 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   if (open) await markDecided(auth.admin, open.id, "approved", auth.userId);
 
-  return NextResponse.json({ ok: true, ...ended });
+  const notified = await notifyMatchEnded(auth.admin, {
+    classroomId,
+    ...ended,
+    origin: request.nextUrl.origin,
+  });
+  return NextResponse.json({ ok: true, ...ended, notified });
 }
 
 async function markDecided(
