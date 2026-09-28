@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "../../../utils/supabase/server";
 import { requireSignedTutorContract } from "../../../utils/contracts/tutor-signature";
-import type { PortalChatThread } from "../ChatPanel";
 import type { ClassroomOption, PortalBooking } from "../BookingsPanel";
 import { createAdminClient } from "../../../utils/supabase/admin";
 import TutorPortalDashboard, {
@@ -33,7 +32,7 @@ export default async function TutorPortalPage() {
   // portal until the current version is signed.
   await requireSignedTutorContract(user.id);
 
-  const [{ data: sessionRows }, { data: threadRows }, { data: bookingRows }] = await Promise.all([
+  const [{ data: sessionRows }, { data: bookingRows }] = await Promise.all([
     supabase
       .from("portal_sessions")
       .select(
@@ -42,11 +41,6 @@ export default async function TutorPortalPage() {
       .eq("tutor_registry_id", profile.tutor_registry_id)
       .order("session_date", { ascending: true })
       .order("starts_at", { ascending: true }),
-    supabase
-      .from("chat_threads")
-      .select("id,student_id")
-      .eq("tutor_registry_id", profile.tutor_registry_id)
-      .order("updated_at", { ascending: false }),
     supabase
       .from("booking_requests")
       .select("id,name,email,phone,subject,preferred_day,preferred_time,note,status,seen_by_tutor,created_at")
@@ -88,7 +82,6 @@ export default async function TutorPortalPage() {
   const studentIds = Array.from(
     new Set([
       ...(sessionRows ?? []).map((row) => row.user_id),
-      ...(threadRows ?? []).map((row) => row.student_id),
     ]),
   );
   const studentMap = new Map<
@@ -122,15 +115,6 @@ export default async function TutorPortalPage() {
     zoomStatus: row.zoom_status,
   }));
 
-  const chatThreads: PortalChatThread[] = (threadRows ?? []).map((row) => ({
-    id: row.id,
-    counterpartName:
-      studentMap.get(row.student_id)?.full_name
-      || studentMap.get(row.student_id)?.email
-      || "학생",
-    counterpartMeta: "수강 학생",
-  }));
-
   return (
     <TutorPortalDashboard
       currentUserId={user.id}
@@ -144,7 +128,6 @@ export default async function TutorPortalPage() {
         registryId: profile.tutor_registry_id,
       }}
       sessions={sessions}
-      chatThreads={chatThreads}
       bookings={bookings}
       classrooms={classroomOptions}
     />

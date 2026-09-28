@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { PortalChatThread } from "./ChatPanel";
 import type { PortalHeaderUser } from "./PortalHeader";
 import { useSeonbaeLocale } from "../../utils/i18n/client";
 import ComplaintForm from "./ComplaintForm";
@@ -60,7 +59,6 @@ export default function PortalDashboard({
   sessions,
   consultations,
   consultationRequests,
-  chatThreads,
   linkedStudentCount,
 }: {
   currentUserId: string;
@@ -68,7 +66,6 @@ export default function PortalDashboard({
   sessions: PortalSession[];
   consultations: PortalConsultation[];
   consultationRequests: PortalConsultationRequest[];
-  chatThreads: PortalChatThread[];
   linkedStudentCount: number;
 }) {
   const [visibleMonth, setVisibleMonth] = useState(() => initialVisibleMonth());

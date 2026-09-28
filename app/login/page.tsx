@@ -697,7 +697,7 @@ export default function LoginPage() {
                       checked={accountRole === "student"}
                       onChange={() => selectAccountRole("student")}
                     />
-                    <span><b>{l("학생 계정", "Student")}</b><small>{l("수업 일정, Zoom, 튜터 채팅", "Lesson calendar, Zoom, and tutor chat")}</small></span>
+                    <span><b>{l("학생 계정", "Student")}</b><small>{l("수업 일정, Zoom, 숙제", "Lesson calendar, Zoom, and homework")}</small></span>
                   </label>
                   <label data-selected={accountRole === "parent"}>
                     <input

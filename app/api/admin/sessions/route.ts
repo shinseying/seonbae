@@ -151,15 +151,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await auth.supabase.from("chat_threads").upsert(
-    {
-      student_id: userId,
-      tutor_registry_id: tutorRegistryId,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "student_id,tutor_registry_id" },
-  );
-
   return NextResponse.json(data, {
     status: 201,
     headers: { "Cache-Control": "private, no-store, max-age=0" },

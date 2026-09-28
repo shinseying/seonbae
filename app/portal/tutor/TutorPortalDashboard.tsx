@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import type { PortalChatThread } from "../ChatPanel";
 import BookingsPanel, { type ClassroomOption, type PortalBooking } from "../BookingsPanel";
 import ComplaintForm from "../ComplaintForm";
 import styles from "../portal.module.css";
@@ -27,14 +26,12 @@ export default function TutorPortalDashboard({
   currentUserId,
   tutor,
   sessions,
-  chatThreads,
   bookings,
   classrooms,
 }: {
   currentUserId: string;
   tutor: { name: string; email: string; registryId: string };
   sessions: TutorPortalSession[];
-  chatThreads: PortalChatThread[];
   bookings: PortalBooking[];
   classrooms: ClassroomOption[];
 }) {

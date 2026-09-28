@@ -6,7 +6,6 @@ import PortalDashboard, {
   type PortalSession,
   type PortalConsultationRequest,
 } from "./PortalDashboard";
-import type { PortalChatThread } from "./ChatPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -140,23 +139,6 @@ export default async function PortalPage() {
     }));
   }
 
-  let chatThreads: PortalChatThread[] = [];
-  if (!isParent) {
-    const { data: rows } = await supabase
-      .from("chat_threads")
-      .select("id,tutor_registry_id,tutors(name,university)")
-      .eq("student_id", user.id)
-      .order("updated_at", { ascending: false });
-    chatThreads = (rows ?? []).map((row) => {
-      const tutor = Array.isArray(row.tutors) ? row.tutors[0] : row.tutors;
-      return {
-        id: row.id,
-        counterpartName: tutor?.name || "담당 튜터",
-        counterpartMeta: tutor?.university || row.tutor_registry_id,
-      };
-    });
-  }
-
   return (
     <PortalDashboard
       currentUserId={user.id}
@@ -172,7 +154,6 @@ export default async function PortalPage() {
       sessions={sessions}
       consultations={consultations}
       consultationRequests={consultationRequests}
-      chatThreads={chatThreads}
       linkedStudentCount={isParent ? studentIds.length : 0}
     />
   );

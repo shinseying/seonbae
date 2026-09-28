@@ -69,7 +69,7 @@ export default function EnglishTermsPage() {
               <li>Consultations and tutor matching based on a student&apos;s subject and goals</li>
               <li>A member portal for lesson schedules, tutors, and notices</li>
               <li>Online lessons through Zoom within the portal</li>
-              <li>Student and tutor lesson chat and private parent consultations with the founding team</li>
+              <li>Private parent consultations with the founding team</li>
               <li>Lesson operations, enquiry handling, and related support</li>
             </ul>
             <p>

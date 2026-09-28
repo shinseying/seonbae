@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 
 // Removing a tutor deletes the public card. The row is only safe to delete
 // while it has no history: the contract-signature FK blocks the delete
-// outright, and homework, chat, and bookings would cascade away with it. When
+// outright, and homework and bookings would cascade away with it. When
 // history exists the admin is pointed at the visibility toggle instead.
 export async function DELETE(request: NextRequest) {
   const auth = await requireAdmin();
@@ -185,7 +185,6 @@ export async function DELETE(request: NextRequest) {
   const dependencyChecks = await Promise.all([
     countFor("portal_sessions", "tutor_registry_id"),
     countFor("portal_assignments", "tutor_registry_id"),
-    countFor("chat_threads", "tutor_registry_id"),
     countFor("tutor_contract_signatures", "tutor_registry_id"),
     countFor("booking_requests", "tutor_registry_id"),
     countFor("tutor_profile_requests", "tutor_registry_id"),
@@ -200,12 +199,11 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const [sessions, assignments, threads, contracts, bookings, profileRequests, classrooms, slotRequests] = dependencyChecks.map((check) => check.count);
+  const [sessions, assignments, contracts, bookings, profileRequests, classrooms, slotRequests] = dependencyChecks.map((check) => check.count);
 
   const blockers = [
     sessions && `수업 ${sessions}건`,
     assignments && `숙제 ${assignments}건`,
-    threads && `대화 ${threads}건`,
     contracts && `계약 서명 ${contracts}건`,
     bookings && `매칭 요청 ${bookings}건`,
     profileRequests && `프로필 수정 요청 ${profileRequests}건`,
