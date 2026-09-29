@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
   const { data: room } = await admin
     .from("classrooms")
-    .select("id,title,student_id,tutor_registry_id,ended_at,purge_after,end_reason")
+    .select("id,title,student_id,tutor_registry_id,ended_at,purge_after")
     .eq("id", classroomId)
     .maybeSingle();
   let allowed = Boolean(room && room.student_id === user.id);
@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
       `학생: ${student?.full_name || student?.email || "-"}`,
       `튜터: ${tutor?.name || room.tutor_registry_id}`,
       `매칭 종료: ${koreanDateTime(room.ended_at)}`,
-      room.end_reason ? `종료 사유: ${room.end_reason}` : null,
       `이 자료는 ${koreanDateTime(room.purge_after)}에 선배 서버에서 삭제됩니다.`,
       "",
       `수업 ${lessons?.length ?? 0}건, 숙제 ${homework?.length ?? 0}건`,

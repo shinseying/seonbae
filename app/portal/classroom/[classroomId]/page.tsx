@@ -166,6 +166,7 @@ export default async function ClassroomDetailPage({
             status: lesson.zoom_status,
             cancellationReason: lesson.cancellation_reason,
           }))}
+          readOnly={ended}
         />
 
         <section className={styles.block}>
@@ -186,7 +187,7 @@ export default async function ClassroomDetailPage({
                   ? <a href={joinUrl ?? undefined} target="_blank" rel="noreferrer">Zoom 입장 ↗</a>
                   : lesson.recording_url
                     ? <a href={lesson.recording_url} target="_blank" rel="noreferrer">녹화본 보기 ↗</a>
-                    : <span data-status={lesson.zoom_status}>{lesson.zoom_status === "ended" ? "녹화 준비 중" : "예정"}</span>}
+                    : <span data-status={lesson.zoom_status}>{lesson.zoom_status === "ended" ? "녹화 준비 중" : lesson.zoom_status === "cancelled" ? "취소됨" : "예정"}</span>}
                 {lesson.notes && <p className={styles.feedback}>{lesson.notes}</p>}
               </article>
             );

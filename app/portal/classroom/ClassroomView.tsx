@@ -446,7 +446,7 @@ export default function ClassroomView({
                     </div>
                     {lesson.recordingUrl
                       ? <a href={lesson.recordingUrl} target="_blank" rel="noreferrer">{l("녹화본 보기", "Watch recording")} ↗</a>
-                      : <span data-status={lesson.status}>{lesson.status === "ended" ? l("녹화 준비 중", "Recording pending") : l("예정", "Upcoming")}</span>}
+                      : <span data-status={lesson.status}>{lesson.status === "ended" ? l("녹화 준비 중", "Recording pending") : lesson.status === "cancelled" ? l("취소됨", "Cancelled") : l("예정", "Upcoming")}</span>}
                     {lesson.notes && <p className={styles.feedback}>{lesson.notes}</p>}
                   </article>
                 )) : <p className={styles.blockEmpty}>{l("수업 기록이 없습니다.", "No lessons yet.")}</p>}

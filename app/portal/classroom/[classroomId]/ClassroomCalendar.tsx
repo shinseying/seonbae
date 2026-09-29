@@ -16,8 +16,9 @@ export type CalendarLesson = {
 };
 
 // The classroom's own month view. A scheduled lesson is a button: pressing it
-// opens the cancellation form for that date.
-export default function ClassroomCalendar({ lessons }: { lessons: CalendarLesson[] }) {
+// opens the cancellation form for that date. An ended match's archive is
+// read-only, so there it is plain text.
+export default function ClassroomCalendar({ lessons, readOnly = false }: { lessons: CalendarLesson[]; readOnly?: boolean }) {
   const router = useRouter();
   const [monthStart, setMonthStart] = useState(() => {
     const now = new Date();
@@ -86,7 +87,7 @@ export default function ClassroomCalendar({ lessons }: { lessons: CalendarLesson
   return (
     <section className={styles.block}>
       <h3>수업 일정</h3>
-      <p className={styles.blockEmpty}>예정된 수업 날짜를 누르면 취소를 신청할 수 있습니다.</p>
+      {!readOnly && <p className={styles.blockEmpty}>예정된 수업 날짜를 누르면 취소를 신청할 수 있습니다.</p>}
 
       <div className={styles.calHead}>
         <button type="button" onClick={() => shiftMonth(-1)} aria-label="이전 달">←</button>
@@ -108,6 +109,10 @@ export default function ClassroomCalendar({ lessons }: { lessons: CalendarLesson
                 lesson.status === "cancelled" ? (
                   <span className={styles.calCancelled} key={lesson.id} title={lesson.cancellationReason || undefined}>
                     {lesson.startsAt.slice(0, 5)} 취소됨
+                  </span>
+                ) : readOnly ? (
+                  <span className={styles.calLesson} key={lesson.id}>
+                    {lesson.startsAt.slice(0, 5)} {lesson.subject}
                   </span>
                 ) : (
                   <button
