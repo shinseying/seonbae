@@ -21,3 +21,4 @@
 .list li>footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:8px;border-top:1px solid var(--line);font-size:.66rem;color:#717b8b}
 .list li>footer a{color:var(--red);font-weight:700;text-decoration:none}
 .empty{min-height:180px;display:grid;place-items:center;color:#717b8b;font-size:.72rem;background:var(--card);border:1px solid var(--line);border-radius:16px;margin:0}
+.list li>footer .mailButton{min-height:36px;border:1px solid var(--line);border-radius:7px;background:#fff;color:#163a51;padding:0 12px;font:inherit;font-size:.66rem;font-weight:800;cursor:pointer}.list li>footer .mailButton:disabled{opacity:.6;cursor:wait}

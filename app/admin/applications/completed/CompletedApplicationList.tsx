@@ -36,6 +36,27 @@ export default function CompletedApplicationList({
   applications: CompletedApplication[];
 }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [mailState, setMailState] = useState<Record<number, string>>({});
+
+  // A 보완 요청 is answered from the applicant's portal, so the email is how
+  // they find out. Resending covers a failed first send.
+  async function sendNeedsInfoEmail(id: number) {
+    setMailState((current) => ({ ...current, [id]: "보내는 중…" }));
+    try {
+      const response = await fetch("/api/admin/applications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "send_needs_info_email" }),
+      });
+      const result = await response.json().catch(() => null);
+      setMailState((current) => ({
+        ...current,
+        [id]: response.ok ? "보냈습니다." : result?.error || "보내지 못했습니다.",
+      }));
+    } catch {
+      setMailState((current) => ({ ...current, [id]: "네트워크를 확인해 주세요." }));
+    }
+  }
   const visible = filter === "all"
     ? applications
     : applications.filter((item) => item.status === filter);
@@ -104,6 +125,16 @@ export default function CompletedApplicationList({
                 </span>
                 {item.hasTutorCard && (
                   <Link href="/admin">명부 {item.rosterNumber || "번호 준비 중"} 보기 ↗</Link>
+                )}
+                {item.status === "needs_info" && (
+                  <button
+                    type="button"
+                    className={styles.mailButton}
+                    disabled={mailState[item.id] === "보내는 중…"}
+                    onClick={() => sendNeedsInfoEmail(item.id)}
+                  >
+                    {mailState[item.id] || "보완 요청 메일 보내기"}
+                  </button>
                 )}
               </footer>
             </li>

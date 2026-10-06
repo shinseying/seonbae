@@ -38,6 +38,7 @@ export async function PATCH(request: NextRequest) {
     return jsonError("심사 요청 형식을 확인해 주세요.", 400);
   }
   const id = Number(body.id);
+  if (body.action === "send_needs_info_email") return sendNeedsInfoAgain(admin, id, request.nextUrl.origin);
   // needs_info is the 보완 요청: the applicant can upload documents and resubmit.
   // rejected is the final 반려.
   const decision = body.decision === "approved" || body.decision === "rejected" || body.decision === "needs_info"
@@ -300,4 +301,31 @@ export async function DELETE(request: NextRequest) {
 
 function jsonError(error: string, status: number) {
   return NextResponse.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
+}
+
+// Sends the applicant the 보완 요청 note again. The idempotency key follows the
+// request's reviewed_at, so a double click sends one email.
+async function sendNeedsInfoAgain(admin: ReturnType<typeof createAdminClient>, id: number, origin: string) {
+  if (!Number.isInteger(id)) return jsonError("심사 번호를 확인해 주세요.", 400);
+  const { data: application } = await admin
+    .from("account_creation_requests")
+    .select("id,email,full_name,status,review_note,reviewed_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (!application || application.status !== "needs_info") return jsonError("보완 요청 상태인 신청이 아닙니다.", 409);
+  if (!application.review_note || !application.reviewed_at) return jsonError("보낼 보완 요청 메모가 없습니다.", 409);
+  try {
+    await sendApplicationNeedsInfoEmail({
+      requestId: id,
+      reviewedAt: application.reviewed_at,
+      to: application.email,
+      name: application.full_name || application.email,
+      note: application.review_note,
+      portalUrl: new URL("/login", origin).toString(),
+    });
+  } catch (mailError) {
+    console.error("[application needs-info email]", { id, error: mailError instanceof Error ? mailError.message.slice(0, 300) : "Email failed" });
+    return jsonError("이메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.", 502);
+  }
+  return NextResponse.json({ ok: true });
 }
