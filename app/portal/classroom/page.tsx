@@ -136,18 +136,20 @@ export default async function ClassroomPage() {
     const studentName = new Map((students ?? []).map((row) => [row.id, row.full_name || row.email || "학생"]));
     const tutorName = new Map((tutors ?? []).map((row) => [row.registry_id, row.name]));
     const memberName = new Map((students ?? []).map((row) => [row.id, row.full_name || row.email || "회원"]));
+    // Parents in the room and parents asking to join, so the list shows their
+    // names rather than the fallback.
+    const memberIds = Array.from(new Set((members ?? []).map((row) => row.user_id)));
+    if (memberIds.length) {
+      const { data: people } = await admin
+        .from("profiles")
+        .select("id,full_name,email")
+        .in("id", memberIds);
+      for (const person of people ?? []) memberName.set(person.id, person.full_name || person.email || "회원");
+    }
 
     // A tutor decides join requests, so their pending list is gathered here.
     if (role === "tutor") {
       const pending = (members ?? []).filter((row) => row.status === "pending");
-      const requesterIds = pending.map((row) => row.user_id);
-      if (requesterIds.length) {
-        const { data: requesters } = await admin
-          .from("profiles")
-          .select("id,full_name,email,role")
-          .in("id", requesterIds);
-        for (const person of requesters ?? []) memberName.set(person.id, person.full_name || person.email || "회원");
-      }
       pendingRequests = pending.map((row) => ({
         id: row.id,
         classroomId: row.classroom_id,
