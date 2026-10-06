@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
   // Signing the other sessions out means nothing if the browser holding them
   // can still skip the code, so a new password starts a new trust window.
-  await clearDeviceTrust();
+  await clearDeviceTrust(user.id);
 
   const { data: profile } = await supabase
     .from("profiles")

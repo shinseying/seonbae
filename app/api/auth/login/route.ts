@@ -97,17 +97,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // A browser that entered a code for this account inside the trust window is
-  // let straight through. The check runs after the password and the role check,
+  // A browser this account signed in on within the trust window is let
+  // straight through. The check runs after the password and the role check,
   // so a trusted browser still cannot get in on a wrong password.
   if (await deviceIsTrusted(data.user.id)) {
     await setUserVerified({
       userId: data.user.id,
       sessionId,
       remember,
-      // The window runs from the verification that earned it. Refreshing it on
-      // every login would keep one code alive forever.
-      trustDevice: false,
     });
     return NextResponse.json({
       destination: await resolvePortalDestination(data.user.id, profile ?? null),

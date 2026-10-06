@@ -4,6 +4,7 @@ import {
   isAdminPhraseValid,
   INVALID_LOGIN_MESSAGE,
   loginMethodMatchesRole,
+  peekAccessGatePayload,
   readAccessGate,
   sessionBindingFromClaims,
   signAccessGate,
@@ -46,6 +47,21 @@ test("tampered and expired gates are rejected", async () => {
     expiresAt: Date.now() - 1,
   });
   assert.equal(await readAccessGate(expired, "admin-step", identity), null);
+});
+
+test("device trust tokens for several accounts stay separate in one cookie value", async () => {
+  const expiresAt = Date.now() + 60_000;
+  const student = await signAccessGate({ kind: "device-trust", userId: "student-1", sessionId: "", expiresAt });
+  const parent = await signAccessGate({ kind: "device-trust", userId: "parent-1", sessionId: "", expiresAt });
+  const cookie = [student, parent].join("~");
+  const tokens = cookie.split("~");
+  assert.deepEqual(tokens.map((token) => peekAccessGatePayload(token)?.userId), ["student-1", "parent-1"]);
+  assert.ok(await readAccessGate(tokens[1], "device-trust", { userId: "parent-1", sessionId: "" }));
+  assert.equal(await readAccessGate(tokens[0], "device-trust", { userId: "parent-1", sessionId: "" }), null);
+  // Peeking never grants anything: a forged payload still fails verification.
+  const forged = `${parent.split(".")[0]}.${student.split(".")[1]}`;
+  assert.equal(peekAccessGatePayload(forged)?.userId, "parent-1");
+  assert.equal(await readAccessGate(forged, "device-trust", { userId: "parent-1", sessionId: "" }), null);
 });
 
 test("verification codes are bound to expiry and session", async () => {

@@ -95,14 +95,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL("/admin-verify", request.nextUrl.origin));
       }
 
-      // Same trust window as the password path: a code entered on this browser
-      // inside it means Google sign-in does not ask for a second one.
+      // Same trust window as the password path: a sign-in on this browser
+      // inside it means Google sign-in does not ask for a code.
       if (await deviceIsTrusted(user.id)) {
         await setUserVerified({
           userId: user.id,
           sessionId,
           remember: true,
-          trustDevice: false,
         });
         const destination = portalDestinationForState(
           { role: googleCheck.profile.role, account_status: googleCheck.profile.accountStatus },

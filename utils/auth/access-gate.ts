@@ -70,6 +70,16 @@ export async function readAccessGate(
   }
 }
 
+/** The unverified payload, for housekeeping only (pruning a cookie). Anything
+ *  that grants access goes through readAccessGate. */
+export function peekAccessGatePayload(token: string) {
+  try {
+    return JSON.parse(decodeText(token.split(".")[0] || "")) as Partial<AccessGatePayload>;
+  } catch {
+    return null;
+  }
+}
+
 export async function verificationCodeDigest(input: {
   code: string;
   userId: string;

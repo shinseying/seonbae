@@ -5,6 +5,7 @@ import {
   ADMIN_STEP_COOKIE,
   createVerificationCode,
   DEVICE_TRUST_COOKIE,
+  peekAccessGatePayload,
   readAccessGate,
   signAccessGate,
   USER_CHALLENGE_COOKIE,
@@ -17,12 +18,16 @@ const CHALLENGE_SECONDS = 10 * 60;
 const REMEMBER_SECONDS = 400 * 24 * 60 * 60;
 const ADMIN_GATE_SECONDS = 12 * 60 * 60;
 
-// How long a browser stays trusted after a code was entered on it. 30 days is
-// what Google, Microsoft, GitHub and Okta all default "remember this device"
-// to, and re-prompting sooner trains people to expect a code and to type one
-// into whatever asks. Absolute, not sliding: the window runs from the last
-// verification, so a browser can never stay trusted indefinitely by being used.
+// How long a browser stays trusted for an account. Sliding, by owner decision
+// on 2026-10-06: every sign-in on the browser restarts the 30 days, so a code
+// is asked again only after 30 days without signing in there. The password is
+// still checked on every sign-in.
 const DEVICE_TRUST_SECONDS = 30 * 24 * 60 * 60;
+// One browser can be trusted for several accounts (a family computer, or the
+// operator testing as student, parent and tutor). Each account has its own
+// signed token in the one cookie.
+const MAX_TRUSTED_ACCOUNTS = 5;
+const TRUST_SEPARATOR = "~";
 
 export async function issueUserChallenge(input: {
   userId: string;
@@ -71,9 +76,6 @@ export async function setUserVerified(input: {
   userId: string;
   sessionId: string;
   remember: boolean;
-  /** False when the session was let through by an existing trusted device: the
-   *  window has to run from the verification that earned it, not from its reuse. */
-  trustDevice?: boolean;
 }) {
   const token = await signAccessGate({
     kind: "user-verified",
@@ -90,32 +92,45 @@ export async function setUserVerified(input: {
   );
   cookieStore.delete(USER_CHALLENGE_COOKIE);
 
-  if (input.trustDevice !== false) {
-    const trust = await signAccessGate({
-      kind: "device-trust",
-      userId: input.userId,
-      sessionId: "",
-      expiresAt: Date.now() + DEVICE_TRUST_SECONDS * 1000,
+  // Every completed sign-in restarts this account's window on this browser.
+  const trust = await signAccessGate({
+    kind: "device-trust",
+    userId: input.userId,
+    sessionId: "",
+    expiresAt: Date.now() + DEVICE_TRUST_SECONDS * 1000,
+  });
+  const others = trustTokens(cookieStore.get(DEVICE_TRUST_COOKIE)?.value)
+    .filter((token) => {
+      const payload = peekAccessGatePayload(token);
+      return payload?.userId !== input.userId && Number(payload?.expiresAt) > Date.now();
     });
-    cookieStore.set(DEVICE_TRUST_COOKIE, trust, cookieOptions(DEVICE_TRUST_SECONDS));
-  }
+  cookieStore.set(
+    DEVICE_TRUST_COOKIE,
+    [trust, ...others].slice(0, MAX_TRUSTED_ACCOUNTS).join(TRUST_SEPARATOR),
+    cookieOptions(DEVICE_TRUST_SECONDS),
+  );
 }
 
-/** True when this browser entered a code for this account inside the window. */
+/** True when this account signed in on this browser inside the window. */
 export async function deviceIsTrusted(userId: string) {
   const cookieStore = await cookies();
-  const trust = await readAccessGate(
-    cookieStore.get(DEVICE_TRUST_COOKIE)?.value,
-    "device-trust",
-    { userId, sessionId: "" },
-  );
-  return Boolean(trust);
+  for (const token of trustTokens(cookieStore.get(DEVICE_TRUST_COOKIE)?.value)) {
+    if (await readAccessGate(token, "device-trust", { userId, sessionId: "" })) return true;
+  }
+  return false;
 }
 
-/** Password changes and account recovery void the trust every browser holds. */
-export async function clearDeviceTrust() {
+/** A password change voids this browser's trust for the account. */
+export async function clearDeviceTrust(userId: string) {
   const cookieStore = await cookies();
-  cookieStore.delete(DEVICE_TRUST_COOKIE);
+  const kept = trustTokens(cookieStore.get(DEVICE_TRUST_COOKIE)?.value)
+    .filter((token) => peekAccessGatePayload(token)?.userId !== userId);
+  if (kept.length) cookieStore.set(DEVICE_TRUST_COOKIE, kept.join(TRUST_SEPARATOR), cookieOptions(DEVICE_TRUST_SECONDS));
+  else cookieStore.delete(DEVICE_TRUST_COOKIE);
+}
+
+function trustTokens(value: string | undefined) {
+  return (value || "").split(TRUST_SEPARATOR).filter(Boolean).slice(0, MAX_TRUSTED_ACCOUNTS);
 }
 
 export async function setAdminPhraseVerified(input: {
