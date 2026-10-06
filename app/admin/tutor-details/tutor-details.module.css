@@ -140,6 +140,7 @@
 .status[data-status="pending"] { border-color: #d8a247; background: #fff2d3; color: #78500d; }
 .status[data-status="approved"] { border-color: #78a887; background: #e8f3e8; color: #2c673e; }
 .status[data-status="rejected"] { border-color: #d38b84; background: #f8e7e4; color: #8c3832; }
+.status[data-status="needs_info"] { border-color: #d8a247; background: #fbeed8; color: #7a4f0e; }
 
 .recordMeta,
 .dataList,

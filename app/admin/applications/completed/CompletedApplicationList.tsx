@@ -26,6 +26,7 @@ export type CompletedApplication = {
 const FILTERS = [
   { key: "all", label: "전체" },
   { key: "approved", label: "승인" },
+  { key: "needs_info", label: "보완 요청" },
   { key: "rejected", label: "반려" },
 ] as const;
 
@@ -76,7 +77,7 @@ export default function CompletedApplicationList({
                   </small>
                 </div>
                 <span className={item.status === "approved" ? styles.approved : styles.rejected}>
-                  {item.status === "approved" ? "승인" : "반려"}
+                  {item.status === "approved" ? "승인" : item.status === "needs_info" ? "보완 요청" : "반려"}
                 </span>
               </header>
 

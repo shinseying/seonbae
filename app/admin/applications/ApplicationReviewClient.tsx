@@ -31,6 +31,10 @@ export type AccountApplication = {
   has_tutor_card: boolean;
   tutor_roster_number: string | null;
   status: string;
+  review_note: string | null;
+  resubmitted_at: string | null;
+  resubmission_note: string | null;
+  resubmitted_documents: Array<{ name: string; url: string | null }>;
   notification_sent_at: string | null;
   notification_error: string | null;
   created_at: string;
@@ -63,7 +67,7 @@ export default function ApplicationReviewClient({
     request: RequestInit,
     pending: string,
     done: string,
-    onDone?: (result: { registryId?: string; cardMode?: "create" | "link" }) => void,
+    onDone?: (result: { registryId?: string; cardMode?: "create" | "link"; applicantNotified?: boolean }) => string | void,
   ) {
     if (busyId !== null) return;
     const removed = accountItems.find((item) => item.id === id);
@@ -78,8 +82,7 @@ export default function ApplicationReviewClient({
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "요청을 처리하지 못했습니다.");
-      onDone?.(result);
-      setMessage(done);
+      setMessage(onDone?.(result) || done);
       router.refresh();
     } catch (error) {
       if (removed) setAccountItems((items) => [...items, removed].sort(byCreatedAt));
@@ -89,8 +92,19 @@ export default function ApplicationReviewClient({
     }
   }
 
-  function decide(item: AccountApplication, decision: "approved" | "rejected") {
+  // 보완 요청 (needs_info) lets the applicant upload documents and resubmit.
+  // 반려 (rejected) is final, so it asks first.
+  function decide(item: AccountApplication, decision: "approved" | "needs_info" | "rejected") {
     const key = `account-${item.id}`;
+    if (decision === "needs_info" && (notes[key] || "").trim().length < 2) {
+      setMessage("보완 요청에는 지원자에게 보낼 메모를 적어 주세요.");
+      return;
+    }
+    if (decision === "rejected" && !window.confirm(
+      `${item.full_name} 님의 신청 #${item.id}을 반려할까요?
+
+반려는 최종 결과입니다. 서류를 다시 받으려면 보완 요청을 쓰세요.`,
+    )) return;
     const cardMode = cardModes[key] || "";
     const existingRegistryId = cardRegistryIds[key] || "";
     return send(
@@ -109,11 +123,15 @@ export default function ApplicationReviewClient({
             : {}),
         }),
       },
-      decision === "approved" ? "승인을 반영하고 있습니다…" : "반려를 반영하고 있습니다…",
-      decision === "approved" ? "승인되었습니다." : "반려되었습니다.",
+      decision === "approved" ? "승인을 반영하고 있습니다…" : decision === "needs_info" ? "보완 요청을 보내고 있습니다…" : "반려를 반영하고 있습니다…",
+      decision === "approved" ? "승인되었습니다." : decision === "needs_info" ? "보완 요청을 보냈습니다." : "반려되었습니다.",
       decision === "approved" && cardMode === "link"
         ? () => setAvailableCards((cards) => cards.filter((card) => card.registry_id !== existingRegistryId))
-        : undefined,
+        : decision === "needs_info"
+          ? (result) => result.applicantNotified === false
+            ? "보완 요청을 저장했지만 지원자 이메일을 보내지 못했습니다. 지원자에게 직접 알려 주세요."
+            : "보완 요청을 보냈습니다. 지원자에게 이메일로 알렸습니다."
+          : undefined,
     );
   }
 
@@ -152,6 +170,16 @@ export default function ApplicationReviewClient({
                 <div><small>#{item.id} · {roleLabel(item.requested_role)}</small><h3>{item.full_name}</h3><p>{item.email} · {item.phone}</p></div>
                 <time>{formatDate(item.created_at)}</time>
               </div>
+              {item.resubmitted_at && (
+                <div className={styles.resubmission}>
+                  <b>재제출 · {formatDate(item.resubmitted_at)}</b>
+                  {item.review_note && <p><small>보완 요청 메모</small>{item.review_note}</p>}
+                  {item.resubmission_note && <p><small>지원자 메모</small>{item.resubmission_note}</p>}
+                  {item.resubmitted_documents.map((document, index) => document.url
+                    ? <a key={index} className={styles.document} href={document.url} target="_blank" rel="noreferrer">새 서류 · {document.name}</a>
+                    : <span key={index} className={styles.noDocument}>새 서류 · {document.name}</span>)}
+                </div>
+              )}
               {item.documentUrl && item.acceptance_letter_name
                 ? <a className={styles.document} href={item.documentUrl} target="_blank" rel="noreferrer">학적증명서 · {item.acceptance_letter_name}</a>
                 : <span className={styles.noDocument}>추가 제출 서류 없음</span>}
@@ -207,13 +235,19 @@ export default function ApplicationReviewClient({
               </span>
               <textarea
                 aria-label={`${item.full_name} 심사 메모`}
-                placeholder="승인 또는 보완 요청 메모"
+                placeholder="심사 메모 (보완 요청 시 지원자에게 이메일로 전달됩니다)"
                 value={notes[key] || ""}
                 onChange={(event) => setNotes((current) => ({ ...current, [key]: event.target.value }))}
               />
               <div className={styles.actions}>
                 <button className={styles.deleteButton} type="button" disabled={anyBusy} onClick={() => remove(item)}>삭제</button>
-                <button type="button" disabled={anyBusy} onClick={() => decide(item, "rejected")}>보완 요청</button>
+                <button type="button" disabled={anyBusy} onClick={() => decide(item, "rejected")}>반려</button>
+                <button
+                  type="button"
+                  disabled={anyBusy || !item.user_id}
+                  title={item.user_id ? undefined : "계정을 만든 뒤 보완 요청을 보낼 수 있습니다."}
+                  onClick={() => decide(item, "needs_info")}
+                >보완 요청</button>
                 {item.requested_role === "tutor" && !item.user_id ? (
                   <a className={styles.provisionLink} href="/admin/tutor-accounts">튜터 계정 생성 탭에서 계정 만들기</a>
                 ) : (

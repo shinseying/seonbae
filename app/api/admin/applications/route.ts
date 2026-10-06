@@ -7,6 +7,7 @@ import { collectApplicationDocumentPaths } from "../../../../utils/tutors/applic
 import { registryRowFromApplication } from "../../../../utils/tutors/from-application";
 import { parseTutorCardChoice } from "../../../../utils/tutors/provisioning";
 import { createTutorRegistryId } from "../../../../utils/tutors/registry-id";
+import { sendApplicationNeedsInfoEmail } from "../../../../utils/email/application-needs-info";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +38,16 @@ export async function PATCH(request: NextRequest) {
     return jsonError("심사 요청 형식을 확인해 주세요.", 400);
   }
   const id = Number(body.id);
-  const decision = body.decision === "approved" || body.decision === "rejected" ? body.decision : null;
+  // needs_info is the 보완 요청: the applicant can upload documents and resubmit.
+  // rejected is the final 반려.
+  const decision = body.decision === "approved" || body.decision === "rejected" || body.decision === "needs_info"
+    ? body.decision
+    : null;
   const note = typeof body.note === "string" ? body.note.trim().slice(0, 2000) : "";
   if (!Number.isInteger(id) || !decision) return jsonError("심사 번호와 결과를 확인해 주세요.", 400);
+  if (decision === "needs_info" && note.length < 2) {
+    return jsonError("보완 요청에는 지원자에게 보낼 메모가 필요합니다.", 400);
+  }
 
   const { data: application } = await admin
     .from("account_creation_requests")
@@ -50,6 +58,10 @@ export async function PATCH(request: NextRequest) {
 
   if (decision === "approved" && !application.user_id) {
     return jsonError("먼저 계정을 생성한 뒤 승인해 주세요.", 409);
+  }
+  // The applicant resubmits from their portal, so there has to be an account.
+  if (decision === "needs_info" && !application.user_id) {
+    return jsonError("계정이 없는 신청은 보완 요청을 보낼 수 없습니다. 먼저 계정을 만들어 주세요.", 409);
   }
 
   const { data: originalProfile, error: profileLookupError } = application.user_id
@@ -192,8 +204,27 @@ export async function PATCH(request: NextRequest) {
     await deleteCreatedCard();
     return jsonError("심사 결과를 저장하지 못했습니다.", 500);
   }
+
+  let notificationError: string | null = null;
+  if (decision === "needs_info") {
+    try {
+      await sendApplicationNeedsInfoEmail({
+        requestId: id,
+        reviewedAt,
+        to: application.email,
+        name: application.full_name || application.email,
+        note,
+        portalUrl: new URL("/login", request.nextUrl.origin).toString(),
+      });
+    } catch (mailError) {
+      notificationError = mailError instanceof Error ? mailError.message.slice(0, 300) : "Email failed";
+      console.error("[application needs-info email]", { id, error: notificationError });
+    }
+  }
+
   return NextResponse.json({
     ...result.data,
+    ...(decision === "needs_info" ? { applicantNotified: !notificationError } : {}),
     ...(tutorRegistryId ? { registryId: tutorRegistryId } : {}),
     ...(cardChoice ? { cardMode: cardChoice.mode } : {}),
   });
@@ -245,7 +276,7 @@ export async function DELETE(request: NextRequest) {
     .select("id", { count: "exact", head: true })
     .eq("application_request_id", id);
   if (signatureCount) {
-    return jsonError("튜터 계약 서명이 연결된 신청은 삭제할 수 없습니다. 보완 요청으로 반려해 주세요.", 409);
+    return jsonError("튜터 계약 서명이 연결된 신청은 삭제할 수 없습니다. 반려로 처리해 주세요.", 409);
   }
 
   // Clear storage first. If it fails, keep the request and its document rows so

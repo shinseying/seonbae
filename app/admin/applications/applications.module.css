@@ -69,3 +69,4 @@
 :global(html[data-theme="dark"]) .cardChoice>p,:global(html[data-theme="dark"]) .cardChoiceGrid span small{color:#c3ccc9}
 :global(html[data-theme="dark"]) .cardChoiceGrid label,:global(html[data-theme="dark"]) .cardSelect select{background:#111b22;border-color:rgba(240,238,235,.2);color:#f3f0ea}
 :global(html[data-theme="dark"]) .cardSelect>span{color:#e1e7e5}
+.resubmission{display:grid;gap:8px;padding:12px;border:1px solid var(--gold,#d6a02b);border-radius:8px;background:var(--honey,#fbeed8)}.resubmission>b{font-size:.66rem;color:var(--blue)}.resubmission p{margin:0;font-size:.64rem;line-height:1.55;color:#3d3a33;white-space:pre-wrap}.resubmission p small{display:block;margin-bottom:2px;color:#7a6f5c;font-size:.58rem;font-weight:800}

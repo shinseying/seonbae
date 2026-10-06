@@ -24,7 +24,7 @@ export default async function AdminApplicationsPage() {
   const admin = createAdminClient();
   const { data: accountRows } = await admin
     .from("account_creation_requests")
-    .select("id,user_id,full_name,email,phone,requested_role,acceptance_letter_path,acceptance_letter_name,credential_path,credential_name,university,subjects,subject_scores,languages,curriculum,official_score,referral_code,status,notification_sent_at,notification_error,created_at")
+    .select("id,user_id,full_name,email,phone,requested_role,acceptance_letter_path,acceptance_letter_name,credential_path,credential_name,university,subjects,subject_scores,languages,curriculum,official_score,referral_code,status,notification_sent_at,notification_error,created_at,review_note,reviewed_at,resubmitted_at,resubmission_note")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
 
@@ -76,6 +76,17 @@ export default async function AdminApplicationsPage() {
   const availableCards = (tutorRows ?? [])
     .filter((card) => !linkedRegistryIds.has(card.registry_id)) as AvailableTutorCard[];
 
+  // A resubmitted application keeps its earlier 보완 요청 in review_note and
+  // reviewed_at. Documents created after that request are the new ones.
+  const resubmittedIds = (accountRows ?? []).filter((item) => item.resubmitted_at).map((item) => item.id);
+  const { data: resubmittedDocuments } = resubmittedIds.length
+    ? await admin
+        .from("account_request_documents")
+        .select("request_id,storage_path,original_name,created_at")
+        .in("request_id", resubmittedIds)
+        .order("created_at", { ascending: true })
+    : { data: [] as Array<{ request_id: number; storage_path: string; original_name: string; created_at: string }> };
+
   const signUrl = async (path: string | null) => {
     if (!path) return null;
     const signed = await admin.storage.from("account-documents").createSignedUrl(path, 60 * 60);
@@ -93,6 +104,12 @@ export default async function AdminApplicationsPage() {
       tutor_roster_number: registryId ? rosterNumberByRegistry.get(registryId) || null : null,
       documentUrl: await signUrl(item.acceptance_letter_path),
       credentialUrl: await signUrl(item.credential_path),
+      resubmitted_documents: item.resubmitted_at
+        ? await Promise.all((resubmittedDocuments ?? [])
+            .filter((document) => document.request_id === item.id
+              && (!item.reviewed_at || Date.parse(document.created_at) > Date.parse(item.reviewed_at)))
+            .map(async (document) => ({ name: document.original_name, url: await signUrl(document.storage_path) })))
+        : [],
       subject_scores: (Array.isArray(item.subject_scores) ? item.subject_scores : []).map((row) => ({
         subject: String(row?.subject ?? ""),
         score: String(row?.score ?? ""),
@@ -107,7 +124,7 @@ export default async function AdminApplicationsPage() {
           <div>
             <p>ADMISSIONS DESK</p>
             <h1>가입 심사</h1>
-            <span>대기 중인 가입 신청을 확인하고 승인, 반려, 삭제합니다.</span>
+            <span>대기 중인 가입 신청을 확인하고 승인, 보완 요청, 반려, 삭제합니다.</span>
           </div>
           <b>{accounts.length}건 대기</b>
         </header>

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cleanupExpiredTutorUploadBatches } from "../../../../utils/auth/tutor-upload-batch";
 import { createAdminClient } from "../../../../utils/supabase/admin";
 import { purgeEndedClassrooms } from "../../../../utils/classrooms/match-end";
+import { cleanupAbandonedResubmissions } from "../../../../utils/auth/application-resubmission";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,8 +25,10 @@ export async function GET(request: NextRequest) {
   // The one daily cron also clears classroom archives past their 7-day
   // download window, so the plan's cron allowance is not spent on a second job.
   const archives = await purgeEndedClassrooms(admin, 25);
-  const failed = result.failed > 0 || archives.failed > 0;
-  return json({ ...result, archives }, failed ? 503 : 200);
+  // Documents uploaded for a 보완 요청 but never submitted.
+  const resubmissions = await cleanupAbandonedResubmissions(admin);
+  const failed = result.failed > 0 || archives.failed > 0 || resubmissions.failed > 0;
+  return json({ ...result, archives, resubmissions }, failed ? 503 : 200);
 }
 
 function isAuthorizedCron(request: NextRequest) {

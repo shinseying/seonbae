@@ -18,7 +18,7 @@ type TutorApplication = {
   phone: string | null;
   university: string | null;
   curriculum: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "needs_info";
   created_at: string;
   reviewed_at: string | null;
 };
@@ -166,7 +166,8 @@ export default async function AdminTutorDetailsPage({ searchParams }: PageProps)
               <option value="all">전체 상태</option>
               <option value="pending">심사 대기</option>
               <option value="approved">승인</option>
-              <option value="rejected">보완 요청</option>
+              <option value="needs_info">보완 요청</option>
+              <option value="rejected">반려</option>
             </select>
           </label>
           <button type="submit">검색</button>
@@ -216,12 +217,12 @@ export default async function AdminTutorDetailsPage({ searchParams }: PageProps)
 }
 
 function StatusBadge({ status }: { status: TutorApplication["status"] }) {
-  const label = status === "approved" ? "승인" : status === "rejected" ? "보완 요청" : "심사 대기";
+  const label = status === "approved" ? "승인" : status === "needs_info" ? "보완 요청" : status === "rejected" ? "반려" : "심사 대기";
   return <span className={styles.status} data-status={status}>{label}</span>;
 }
 
 function isStatus(value: unknown): value is "all" | TutorApplication["status"] {
-  return value === "all" || value === "pending" || value === "approved" || value === "rejected";
+  return value === "all" || value === "pending" || value === "approved" || value === "rejected" || value === "needs_info";
 }
 
 function cleanSearch(value: unknown) {

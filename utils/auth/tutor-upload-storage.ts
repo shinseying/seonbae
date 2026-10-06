@@ -13,7 +13,7 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 
 export async function validateUploadedTutorDocuments(
   admin: AdminClient,
-  ticket: TutorUploadTicket,
+  ticket: Pick<TutorUploadTicket, "documents">,
 ): Promise<{ documents: TutorUploadDocument[]; error: string | null }> {
   const storage = admin.storage.from(TUTOR_UPLOAD_BUCKET);
   for (const document of ticket.documents) {

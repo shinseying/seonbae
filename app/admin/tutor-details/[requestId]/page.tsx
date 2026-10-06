@@ -37,7 +37,7 @@ type ApplicationRecord = {
   languages: string | null;
   referral_code: string | null;
   applicant_note: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "needs_info";
   notification_sent_at: string | null;
   notification_error: string | null;
   review_note: string | null;
@@ -415,12 +415,13 @@ function StatusBadge({ status }: { status: ApplicationRecord["status"] }) {
 }
 
 function statusLabel(status: ApplicationRecord["status"]) {
-  return status === "approved" ? "승인" : status === "rejected" ? "보완 요청" : "심사 대기";
+  return status === "approved" ? "승인" : status === "needs_info" ? "보완 요청" : status === "rejected" ? "반려" : "심사 대기";
 }
 
 function accountStatusLabel(status: string) {
   if (status === "approved") return "승인";
-  if (status === "rejected") return "보완 요청";
+  if (status === "needs_info") return "보완 요청";
+  if (status === "rejected") return "반려";
   if (status === "pending") return "심사 대기";
   return status;
 }
