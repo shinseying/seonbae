@@ -73,6 +73,14 @@ const socials = [
       <p class="footer-copy">© {year} Seonbae · <T en={ui.footer.base.en} ko={ui.footer.base.ko} /></p>
       <p class="footer-legal"><a href={link('/privacy')}><T en="Privacy policy" ko="개인정보 처리방침" /></a> · <a href={link('/terms')}><T en="Terms" ko="이용약관" /></a> · <button type="button" data-cookie-settings><T en="Cookie settings" ko="쿠키 설정" /></button> · <a href={link('/verification')}><T en={ui.footer.legalVerify.en} ko={ui.footer.legalVerify.ko} /></a> · <a href={link('/contact')}><T en={ui.footer.legalContact.en} ko={ui.footer.legalContact.ko} /></a> · seonbaetutor.com</p>
     </div>
+
+    <dl class="footer-business">
+      <div><dt><T en="Company" ko="상호명" /></dt><dd>주식회사 선배</dd></div>
+      <div><dt><T en="CEO" ko="대표자명" /></dt><dd>이윤재</dd></div>
+      <div><dt><T en="Business registration no." ko="사업자등록번호" /></dt><dd>476-88-03992</dd></div>
+      <div><dt><T en="Phone" ko="연락처" /></dt><dd><a href="tel:01048980623">010-4898-0623</a>, <a href="tel:01057474731">010-5747-4731</a></dd></div>
+      <div><dt><T en="Address" ko="주소" /></dt><dd>인천광역시 연수구 인천타워대로 301, 비동 1209호(송도동, 송도센텀하이브)</dd></div>
+    </dl>
   </div>
 </footer>
 
@@ -177,6 +185,20 @@ const socials = [
   .footer-legal a, .footer-legal button { color: var(--on-dark-soft); text-decoration: underline; text-underline-offset: 3px; }
   .footer-legal button { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
   .footer-legal a:hover, .footer-legal button:hover { color: var(--on-dark); }
+
+  .footer-business {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    color: var(--on-dark-soft);
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  .footer-business div { display: flex; gap: 6px; }
+  .footer-business dt::after { content: ':'; }
+  .footer-business a { color: inherit; }
+  .footer-business a:hover { color: var(--on-dark); }
 
   @media (max-width: 860px) {
     .footer-grid { grid-template-columns: 1fr; }
