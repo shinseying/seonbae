@@ -37,7 +37,10 @@ export function localePath(href: string, locale: SiteLocale): string {
   const root = pathname === '/' ? '/' : `/${pathname.split('/').filter(Boolean)[0] ?? ''}`;
   if (!marketingRoots.has(root)) return href;
 
-  const localised = pathname === '/' ? '/en/' : `/en${pathname}`;
+  // `/en`, not `/en/`: Next redirects the trailing-slash form, and an internal
+  // link that redirects costs a crawl hop and lands in Search Console as a
+  // page that was not indexed.
+  const localised = pathname === '/' ? '/en' : `/en${pathname}`;
   return `${localised}${query ? `?${query}` : ''}${hash ? `#${hash}` : ''}`;
 }
 
@@ -48,5 +51,5 @@ export function counterpartPath(pathname: string, locale: SiteLocale): string {
 export function pathForLocale(pathname: string, target: SiteLocale): string {
   const plain = stripLocale(pathname);
   if (target === 'ko') return plain;
-  return plain === '/' ? '/en/' : `/en${plain}`;
+  return plain === '/' ? '/en' : `/en${plain}`;
 }
