@@ -92,6 +92,9 @@ export async function GET() {
   return NextResponse.json(publicRows, {
     headers: {
       "Cache-Control": "no-store, max-age=0",
+      // robots.txt lets crawlers fetch this endpoint so the tutor directory
+      // renders for them. The payload is not a page, so keep it unindexed.
+      "X-Robots-Tag": "noindex",
     },
   });
 }

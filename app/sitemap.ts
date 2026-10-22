@@ -50,7 +50,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: number,
   ): MetadataRoute.Sitemap => {
     const koPath = path;
-    const enPath = path === "/" ? "/en/" : `/en${path}`;
+    // No trailing slash: Next redirects `/en/` to `/en`, and a sitemap URL
+    // that redirects is reported as uncrawlable instead of being indexed.
+    const enPath = path === "/" ? "/en" : `/en${path}`;
     const languages = {
       ko: new URL(koPath, siteUrl).toString(),
       en: new URL(enPath, siteUrl).toString(),
