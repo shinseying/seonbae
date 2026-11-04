@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Spinner from "../../Spinner";
 import styles from "../classroom.module.css";
@@ -28,6 +28,18 @@ export default function ClassroomCalendar({ lessons, readOnly = false }: { lesso
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const reasonRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // The form opens underneath a full month grid, so on most screens it lands
+  // below the fold and pressing a lesson looks like it did nothing at all.
+  // Bring it into view and put the cursor in it.
+  useEffect(() => {
+    if (!selected) return;
+    const field = reasonRef.current;
+    if (!field) return;
+    field.scrollIntoView({ behavior: "smooth", block: "center" });
+    field.focus({ preventScroll: true });
+  }, [selected]);
 
   const byDate = useMemo(() => {
     const map = new Map<string, CalendarLesson[]>();
@@ -137,6 +149,7 @@ export default function ClassroomCalendar({ lessons, readOnly = false }: { lesso
           <label>
             <span>취소 사유</span>
             <textarea
+              ref={reasonRef}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               rows={3}
