@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import CookieConsent from "./CookieConsent";
+import ServerLocaleProvider from "../utils/i18n/ServerLocale";
+import { LOCALE_COOKIE, pairedPage, parseLocale } from "../utils/i18n/locale-routing";
 import "./globals.css";
 
 const TITLE = "검증된 튜터를 찾는 가장 확실한 방법 | 선배";
@@ -50,7 +52,11 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = (await headers()).get("x-seonbae-pathname") || "/";
-  const locale = pathname === "/en" || pathname.startsWith("/en/") ? "en" : "ko";
+  // The cookie is the site-wide choice, so it outranks the URL. A portal page
+  // has one URL in both languages, so without the cookie the server had no way
+  // to know it was rendering for an English reader and always chose Korean.
+  const cookieLocale = parseLocale((await cookies()).get(LOCALE_COOKIE)?.value);
+  const locale = cookieLocale ?? pairedPage(pathname)?.locale ?? "ko";
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
@@ -63,8 +69,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         />
       </head>
       <body suppressHydrationWarning>
-        {children}
-        <CookieConsent />
+        <ServerLocaleProvider locale={locale}>
+          {children}
+          <CookieConsent />
+        </ServerLocaleProvider>
         <Script src="/cookie-consent.js" strategy="afterInteractive" />
       </body>
     </html>

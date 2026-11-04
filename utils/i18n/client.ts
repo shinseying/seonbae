@@ -1,8 +1,16 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 
 export type SeonbaeLocale = "ko" | "en";
+
+// The locale the server rendered with, read from the seonbae-lang cookie in the
+// root layout. React uses the server snapshot for the hydration render too, so
+// seeding it from the same cookie the browser will read is what keeps the first
+// paint identical on both sides. Without it the server always said "ko" while
+// an English reader's browser said "en", and every portal page that prints
+// localised text threw a hydration mismatch.
+export const ServerLocaleContext = createContext<SeonbaeLocale>("ko");
 
 const STORAGE_KEY = "seonbae-lang";
 const CHANGE_EVENT = "seonbae:language-change";
@@ -33,7 +41,8 @@ function subscribe(callback: () => void) {
 }
 
 export function useSeonbaeLocale() {
-  return useSyncExternalStore(subscribe, readLocale, () => "ko" as const);
+  const serverLocale = useContext(ServerLocaleContext);
+  return useSyncExternalStore(subscribe, readLocale, () => serverLocale);
 }
 
 export function setSeonbaeLocale(locale: SeonbaeLocale) {
