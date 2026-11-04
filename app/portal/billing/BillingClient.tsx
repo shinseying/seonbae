@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../parent.module.css";
+import Spinner from "../Spinner";
 import { usePortalText } from "../PortalLocale";
 
 export type BillingLineItem = {
@@ -62,7 +63,16 @@ function BillingGate({ methods }: { methods: { email: boolean; phone: boolean } 
       }
       setChallenge(result.challenge);
       setDestination(result.destination);
-      setMessage(result.message);
+      // Worded so it is true whether or not the Supabase email template prints
+      // the code next to the link.
+      setMessage(
+        result.method === "phone"
+          ? l("등록된 휴대전화로 인증번호를 보냈습니다.", "We sent a verification code to your registered phone.")
+          : l(
+              "등록된 이메일로 일회용 링크를 보냈습니다. 인증번호가 함께 왔다면 아래에 입력해 주세요.",
+              "We sent a one-time link to your registered email. If a verification code came with it, enter the code below.",
+            ),
+      );
     } catch {
       setMessage(l("네트워크 연결을 확인한 뒤 다시 시도해 주세요.", "Check your connection and try again."));
     } finally {
@@ -138,7 +148,7 @@ function BillingGate({ methods }: { methods: { email: boolean; phone: boolean } 
 
         {!challenge ? (
           <button className={styles.primaryButton} type="button" onClick={requestOtp} disabled={busy}>
-            {busy ? l("전송 중", "Sending") : l("인증번호 받기", "Get verification code")}
+            {busy ? <Spinner label={l("전송 중", "Sending")} /> : l("인증번호 받기", "Get verification code")}
           </button>
         ) : (
           <form className={styles.form} onSubmit={verifyOtp}>
@@ -161,7 +171,7 @@ function BillingGate({ methods }: { methods: { email: boolean; phone: boolean } 
               />
             </label>
             <button className={styles.primaryButton} type="submit" disabled={busy || token.length < 6}>
-              {busy ? l("확인 중", "Checking") : l("잠금 해제", "Unlock billing")}
+              {busy ? <Spinner label={l("확인 중", "Checking")} /> : l("잠금 해제", "Unlock billing")}
             </button>
           </form>
         )}

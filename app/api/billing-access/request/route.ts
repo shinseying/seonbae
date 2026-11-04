@@ -71,15 +71,14 @@ export async function POST(request: NextRequest) {
     return errorResponse("인증 요청을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.", 503);
   }
 
+  // No copy here. The caller knows the method and renders the sentence in the
+  // reader's own language; a Korean string returned from the API used to be
+  // printed verbatim on the English page.
   return NextResponse.json(
     {
       challenge,
       method,
       destination: maskDestination(target, method),
-      message:
-        method === "phone"
-          ? "등록된 휴대전화로 인증번호를 보냈습니다."
-          : "등록된 이메일로 인증번호와 일회용 링크를 보냈습니다.",
     },
     { headers: noStoreHeaders() },
   );
