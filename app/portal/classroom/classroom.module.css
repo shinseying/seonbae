@@ -25,16 +25,27 @@
 .joinForm button{padding:12px 20px;border:0;border-radius:9px;background:#163a51;color:#fff;font-weight:700;cursor:pointer}
 .joinForm button:disabled{opacity:.6}
 
-.layout{display:grid;grid-template-columns:250px 1fr;gap:18px;align-items:start}
-.roomList{display:flex;flex-direction:column;gap:8px}
-.roomList button{text-align:left;padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer}
-.roomList button b{display:block;font-size:.88rem}
-.roomList button small{color:var(--muted);font-size:.7rem}
-.activeRoom{border-color:var(--blue)!important;box-shadow:0 0 0 2px rgba(22,58,81,.1)}
+/* Each room is a door: name, subject, and a dot when something is new. Anything
+   else happens after walking in. */
+.listShell{min-height:100vh}
+.roomList{display:flex;flex-direction:column;gap:10px}
+.roomCard{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;color:inherit;text-decoration:none;transition:border-color .18s,transform .18s}
+.roomCard:hover{border-color:var(--blue);transform:translateY(-1px)}
+.roomCard:focus-visible{outline:3px solid #2d789c;outline-offset:2px}
+.roomCard h2{margin:0 0 4px;font-size:1rem}
+.roomCard p{margin:0;font-size:.8rem;color:var(--muted)}
+.roomArrow{font-size:1.1rem;color:var(--blue)}
+.updateDot{display:inline-block;width:9px;height:9px;margin-left:8px;border-radius:50%;background:var(--red);vertical-align:middle}
+.joinCompact{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) auto;align-items:center;gap:8px;margin-top:auto;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
+.joinCompact h2{margin:0 6px 0 0;font-size:.74rem;font-weight:700;color:var(--muted);white-space:nowrap}
+.joinCompact input{min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font:inherit;font-size:.8rem}
+.joinCompact button{min-height:44px;padding:0 14px;border:0;border-radius:9px;background:#163a51;color:#fff;font-size:.76rem;font-weight:700;cursor:pointer}
+.joinCompact button:disabled{opacity:.6}
+.joinCompact p{grid-column:1/-1;margin:0;font-size:.76rem;color:var(--muted)}
+@media(max-width:640px){.joinCompact{grid-template-columns:1fr}.joinCompact h2{margin:4px 0 0}.joinCompact input{font-size:16px}}
+@media(max-width:860px){.listShell{min-height:calc(100vh - 66px)}}
+@media(prefers-reduced-motion:reduce){.roomCard{transition:none}}
 
-.room{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
-.room>header h2{margin:0;font-size:1.2rem}
-.room>header p{margin:4px 0 0;font-size:.8rem;color:var(--muted)}
 .codeBox{display:flex;flex-wrap:wrap;gap:20px;margin-top:16px;padding:14px 16px;border-radius:12px;background:#fbeed8}
 .codeBox small{display:block;font-size:.68rem;color:var(--muted)}
 .codeBox b{font-size:1rem;font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em}
@@ -53,15 +64,13 @@
 .item a{color:#c1663a;font-weight:700;font-size:.78rem;text-decoration:none}
 .feedback{grid-column:1/-1;margin:6px 0 0;padding:10px 12px;border-radius:9px;background:rgba(0,0,0,.03);font-size:.8rem;line-height:1.55;white-space:pre-wrap}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:.86rem;background:var(--card);border:1px solid var(--line);border-radius:16px}
-@media(max-width:860px){.layout{grid-template-columns:1fr}.joinForm{grid-template-columns:1fr}}
+@media(max-width:860px){.joinForm{grid-template-columns:1fr}}
 
 .matchRow{align-items:flex-start!important}
 .matchNote{margin:6px 0 0;font-size:.78rem;color:var(--muted);line-height:1.5}
 .requestActions select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:.78rem;max-width:170px}
 .wideField{grid-column:1/-1}
 
-.openRoom{display:inline-block;margin-top:10px;font-size:.8rem;font-weight:700;color:var(--blue);text-decoration:none}
-.openRoom:hover{text-decoration:underline}
 .backLink{display:inline-block;margin-bottom:10px;font-size:.8rem;font-weight:700;color:var(--muted);text-decoration:none}
 
 .toolForm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end;margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:13px;background:var(--card)}
@@ -143,16 +152,24 @@
 .calDay{font-size:.7rem;color:var(--muted)}
 .calLesson{width:100%;padding:5px 6px;border:0;border-radius:7px;background:var(--blue);color:#fff;font-size:.66rem;font-weight:700;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .calLesson:hover{opacity:.88}
+.calLessonCell{min-width:0;min-height:74px;display:flex;flex-direction:column;gap:2px;padding:6px;border:0;border-radius:10px;background:var(--blue);color:#fff;text-align:left;cursor:pointer;transition:opacity .15s}
+.calLessonCell:hover{opacity:.88}
+.calLessonCell:focus-visible{outline:3px solid #2d789c;outline-offset:2px}
+.calLessonCell span{font-size:.7rem;opacity:.72}
+.calLessonCell b{font-size:.78rem}
+.calLessonCell small{overflow:hidden;font-size:.66rem;text-overflow:ellipsis;white-space:nowrap}
 .calCancelled{padding:5px 6px;border-radius:7px;background:rgba(199,68,59,.12);color:var(--red);font-size:.66rem;font-weight:700}
 .calNone{flex:1}
 .cancelBox{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:13px;background:var(--card);display:grid;gap:10px}
 .cancelBox label{display:grid;gap:6px;font-size:.72rem;font-weight:700;color:var(--muted)}
 .cancelBox textarea{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font:inherit;font-size:.82rem}
+.dayPicker{display:grid;gap:8px}
+.dayPicker button{min-height:44px;padding:8px 14px;border:1px solid var(--blue);border-radius:9px;background:transparent;color:var(--blue);font:inherit;font-size:.8rem;font-weight:700;text-align:left;cursor:pointer}
 .cancelActions{display:flex;gap:8px}
 .cancelActions button{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-radius:9px;background:var(--red);color:#fff;font-weight:700;font-size:.8rem;cursor:pointer}
 .cancelActions button:disabled{opacity:.55;cursor:default}
 .cancelGhost{background:transparent!important;color:var(--muted)!important;border:1px solid var(--line)!important}
-@media(max-width:640px){.calCell{min-height:60px}.calLesson,.calCancelled{font-size:.6rem}}
+@media(max-width:640px){.calCell,.calLessonCell{min-height:60px}.calLesson,.calCancelled{font-size:.6rem}.calLessonCell{padding:4px}.calLessonCell b{font-size:.68rem}.calLessonCell small{font-size:.58rem}}
 
 /* ----- Loading skeletons (loading.tsx for this route and the room page) ----- */
 .skeleton{display:block;border-radius:8px;background:linear-gradient(90deg,#e8e0d2 24%,#f7f1e7 48%,#e8e0d2 72%);background-size:220% 100%;animation:classroomShimmer 1.25s ease-in-out infinite}
@@ -165,9 +182,9 @@
 .skelHeading{width:132px;height:15px;margin-bottom:12px}
 .skelDay{min-height:74px;border:1px solid var(--line);border-radius:10px;background:#f2ece1}
 .skelRow{height:56px;margin-bottom:8px;border-radius:11px}
-.skelRoom{height:132px;border-radius:16px}
+.skelRoom{height:84px;border-radius:16px}
 @keyframes classroomShimmer{to{background-position:-220% 0}}
-@media(max-width:760px){.skelDay{min-height:60px}.skelRoom{height:110px}}
+@media(max-width:760px){.skelDay{min-height:60px}}
 @media(prefers-reduced-motion:reduce){.skeleton{animation:none}}
 
 /* An ended match: read-only archive with a download window. */

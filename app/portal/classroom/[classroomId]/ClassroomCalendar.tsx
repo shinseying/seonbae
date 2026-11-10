@@ -15,20 +15,35 @@ export type CalendarLesson = {
   cancellationReason: string | null;
 };
 
-// The classroom's own month view. A scheduled lesson is a button: pressing it
-// opens the cancellation form for that date. An ended match's archive is
-// read-only, so there it is plain text.
-export default function ClassroomCalendar({ lessons, readOnly = false }: { lessons: CalendarLesson[]; readOnly?: boolean }) {
+// The classroom's own month view. A day with a scheduled lesson is one button
+// filling the cell: pressing it opens the cancellation form, and a day with
+// several asks which lesson first. An ended match's archive is read-only, so
+// there it is plain text. initialLessonId arrives from the dashboard's 수업 취소
+// link and opens that lesson's form straight away.
+export default function ClassroomCalendar({
+  lessons,
+  readOnly = false,
+  initialLessonId = null,
+}: {
+  lessons: CalendarLesson[];
+  readOnly?: boolean;
+  initialLessonId?: number | null;
+}) {
   const router = useRouter();
+  const initialLesson = readOnly
+    ? null
+    : lessons.find((lesson) => lesson.id === initialLessonId && lesson.status !== "cancelled") ?? null;
   const [monthStart, setMonthStart] = useState(() => {
-    const now = new Date();
+    const now = initialLesson ? new Date(`${initialLesson.date}T00:00:00`) : new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [selected, setSelected] = useState<CalendarLesson | null>(null);
+  const [selected, setSelected] = useState<CalendarLesson | null>(initialLesson);
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const reasonRef = useRef<HTMLTextAreaElement | null>(null);
+  const pickerRef = useRef<HTMLButtonElement | null>(null);
 
   // The form opens underneath a full month grid, so on most screens it lands
   // below the fold and pressing a lesson looks like it did nothing at all.
@@ -40,6 +55,14 @@ export default function ClassroomCalendar({ lessons, readOnly = false }: { lesso
     field.scrollIntoView({ behavior: "smooth", block: "center" });
     field.focus({ preventScroll: true });
   }, [selected]);
+
+  useEffect(() => {
+    if (!pickedDay) return;
+    const first = pickerRef.current;
+    if (!first) return;
+    first.scrollIntoView({ behavior: "smooth", block: "center" });
+    first.focus({ preventScroll: true });
+  }, [pickedDay]);
 
   const byDate = useMemo(() => {
     const map = new Map<string, CalendarLesson[]>();
@@ -94,6 +117,17 @@ export default function ClassroomCalendar({ lessons, readOnly = false }: { lesso
     }
   }
 
+  function pressDay(iso: string, live: CalendarLesson[]) {
+    setMessage("");
+    if (live.length > 1) {
+      setSelected(null);
+      setPickedDay(iso);
+      return;
+    }
+    setPickedDay(null);
+    setSelected(live[0]);
+  }
+
   const monthLabel = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(monthStart);
 
   return (
@@ -114,6 +148,26 @@ export default function ClassroomCalendar({ lessons, readOnly = false }: { lesso
         {cells.map((cell) => {
           const dayLessons = cell.iso ? byDate.get(cell.iso) ?? [] : [];
           const live = dayLessons.filter((lesson) => lesson.status !== "cancelled");
+          if (!readOnly && live.length > 0) {
+            return (
+              <button
+                type="button"
+                className={styles.calLessonCell}
+                key={cell.key}
+                onClick={() => pressDay(cell.iso, live)}
+              >
+                <span>{cell.day}</span>
+                {live.length === 1 ? (
+                  <>
+                    <b>{live[0].startsAt.slice(0, 5)}</b>
+                    <small>{live[0].subject}</small>
+                  </>
+                ) : (
+                  <b>수업 1+</b>
+                )}
+              </button>
+            );
+          }
           return (
             <div className={styles.calCell} key={cell.key} data-empty={cell.day ? undefined : "true"}>
               {cell.day && <span className={styles.calDay}>{cell.day}</span>}
@@ -122,19 +176,10 @@ export default function ClassroomCalendar({ lessons, readOnly = false }: { lesso
                   <span className={styles.calCancelled} key={lesson.id} title={lesson.cancellationReason || undefined}>
                     {lesson.startsAt.slice(0, 5)} 취소됨
                   </span>
-                ) : readOnly ? (
+                ) : (
                   <span className={styles.calLesson} key={lesson.id}>
                     {lesson.startsAt.slice(0, 5)} {lesson.subject}
                   </span>
-                ) : (
-                  <button
-                    type="button"
-                    className={styles.calLesson}
-                    key={lesson.id}
-                    onClick={() => { setSelected(lesson); setMessage(""); }}
-                  >
-                    {lesson.startsAt.slice(0, 5)} {lesson.subject}
-                  </button>
                 )
               ))}
               {cell.day && live.length === 0 && dayLessons.length === 0 && <span className={styles.calNone} />}
@@ -142,6 +187,27 @@ export default function ClassroomCalendar({ lessons, readOnly = false }: { lesso
           );
         })}
       </div>
+
+      {pickedDay && (
+        <div className={styles.cancelBox}>
+          <b>{pickedDay} · 취소할 수업을 선택해 주세요</b>
+          <div className={styles.dayPicker}>
+            {(byDate.get(pickedDay) ?? []).filter((lesson) => lesson.status !== "cancelled").map((lesson, index) => (
+              <button
+                type="button"
+                key={lesson.id}
+                ref={index === 0 ? pickerRef : undefined}
+                onClick={() => { setPickedDay(null); setSelected(lesson); }}
+              >
+                {lesson.startsAt.slice(0, 5)} · {lesson.subject} · {lesson.title}
+              </button>
+            ))}
+          </div>
+          <div className={styles.cancelActions}>
+            <button type="button" className={styles.cancelGhost} onClick={() => setPickedDay(null)}>닫기</button>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className={styles.cancelBox}>

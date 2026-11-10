@@ -5,6 +5,7 @@ import { createClient } from "../../../../utils/supabase/server";
 import { zoomJoinUrl } from "../../../../utils/zoom/join-url";
 import ClassroomCalendar from "./ClassroomCalendar";
 import ClassroomTools from "./ClassroomTools";
+import { EndMatchRequest, JoinRequests } from "./RoomRequests";
 import styles from "../classroom.module.css";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +15,13 @@ export const dynamic = "force-dynamic";
 // recordings once a lesson has ended.
 export default async function ClassroomDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ classroomId: string }>;
+  searchParams: Promise<{ cancel?: string }>;
 }) {
   const { classroomId: raw } = await params;
+  const { cancel } = await searchParams;
   const classroomId = Number(raw);
   if (!Number.isSafeInteger(classroomId) || classroomId < 1) notFound();
 
@@ -61,16 +65,27 @@ export default async function ClassroomDetailPage({
   const ended = Boolean(room.ended_at);
   if (ended && !isStudent && !isMember) notFound();
 
-  const [{ data: tutor }, { data: student }, { data: memberRows }] = await Promise.all([
+  // Opening the room is what clears its dot on the 내 교실 list.
+  await admin
+    .from("classroom_reads")
+    .upsert({ classroom_id: room.id, user_id: user.id, last_seen_at: new Date().toISOString() });
+
+  const [{ data: tutor }, { data: student }, { data: memberRows }, { data: endRequest }] = await Promise.all([
     admin.from("tutors").select("name").eq("registry_id", room.tutor_registry_id).maybeSingle(),
     room.student_id
       ? admin.from("profiles").select("full_name,email").eq("id", room.student_id).maybeSingle()
       : Promise.resolve({ data: null }),
     admin
       .from("classroom_members")
-      .select("user_id,role")
+      .select("id,user_id,role,status,requested_at")
       .eq("classroom_id", room.id)
-      .eq("status", "approved"),
+      .in("status", ["approved", "pending"]),
+    admin
+      .from("classroom_end_requests")
+      .select("id")
+      .eq("classroom_id", room.id)
+      .eq("status", "pending")
+      .maybeSingle(),
   ]);
 
   // Who else is in the room, so opening it shows the parents too.
@@ -78,14 +93,19 @@ export default async function ClassroomDetailPage({
   const { data: memberProfiles } = memberIds.length
     ? await admin.from("profiles").select("id,full_name,email").in("id", memberIds)
     : { data: [] as Array<{ id: string; full_name: string | null; email: string }> };
-  const members = (memberRows ?? []).map((row) => {
-    const person = (memberProfiles ?? []).find((item) => item.id === row.user_id);
-    return {
-      id: row.user_id,
-      name: person?.full_name || person?.email || "회원",
-      role: row.role,
-    };
-  });
+  const memberName = (userId: string) => {
+    const person = (memberProfiles ?? []).find((item) => item.id === userId);
+    return person?.full_name || person?.email || "회원";
+  };
+  const members = (memberRows ?? [])
+    .filter((row) => row.status === "approved")
+    .map((row) => ({ id: row.user_id, name: memberName(row.user_id), role: row.role }));
+  // A tutor decides who joins, and only while the match is running.
+  const joinRequests = isTutor && !ended
+    ? (memberRows ?? [])
+        .filter((row) => row.status === "pending")
+        .map((row) => ({ id: row.id, name: memberName(row.user_id), role: row.role }))
+    : [];
 
   const [{ data: lessons }, { data: homework }] = await Promise.all([
     room.student_id
@@ -132,6 +152,8 @@ export default async function ClassroomDetailPage({
           </div>
         )}
 
+        {joinRequests.length > 0 && <JoinRequests requests={joinRequests} />}
+
         {!ended && (isTutor || isStudent) && (
           <div className={styles.codeBox}>
             <div><small>교실 ID</small><b>{room.join_code}</b></div>
@@ -167,6 +189,7 @@ export default async function ClassroomDetailPage({
             cancellationReason: lesson.cancellation_reason,
           }))}
           readOnly={ended}
+          initialLessonId={Number(cancel) || null}
         />
 
         <section className={styles.block}>
@@ -221,6 +244,10 @@ export default async function ClassroomDetailPage({
             <p className={styles.blockEmpty}>아직 참여 중인 보호자가 없습니다.</p>
           )}
         </section>
+
+        {!ended && room.student_id && (
+          <EndMatchRequest classroomId={room.id} title={title} pending={Boolean(endRequest)} />
+        )}
       </section>
     </main>
   );

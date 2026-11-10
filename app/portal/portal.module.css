@@ -15,6 +15,7 @@
 .lesson{grid-template-columns:70px minmax(0,1fr) auto auto}
 .zoomLink,.nextZoomLink,.detailZoomLink{display:inline-flex;align-items:center;justify-content:center;background:var(--blue);color:#fff;font-size:.64rem;font-weight:800}
 .zoomLink{min-height:31px;padding:0 10px;border-radius:999px;white-space:nowrap}
+.cancelLink{display:inline-flex;align-items:center;min-height:44px;margin:-6px 0 -14px;color:var(--muted);font-size:.66rem;font-weight:700;text-decoration:underline;text-underline-offset:2px}
 .nextZoomLink{min-height:42px;margin-top:12px;padding:0 14px;border-radius:11px;justify-content:space-between}
 .nextZoomLink span{margin-left:auto}
 .detailZoomLink{grid-column:1/-1;min-height:39px;border-radius:10px}

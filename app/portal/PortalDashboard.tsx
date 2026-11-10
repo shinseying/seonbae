@@ -22,6 +22,8 @@ export type PortalSession = {
   tutorRegistryId: string | null;
   zoomMeetingNumber: string | null;
   zoomStatus: string;
+  /** The running classroom this lesson belongs to, if the reader can open it. */
+  classroomId: number | null;
   tutor: {
     name: string;
     university: string | null;
@@ -281,6 +283,15 @@ export default function PortalDashboard({
                         {session.tutor?.name || l("담당 튜터 배정 중", "Tutor assignment pending")} ·{" "}
                         {session.sessionType}
                       </p>
+                      {session.classroomId && session.zoomStatus !== "cancelled" && session.zoomStatus !== "ended" && (
+                        <Link
+                          className={styles.cancelLink}
+                          href={`/portal/classroom/${session.classroomId}?cancel=${session.id}`}
+                          prefetch={false}
+                        >
+                          {l("수업 취소", "Cancel lesson")}
+                        </Link>
+                      )}
                     </div>
                     <span className={styles.subject}>{session.subject}</span>
                     {zoomIsAvailable(session) && (

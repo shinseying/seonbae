@@ -3,7 +3,6 @@ import { createAdminClient } from "../../../utils/supabase/admin";
 import { createClient } from "../../../utils/supabase/server";
 import ClassroomView, {
   type Classroom,
-  type JoinRequest,
   type MatchRequest,
 } from "./ClassroomView";
 import styles from "./classroom.module.css";
@@ -31,7 +30,6 @@ export default async function ClassroomPage() {
   const role = profile.role as "student" | "parent" | "tutor";
 
   let classrooms: Classroom[] = [];
-  let pendingRequests: JoinRequest[] = [];
   let classroomLimit = 3;
   let slotRequestPending = false;
   let matchRequests: MatchRequest[] = [];
@@ -93,7 +91,7 @@ export default async function ClassroomPage() {
   if (classroomIds.length) {
     const { data: rows } = await admin
       .from("classrooms")
-      .select("id,join_code,join_password,student_id,tutor_registry_id,title,ended_at,purge_after")
+      .select("id,student_id,tutor_registry_id,title,ended_at")
       .in("id", classroomIds);
 
     const studentIds = Array.from(
@@ -101,7 +99,7 @@ export default async function ClassroomPage() {
     );
     const registryIds = Array.from(new Set((rows ?? []).map((row) => row.tutor_registry_id)));
 
-    const [{ data: students }, { data: tutors }, { data: sessions }, { data: homework }, { data: members }, { data: endRequests }] =
+    const [{ data: students }, { data: tutors }, { data: sessions }, { data: homework }, { data: joinRequests }, { data: bookings }, { data: reads, error: readsError }] =
       await Promise.all([
         studentIds.length
           ? admin.from("profiles").select("id,full_name,email").in("id", studentIds)
@@ -110,54 +108,39 @@ export default async function ClassroomPage() {
         studentIds.length
           ? admin
               .from("portal_sessions")
-              .select("id,user_id,tutor_registry_id,session_date,starts_at,subject,title,notes,zoom_status,recording_url,created_at")
+              .select("user_id,tutor_registry_id,subject,zoom_status,recording_url,cancelled_at,cancelled_by,created_at,updated_at")
               .in("user_id", studentIds)
               .order("session_date", { ascending: false })
           : Promise.resolve({ data: [] as any[] }),
         studentIds.length
           ? admin
               .from("portal_assignments")
-              .select("id,student_id,tutor_registry_id,title,due_date,status,feedback,created_at")
+              .select("student_id,tutor_registry_id,created_at,submitted_at,graded_at,returned_for_revision_at")
               .in("student_id", studentIds)
-              .order("due_date", { ascending: false })
           : Promise.resolve({ data: [] as any[] }),
+        role === "tutor"
+          ? admin
+              .from("classroom_members")
+              .select("classroom_id,requested_at")
+              .in("classroom_id", classroomIds)
+              .eq("status", "pending")
+          : Promise.resolve({ data: [] as Array<{ classroom_id: number; requested_at: string }> }),
         admin
-          .from("classroom_members")
-          .select("id,classroom_id,user_id,role,status,requested_at")
-          .in("classroom_id", classroomIds),
-        admin
-          .from("classroom_end_requests")
-          .select("classroom_id")
+          .from("booking_requests")
+          .select("classroom_id,subject")
           .in("classroom_id", classroomIds)
-          .eq("status", "pending"),
+          .eq("status", "accepted"),
+        admin
+          .from("classroom_reads")
+          .select("classroom_id,last_seen_at")
+          .eq("user_id", user.id)
+          .in("classroom_id", classroomIds),
       ]);
-    const pendingEnd = new Set((endRequests ?? []).map((row) => row.classroom_id));
 
     const studentName = new Map((students ?? []).map((row) => [row.id, row.full_name || row.email || "학생"]));
     const tutorName = new Map((tutors ?? []).map((row) => [row.registry_id, row.name]));
-    const memberName = new Map((students ?? []).map((row) => [row.id, row.full_name || row.email || "회원"]));
-    // Parents in the room and parents asking to join, so the list shows their
-    // names rather than the fallback.
-    const memberIds = Array.from(new Set((members ?? []).map((row) => row.user_id)));
-    if (memberIds.length) {
-      const { data: people } = await admin
-        .from("profiles")
-        .select("id,full_name,email")
-        .in("id", memberIds);
-      for (const person of people ?? []) memberName.set(person.id, person.full_name || person.email || "회원");
-    }
-
-    // A tutor decides join requests, so their pending list is gathered here.
-    if (role === "tutor") {
-      const pending = (members ?? []).filter((row) => row.status === "pending");
-      pendingRequests = pending.map((row) => ({
-        id: row.id,
-        classroomId: row.classroom_id,
-        name: memberName.get(row.user_id) || "회원",
-        role: row.role,
-        requestedAt: row.requested_at,
-      }));
-    }
+    const bookingSubject = new Map((bookings ?? []).map((row) => [row.classroom_id, row.subject]));
+    const lastSeen = new Map((reads ?? []).map((row) => [row.classroom_id, row.last_seen_at]));
 
     classrooms = (rows ?? []).map((row) => {
       // An archive holds what existed when the match ended, not a later re-match.
@@ -166,39 +149,33 @@ export default async function ClassroomPage() {
         && (item.user_id ?? item.student_id) === row.student_id
         && item.tutor_registry_id === row.tutor_registry_id
         && (!row.ended_at || !item.created_at || Date.parse(item.created_at) <= Date.parse(row.ended_at));
+      const lessons = (sessions ?? []).filter(belongs);
+      const work = (homework ?? []).filter(belongs);
+
+      // The dot reports what someone else did, never the reader's own action.
+      const isTutor = role === "tutor";
+      const updates: Array<string | null> = [
+        ...lessons.flatMap((item) => [
+          isTutor ? null : item.created_at,
+          item.cancelled_by === user.id ? null : item.cancelled_at,
+          !isTutor && item.recording_url ? item.updated_at : null,
+        ]),
+        ...work.flatMap((item) => (isTutor
+          ? [item.submitted_at]
+          : [item.created_at, item.graded_at, item.returned_for_revision_at, role === "parent" ? item.submitted_at : null])),
+        ...(joinRequests ?? []).filter((item) => item.classroom_id === row.id).map((item) => item.requested_at),
+        isTutor ? null : row.ended_at,
+      ];
 
       return {
         id: row.id,
         title: row.title || `${row.student_id ? studentName.get(row.student_id) : "빈 자리"} · ${tutorName.get(row.tutor_registry_id) || row.tutor_registry_id}`,
+        // Classrooms have no subject of their own: the latest lesson names it,
+        // and until there is one, the match request that filled the seat.
+        subject: lessons.find((item) => item.zoom_status !== "cancelled")?.subject || bookingSubject.get(row.id) || "",
         studentName: row.student_id ? (studentName.get(row.student_id) || "학생") : "",
-        tutorName: tutorName.get(row.tutor_registry_id) || row.tutor_registry_id,
-        // Only the tutor and the student hand the code out, and only while the
-        // match is running.
-        joinCode: role === "parent" || row.ended_at ? null : row.join_code,
-        joinPassword: role === "parent" || row.ended_at ? null : row.join_password,
-        endedAt: row.ended_at,
-        availableUntil: row.purge_after,
-        endRequestPending: pendingEnd.has(row.id),
-        lessons: (sessions ?? []).filter(belongs).map((item) => ({
-          id: item.id,
-          date: item.session_date,
-          startsAt: item.starts_at,
-          subject: item.subject,
-          title: item.title,
-          notes: item.notes,
-          status: item.zoom_status,
-          recordingUrl: item.recording_url,
-        })),
-        homework: (homework ?? []).filter(belongs).map((item) => ({
-          id: item.id,
-          title: item.title,
-          dueDate: item.due_date,
-          status: item.status,
-          feedback: item.feedback,
-        })),
-        members: (members ?? [])
-          .filter((item) => item.classroom_id === row.id && item.status === "approved")
-          .map((item) => ({ id: item.id, name: memberName.get(item.user_id) || "회원", role: item.role })),
+        // Without read state every room would look new forever, so show nothing.
+        updatedAt: readsError ? null : unseenUpdate(updates, lastSeen.get(row.id)),
       };
     });
   }
@@ -208,11 +185,18 @@ export default async function ClassroomPage() {
       <ClassroomView
         role={role}
         classrooms={classrooms}
-        pendingRequests={pendingRequests}
         matchRequests={matchRequests}
         classroomLimit={classroomLimit}
         slotRequestPending={slotRequestPending}
       />
     </main>
   );
+}
+
+function unseenUpdate(updates: Array<string | null>, seenAt: string | undefined) {
+  const newest = updates.reduce<string | null>(
+    (latest, value) => (value && (!latest || Date.parse(value) > Date.parse(latest)) ? value : latest),
+    null,
+  );
+  return newest && (!seenAt || Date.parse(newest) > Date.parse(seenAt)) ? newest : null;
 }

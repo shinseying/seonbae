@@ -58,14 +58,26 @@ export default async function PortalPage() {
 
   const sessionSelect =
     "id,user_id,session_date,starts_at,duration_minutes,actual_minutes,subject,title,session_type,location,notes,tutor_registry_id,zoom_meeting_number,zoom_status,tutors(name,university,photo_url)";
-  const { data: sessionRows } = studentIds.length
-    ? await supabase
-        .from("portal_sessions")
-        .select(sessionSelect)
-        .in("user_id", studentIds)
-        .order("session_date", { ascending: true })
-        .order("starts_at", { ascending: true })
-    : { data: [] };
+  // RLS returns only the rooms this reader can open, so a lesson without a
+  // room here gets no cancel link that would lead to a 404.
+  const [{ data: sessionRows }, { data: roomRows }] = studentIds.length
+    ? await Promise.all([
+        supabase
+          .from("portal_sessions")
+          .select(sessionSelect)
+          .in("user_id", studentIds)
+          .order("session_date", { ascending: true })
+          .order("starts_at", { ascending: true }),
+        supabase
+          .from("classrooms")
+          .select("id,student_id,tutor_registry_id")
+          .in("student_id", studentIds)
+          .is("ended_at", null),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const roomFor = new Map(
+    (roomRows ?? []).map((room) => [`${room.student_id}:${room.tutor_registry_id}`, room.id]),
+  );
 
   const sessions: PortalSession[] = (sessionRows ?? []).map((row) => {
     const tutor = Array.isArray(row.tutors) ? row.tutors[0] : row.tutors;
@@ -84,6 +96,7 @@ export default async function PortalPage() {
       tutorRegistryId: row.tutor_registry_id,
       zoomMeetingNumber: row.zoom_meeting_number,
       zoomStatus: row.zoom_status,
+      classroomId: roomFor.get(`${row.user_id}:${row.tutor_registry_id}`) ?? null,
       tutor: tutor
         ? {
             name: tutor.name,

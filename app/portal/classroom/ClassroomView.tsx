@@ -10,34 +10,18 @@ import styles from "./classroom.module.css";
 export type Classroom = {
   id: number;
   title: string;
+  /** Empty until a lesson or the match request names one. */
+  subject: string;
+  /** Empty while the seat is free; the tutor's match dropdown needs it. */
   studentName: string;
-  tutorName: string;
-  joinCode: string | null;
-  joinPassword: string | null;
-  lessons: Array<{
-    id: number;
-    date: string;
-    startsAt: string;
-    subject: string;
-    title: string;
-    notes: string | null;
-    status: string;
-    recordingUrl: string | null;
-  }>;
-  homework: Array<{
-    id: number;
-    title: string;
-    dueDate: string | null;
-    status: string;
-    feedback: string | null;
-  }>;
-  members: Array<{ id: number; name: string; role: string }>;
-  /** Set once the match ends; the room is then a read-only archive. */
-  endedAt: string | null;
-  /** Last moment the archive can be downloaded before it is deleted. */
-  availableUntil: string | null;
-  endRequestPending: boolean;
+  /** When the newest unseen change happened, null when nothing is new. */
+  updatedAt: string | null;
 };
+
+// Going back to this list restores the cached page, which still carries the
+// dot for the room just visited. The value is the update that was opened, so a
+// newer one still shows.
+const openedUpdates = new Map<number, string>();
 
 export type MatchRequest = {
   id: number;
@@ -50,32 +34,21 @@ export type MatchRequest = {
   createdAt: string;
 };
 
-export type JoinRequest = {
-  id: number;
-  classroomId: number;
-  name: string;
-  role: string;
-  requestedAt: string;
-};
-
 export default function ClassroomView({
   role,
   classrooms,
-  pendingRequests,
   matchRequests = [],
   classroomLimit = 3,
   slotRequestPending = false,
 }: {
   role: "student" | "parent" | "tutor";
   classrooms: Classroom[];
-  pendingRequests: JoinRequest[];
   matchRequests?: MatchRequest[];
   classroomLimit?: number;
   slotRequestPending?: boolean;
 }) {
   const { text: l } = usePortalText();
   const router = useRouter();
-  const [openId, setOpenId] = useState<number | null>(classrooms[0]?.id ?? null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -99,25 +72,6 @@ export default function ClassroomView({
       router.refresh();
     } catch {
       setMessage(l("네트워크를 확인해 주세요.", "Check your connection."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function decide(id: number, decision: "approved" | "rejected") {
-    setBusy(true);
-    try {
-      const response = await fetch("/api/classroom", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, decision }),
-      });
-      if (!response.ok) {
-        const result = await response.json().catch(() => null);
-        setMessage(result?.error || l("처리하지 못했습니다.", "Could not process."));
-        return;
-      }
-      router.refresh();
     } finally {
       setBusy(false);
     }
@@ -156,17 +110,6 @@ export default function ClassroomView({
     if (ok) setMessage(l("교실을 만들었습니다.", "Classroom created."));
   }
 
-  async function requestEnd(event: FormEvent<HTMLFormElement>, room: Classroom) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    if (!window.confirm(l(
-      `'${room.title}' 매칭 종료를 관리자에게 요청할까요? 관리자가 승인하면 예정된 수업이 취소되고 교실은 보관 상태가 됩니다.`,
-      `Ask the admin to end the match for '${room.title}'? Once approved, upcoming lessons are cancelled and the classroom is archived.`,
-    ))) return;
-    const ok = await post("/api/classroom/end-request", { classroomId: room.id, reason: form.get("reason") });
-    if (ok) setMessage(l("매칭 종료 요청을 보냈습니다. 관리자가 확인한 뒤 처리합니다.", "End request sent. The admin will review it."));
-  }
-
   async function requestSlot(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -178,12 +121,11 @@ export default function ClassroomView({
     await post("/api/tutor/bookings", { id, decision, classroomId }, "PATCH");
   }
 
-  const open = classrooms.find((room) => room.id === openId) ?? null;
   // A classroom seats one student; the rest can only take parents.
   const openRooms = classrooms.filter((room) => !room.studentName);
 
   return (
-    <section className={styles.shell}>
+    <section className={`${styles.shell} ${styles.listShell}`}>
       <header className={styles.heading}>
         <p>MY CLASSROOM</p>
         <h1>{l("내 교실", "My classroom")}</h1>
@@ -195,29 +137,7 @@ export default function ClassroomView({
         </span>
       </header>
 
-      {message && <p className={styles.message} role="status">{message}</p>}
-
-      {role === "tutor" && pendingRequests.length > 0 && (
-        <section className={styles.requests}>
-          <h2>{l("참여 요청", "Join requests")}</h2>
-          {pendingRequests.map((request) => (
-            <article key={request.id}>
-              <div>
-                <b>{request.name}</b>
-                <small>{request.role === "parent" ? l("보호자", "Parent") : l("학생", "Student")}</small>
-              </div>
-              <div className={styles.requestActions}>
-                <button type="button" disabled={busy} onClick={() => decide(request.id, "approved")}>
-                  {l("수락", "Accept")}
-                </button>
-                <button type="button" className={styles.ghost} disabled={busy} onClick={() => decide(request.id, "rejected")}>
-                  {l("거절", "Decline")}
-                </button>
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
+      {role !== "parent" && message && <p className={styles.message} role="status">{message}</p>}
 
       {role === "tutor" && matchRequests.length > 0 && (
         <section className={styles.requests}>
@@ -286,6 +206,38 @@ export default function ClassroomView({
         </section>
       )}
 
+      {classrooms.length === 0 ? (
+        <div className={styles.empty}>
+          {role === "tutor"
+            ? l("아직 교실이 없습니다. 아래에서 교실을 만들어 주세요.", "No classrooms yet. Create one below.")
+            : l("아직 참여 중인 교실이 없습니다.", "You have not joined a classroom yet.")}
+        </div>
+      ) : (
+        <nav className={styles.roomList} aria-label={l("내 교실 목록", "My classrooms")}>
+          {classrooms.map((room) => (
+            <Link
+              className={styles.roomCard}
+              href={`/portal/classroom/${room.id}`}
+              // Rendering the room marks it as seen, so only a real visit may.
+              prefetch={false}
+              key={room.id}
+              onClick={() => { if (room.updatedAt) openedUpdates.set(room.id, room.updatedAt); }}
+            >
+              <div>
+                <h2>
+                  {room.title}
+                  {room.updatedAt && openedUpdates.get(room.id) !== room.updatedAt && (
+                    <i className={styles.updateDot} role="img" aria-label={l("새 소식 있음", "New updates")} />
+                  )}
+                </h2>
+                <p>{room.subject || l("과목 미정", "Subject not set")}</p>
+              </div>
+              <span className={styles.roomArrow} aria-hidden="true">→</span>
+            </Link>
+          ))}
+        </nav>
+      )}
+
       {role === "tutor" && (
         <section className={styles.requests}>
           <h2>{l("교실 만들기", "Create a classroom")}</h2>
@@ -322,162 +274,14 @@ export default function ClassroomView({
       )}
 
       {role === "parent" && (
-        <form className={styles.joinForm} onSubmit={join}>
-          <div>
-            <h2>{l("교실 참여하기", "Join a classroom")}</h2>
-            <p>{l("튜터에게 받은 교실 ID와 비밀번호를 입력하면 참여 요청이 전송됩니다.", "Enter the classroom ID and password from the tutor to request access.")}</p>
-          </div>
-          <label><span>{l("교실 ID", "Classroom ID")}</span><input name="code" required maxLength={24} placeholder="C-ABC123" /></label>
-          <label><span>{l("비밀번호", "Password")}</span><input name="password" required maxLength={32} /></label>
+        <form className={styles.joinCompact} onSubmit={join}>
+          <h2>{l("교실 참여하기", "Join a classroom")}</h2>
+          <input name="code" required maxLength={24} placeholder={l("교실 ID", "Classroom ID")} aria-label={l("교실 ID", "Classroom ID")} />
+          <input name="password" required maxLength={32} placeholder={l("비밀번호", "Password")} aria-label={l("비밀번호", "Password")} />
           <button type="submit" disabled={busy}>{busy ? <Spinner label={l("보내는 중", "Sending")} /> : l("참여 요청", "Request access")}</button>
+          {message && <p role="status">{message}</p>}
         </form>
-      )}
-
-      {classrooms.length === 0 ? (
-        <div className={styles.empty}>
-          {role === "tutor"
-            ? l("아직 교실이 없습니다. 위에서 교실을 만들어 주세요.", "No classrooms yet. Create one above.")
-            : l("아직 참여 중인 교실이 없습니다.", "You have not joined a classroom yet.")}
-        </div>
-      ) : (
-        <div className={styles.layout}>
-          <aside className={styles.roomList}>
-            {classrooms.map((room) => (
-              <button
-                type="button"
-                key={room.id}
-                className={room.id === openId ? styles.activeRoom : undefined}
-                onClick={() => setOpenId(room.id)}
-              >
-                <b>{room.title}</b>
-                <small>
-                  {room.endedAt ? `${l("종료됨", "Ended")} · ` : ""}
-                  {l(`숙제 ${room.homework.length} · 수업 ${room.lessons.length}`, `${room.homework.length} homework · ${room.lessons.length} lessons`)}
-                </small>
-              </button>
-            ))}
-          </aside>
-
-          {open && (
-            <div className={styles.room}>
-              <header>
-                <h2>{open.title}</h2>
-                <p>
-                  {open.studentName
-                    ? `${l("학생", "Student")} ${open.studentName} · `
-                    : `${l("학생 배정 전", "No student yet")} · `}
-                  {l("튜터", "Tutor")} {open.tutorName}
-                </p>
-                <Link className={styles.openRoom} href={`/portal/classroom/${open.id}`}>
-                  {l("교실 열기", "Open classroom")} →
-                </Link>
-              </header>
-
-              {open.endedAt && (
-                <div className={styles.archiveBox}>
-                  <p>
-                    {l(
-                      `${formatDay(open.endedAt)}에 매칭이 종료된 교실입니다. 수업, 숙제와 피드백은 ${formatDay(open.availableUntil)}까지 보관되며 그 뒤 삭제됩니다.`,
-                      `This match ended on ${formatDay(open.endedAt, "en")}. Lessons, homework and feedback are kept until ${formatDay(open.availableUntil, "en")} and deleted after that.`,
-                    )}
-                  </p>
-                  {role !== "tutor" && (
-                    <a href={`/api/classroom/archive?classroomId=${open.id}`} download>
-                      {l("기록 전체 내려받기 (ZIP)", "Download everything (ZIP)")}
-                    </a>
-                  )}
-                </div>
-              )}
-
-              {!open.endedAt && open.studentName && (
-                open.endRequestPending ? (
-                  <p className={styles.matchNote}>
-                    {l("매칭 종료 요청이 접수되어 관리자가 검토하고 있습니다.", "An end request is with the admin.")}
-                  </p>
-                ) : (
-                  <details className={styles.endRequest}>
-                    <summary>{l("매칭 종료 요청", "Ask to end this match")}</summary>
-                    <form onSubmit={(event) => requestEnd(event, open)}>
-                      <label>
-                        <span>{l("종료 사유 (선택)", "Reason (optional)")}</span>
-                        <textarea name="reason" rows={3} maxLength={1000} />
-                      </label>
-                      <button type="submit" disabled={busy}>{l("관리자에게 종료 요청", "Send to the admin")}</button>
-                    </form>
-                  </details>
-                )
-              )}
-
-              {open.joinCode && (
-                <div className={styles.codeBox}>
-                  <div>
-                    <small>{l("교실 ID", "Classroom ID")}</small>
-                    <b>{open.joinCode}</b>
-                  </div>
-                  <div>
-                    <small>{l("비밀번호", "Password")}</small>
-                    <b>{open.joinPassword}</b>
-                  </div>
-                  <p>{l("보호자에게 전달하면 이 교실에 참여를 요청할 수 있습니다.", "Give these to a parent so they can request access.")}</p>
-                </div>
-              )}
-
-              <section className={styles.block}>
-                <h3>{l("숙제와 피드백", "Homework and feedback")}</h3>
-                {open.homework.length ? open.homework.map((item) => (
-                  <article key={item.id} className={styles.item}>
-                    <div>
-                      <b>{item.title}</b>
-                      <small>{item.dueDate ? `${l("마감", "Due")} ${item.dueDate}` : l("마감 없음", "No due date")}</small>
-                    </div>
-                    <span data-status={item.status}>{homeworkLabel(item.status)}</span>
-                    {item.feedback && <p className={styles.feedback}>{item.feedback}</p>}
-                  </article>
-                )) : <p className={styles.blockEmpty}>{l("등록된 숙제가 없습니다.", "No homework yet.")}</p>}
-              </section>
-
-              <section className={styles.block}>
-                <h3>{l("수업과 녹화본", "Lessons and recordings")}</h3>
-                {open.lessons.length ? open.lessons.map((lesson) => (
-                  <article key={lesson.id} className={styles.item}>
-                    <div>
-                      <b>{lesson.title}</b>
-                      <small>{lesson.date} {lesson.startsAt?.slice(0, 5)} · {lesson.subject}</small>
-                    </div>
-                    {lesson.recordingUrl
-                      ? <a href={lesson.recordingUrl} target="_blank" rel="noreferrer">{l("녹화본 보기", "Watch recording")} ↗</a>
-                      : <span data-status={lesson.status}>{lesson.status === "ended" ? l("녹화 준비 중", "Recording pending") : lesson.status === "cancelled" ? l("취소됨", "Cancelled") : l("예정", "Upcoming")}</span>}
-                    {lesson.notes && <p className={styles.feedback}>{lesson.notes}</p>}
-                  </article>
-                )) : <p className={styles.blockEmpty}>{l("수업 기록이 없습니다.", "No lessons yet.")}</p>}
-              </section>
-
-              {open.members.length > 0 && (
-                <section className={styles.block}>
-                  <h3>{l("참여 중인 보호자", "Parents in this classroom")}</h3>
-                  <p className={styles.blockEmpty}>{open.members.map((member) => member.name).join(", ")}</p>
-                </section>
-              )}
-            </div>
-          )}
-        </div>
       )}
     </section>
   );
-}
-
-function formatDay(value: string | null, locale: "ko" | "en" = "ko") {
-  if (!value) return "";
-  return new Intl.DateTimeFormat(locale === "ko" ? "ko-KR" : "en-US", {
-    timeZone: "Asia/Seoul",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(value));
-}
-
-function homeworkLabel(status: string) {
-  if (status === "submitted") return "제출 완료";
-  if (status === "graded") return "반환 완료";
-  if (status === "needs_revision") return "수정 필요";
-  return "진행 중";
 }
