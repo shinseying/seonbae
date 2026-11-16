@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 // KG Inicis INIPay Pro 일반결제. Manual: https://manual.inicis.com/pay/pro.html
 // Flow: the browser opens the payment window with signed P_* fields, INIPay
@@ -26,11 +26,13 @@ export function isIdcName(value: string): boolean {
   return IDC_NAMES.has(value);
 }
 
-/** Order ids are unique, at most 40 bytes, and safe in a URL. */
+/**
+ * 40 bytes, the P_OID limit. The return route finds the order by this id
+ * alone, so the random part must be unguessable.
+ */
 export function newOrderId() {
   const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
-  const random = Math.random().toString(36).slice(2, 10).toUpperCase();
-  return `SB${stamp}${random}`;
+  return `SB${stamp}${randomBytes(12).toString("hex").toUpperCase()}`;
 }
 
 export async function approvePayment(idcName: string, fields: { mid: string; authTid: string; amount: number }) {

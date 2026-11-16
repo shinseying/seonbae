@@ -5,7 +5,8 @@
 -- INIPay posts the auth result back to the return route, which claims the row
 -- (pending -> approving), calls the approval API, and records paid or failed.
 -- A paid row whose write fails is net-cancelled, so a charge never exists
--- without a row.
+-- without a row. A net cancel that INIPay refuses leaves 'unreconciled': the
+-- card was charged and an operator must refund it from the merchant console.
 
 create table if not exists public.billing_payments (
   id bigint generated always as identity primary key,
@@ -15,7 +16,7 @@ create table if not exists public.billing_payments (
   amount_krw integer not null check (amount_krw > 0),
   session_ids bigint[] not null default '{}',
   status text not null default 'pending'
-    check (status in ('pending', 'approving', 'paid', 'failed')),
+    check (status in ('pending', 'approving', 'paid', 'failed', 'unreconciled')),
   pay_type text,
   approval_tid text,
   approved_at timestamptz,
