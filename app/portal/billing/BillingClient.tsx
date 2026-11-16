@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../parent.module.css";
 import Spinner from "../Spinner";
@@ -19,6 +19,7 @@ const INIPAY_SDK_URL = "https://paypro.inicis.com/std/payment/js/INIPayPro_v2.js
 declare global {
   interface Window {
     INIPayPro?: { requestPayment(fields: Record<string, string>): void };
+    jQuery?: unknown;
   }
 }
 
@@ -227,6 +228,11 @@ function BillingLedger({
   const allPriced = monthItems.length > 0 && pricedItems.length === monthItems.length;
   const paid = paidMonths.find((payment) => payment.month === month);
 
+  // Load the SDK with the page so the first click does not wait on it.
+  useEffect(() => {
+    if (paymentEnabled) loadInipaySdk().catch(() => undefined);
+  }, [paymentEnabled]);
+
   async function startPayment() {
     setPaying(true);
     setPaymentError("");
@@ -358,17 +364,32 @@ function BillingLedger({
 
 let inipaySdk: Promise<void> | null = null;
 
+// The SDK fetches jQuery itself after it loads, and requestPayment needs it,
+// so the script's load event alone is too early.
 function loadInipaySdk() {
-  if (window.INIPayPro) return Promise.resolve();
+  if (window.INIPayPro && window.jQuery) return Promise.resolve();
   inipaySdk ??= new Promise<void>((resolve, reject) => {
+    const fail = () => {
+      inipaySdk = null;
+      reject(new Error("INIPay SDK failed to load"));
+    };
+    const waitForJquery = (deadline: number) => {
+      if (window.INIPayPro && window.jQuery) resolve();
+      else if (Date.now() > deadline) fail();
+      else window.setTimeout(() => waitForJquery(deadline), 50);
+    };
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${INIPAY_SDK_URL}"]`);
+    if (existing) {
+      waitForJquery(Date.now() + 10_000);
+      return;
+    }
     const script = document.createElement("script");
     script.src = INIPAY_SDK_URL;
     script.charset = "UTF-8";
-    script.onload = () => resolve();
+    script.onload = () => waitForJquery(Date.now() + 10_000);
     script.onerror = () => {
-      inipaySdk = null;
       script.remove();
-      reject(new Error("INIPay SDK failed to load"));
+      fail();
     };
     document.head.appendChild(script);
   });

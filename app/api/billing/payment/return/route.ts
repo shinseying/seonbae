@@ -9,26 +9,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// P_NEXT_URL. INIPay posts the auth result here from its own page on desktop,
-// and redirects here with a GET after a mobile card app hands back. Either way
-// the SameSite session cookie may be missing: the unguessable order id
-// identifies the payment. The request is unauthenticated, so nothing in it is
-// written: only the approval API's answer moves an order to paid or failed. An
-// auth that is never approved expires at INIPay without a charge.
+// P_NEXT_URL. INIPay posts the auth result here from its own page, so the
+// SameSite session cookie is not sent: the unguessable order id identifies the
+// payment. The posted form is unauthenticated, so nothing in it is written:
+// only the approval API's answer moves an order to paid or failed. An auth
+// that is never approved expires at INIPay without a charge.
 export async function POST(request: NextRequest) {
   const form = await request.formData().catch(() => null);
-  return handleAuthResult(request, (name) => String(form?.get(name) ?? ""));
-}
-
-export async function GET(request: NextRequest) {
-  const params = request.nextUrl.searchParams;
-  if (!params.get("P_OID")) {
-    console.error("INIPay GET return without P_OID", { keys: Array.from(params.keys()) });
-  }
-  return handleAuthResult(request, (name) => params.get(name) ?? "");
-}
-
-async function handleAuthResult(request: NextRequest, field: (name: string) => string) {
+  const field = (name: string) => String(form?.get(name) ?? "");
   const orderId = field("P_OID");
   const config = inipayConfig();
   if (!config || !orderId) return back(request, "failed");
