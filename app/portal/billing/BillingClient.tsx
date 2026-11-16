@@ -6,33 +6,49 @@ import styles from "../parent.module.css";
 import Spinner from "../Spinner";
 import { usePortalText } from "../PortalLocale";
 
-export type BillingLineItem = {
-  id: number;
-  date: string;
-  title: string;
-  subject: string;
-  studentName: string;
-  tutorName: string;
-  minutes: number;
-  amountKrw: number | null;
-  status: "confirmed" | "scheduled";
-};
+import type { BillingLineItem } from "../../../utils/billing/statement";
+
+export type { BillingLineItem };
+export type PaidMonth = { month: string; amountKrw: number; approvedAt: string | null };
+export type PaymentResult = "paid" | "failed" | "closed";
 
 type Method = "email" | "phone";
+
+const INIPAY_SDK_URL = "https://paypro.inicis.com/std/payment/js/INIPayPro_v2.js";
+
+declare global {
+  interface Window {
+    INIPayPro?: { requestPayment(fields: Record<string, string>): void };
+  }
+}
 
 export default function BillingClient({
   locked,
   accessExpiresAt,
   methods,
   items,
+  paymentEnabled,
+  paidMonths,
+  paymentResult,
 }: {
   locked: boolean;
   accessExpiresAt: number | null;
   methods: { email: boolean; phone: boolean };
   items: BillingLineItem[];
+  paymentEnabled: boolean;
+  paidMonths: PaidMonth[];
+  paymentResult: PaymentResult | null;
 }) {
   if (locked) return <BillingGate methods={methods} />;
-  return <BillingLedger accessExpiresAt={accessExpiresAt} items={items} />;
+  return (
+    <BillingLedger
+      accessExpiresAt={accessExpiresAt}
+      items={items}
+      paymentEnabled={paymentEnabled}
+      paidMonths={paidMonths}
+      paymentResult={paymentResult}
+    />
+  );
 }
 
 function BillingGate({ methods }: { methods: { email: boolean; phone: boolean } }) {
@@ -184,9 +200,15 @@ function BillingGate({ methods }: { methods: { email: boolean; phone: boolean } 
 function BillingLedger({
   accessExpiresAt,
   items,
+  paymentEnabled,
+  paidMonths,
+  paymentResult,
 }: {
   accessExpiresAt: number | null;
   items: BillingLineItem[];
+  paymentEnabled: boolean;
+  paidMonths: PaidMonth[];
+  paymentResult: PaymentResult | null;
 }) {
   const { locale, text: l } = usePortalText();
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -196,12 +218,38 @@ function BillingLedger({
     return Array.from(values).sort().reverse();
   }, [items, currentMonth]);
   const [month, setMonth] = useState(months[0]);
-  const [paymentNotice, setPaymentNotice] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
   const monthItems = items.filter((item) => item.date.startsWith(month));
   const totalMinutes = monthItems.reduce((sum, item) => sum + item.minutes, 0);
   const pricedItems = monthItems.filter((item) => item.amountKrw !== null);
   const totalAmount = pricedItems.reduce((sum, item) => sum + (item.amountKrw || 0), 0);
   const allPriced = monthItems.length > 0 && pricedItems.length === monthItems.length;
+  const paid = paidMonths.find((payment) => payment.month === month);
+
+  async function startPayment() {
+    setPaying(true);
+    setPaymentError("");
+    try {
+      const response = await fetch("/api/billing/payment", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month, locale }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setPaymentError(result.error || l("결제를 시작하지 못했습니다.", "The payment could not be started."));
+        return;
+      }
+      await loadInipaySdk();
+      window.INIPayPro!.requestPayment(result);
+    } catch {
+      setPaymentError(l("결제창을 열지 못했습니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.", "The payment window could not be opened. Check your connection and try again."));
+    } finally {
+      setPaying(false);
+    }
+  }
 
   return (
     <>
@@ -264,26 +312,67 @@ function BillingLedger({
             <div className={styles.grandTotal}><dt>{l("결제 예정 금액", "Amount due")}</dt><dd>{allPriced ? formatKrw(totalAmount, locale) : l("금액 확정 전", "Amount pending")}</dd></div>
           </dl>
           <div className={styles.paymentAction}>
-            <button
-              className={styles.payButton}
-              type="button"
-              disabled={!monthItems.length || !allPriced}
-              onClick={() => setPaymentNotice(true)}
-            >
-              {l("결제하기", "Pay now")}
-            </button>
-            <small>{l("결제 게이트웨이 연결 후 사용할 수 있습니다.", "Available after the payment gateway is connected.")}</small>
+            {paid ? (
+              <>
+                <button className={styles.payButton} type="button" disabled>
+                  {l("결제 완료", "Paid")}
+                </button>
+                <small>
+                  {l(`${formatKrw(paid.amountKrw, "ko")} 결제됨`, `${formatKrw(paid.amountKrw, "en")} paid`)}
+                </small>
+              </>
+            ) : (
+              <>
+                <button
+                  className={styles.payButton}
+                  type="button"
+                  disabled={!paymentEnabled || !monthItems.length || !allPriced || paying}
+                  onClick={startPayment}
+                >
+                  {paying ? <Spinner label={l("결제창 여는 중", "Opening payment")} /> : l("결제하기", "Pay now")}
+                </button>
+                <small>
+                  {paymentEnabled
+                    ? l("신용카드 또는 계좌이체로 결제합니다.", "Pay by card or bank transfer.")
+                    : l("결제 게이트웨이 연결 후 사용할 수 있습니다.", "Available after the payment gateway is connected.")}
+                </small>
+              </>
+            )}
           </div>
         </div>
 
-        {paymentNotice && (
-          <p className={styles.formMessage} role="status">
-            {l("결제 게이트웨이는 다음 단계에서 연결됩니다.", "The payment gateway will be connected in the next phase.")}
+        {paymentError && <p className={styles.formMessage} role="alert">{paymentError}</p>}
+        {paymentResult && !paymentError && (
+          <p className={styles.formMessage} role={paymentResult === "failed" ? "alert" : "status"}>
+            {paymentResult === "paid"
+              ? l("결제가 완료되었습니다.", "Your payment is complete.")
+              : paymentResult === "closed"
+                ? l("결제를 취소했습니다. 청구된 금액은 없습니다.", "Payment cancelled. Nothing was charged.")
+                : l("결제가 승인되지 않았습니다. 다시 시도해 주세요.", "The payment was not approved. Please try again.")}
           </p>
         )}
       </section>
     </>
   );
+}
+
+let inipaySdk: Promise<void> | null = null;
+
+function loadInipaySdk() {
+  if (window.INIPayPro) return Promise.resolve();
+  inipaySdk ??= new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = INIPAY_SDK_URL;
+    script.charset = "UTF-8";
+    script.onload = () => resolve();
+    script.onerror = () => {
+      inipaySdk = null;
+      script.remove();
+      reject(new Error("INIPay SDK failed to load"));
+    };
+    document.head.appendChild(script);
+  });
+  return inipaySdk;
 }
 
 function formatMonth(value: string, locale: "ko" | "en") {

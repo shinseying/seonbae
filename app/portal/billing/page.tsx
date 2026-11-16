@@ -1,19 +1,24 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { hourlyRateFor, lessonAmountFromRateKrw } from "../../../utils/billing/rate-lookup";
 import { createClient } from "../../../utils/supabase/server";
-import { classroomStudentIds } from "../../../utils/classrooms/students";
+import { createAdminClient } from "../../../utils/supabase/admin";
 import {
   BILLING_ACCESS_COOKIE,
   readBillingAccess,
 } from "../../../utils/auth/portal-otp";
-import { type BillingLineItem } from "./BillingClient";
+import { loadBillingItems, type BillingLineItem } from "../../../utils/billing/statement";
+import { inipayConfig } from "../../../utils/billing/inipay";
+import { type PaidMonth, type PaymentResult } from "./BillingClient";
 import BillingPageContent from "./BillingPageContent";
 import styles from "../parent.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payment?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,43 +42,15 @@ export default async function BillingPage() {
   );
 
   let items: BillingLineItem[] = [];
+  let paidMonths: PaidMonth[] = [];
   if (access) {
-    const studentIds = await classroomStudentIds(user.id);
-    const studentNames = new Map<string, string>();
-    if (studentIds.length) {
-      const { data: students } = await supabase
-        .from("profiles")
-        .select("id,full_name,email")
-        .in("id", studentIds);
-      for (const student of students ?? []) {
-        studentNames.set(student.id, student.full_name || student.email || "학생");
-      }
-
-      const { data: sessions } = await supabase
-        .from("portal_sessions")
-        .select("id,user_id,session_date,duration_minutes,actual_minutes,title,subject,billing_rate_krw,zoom_status,tutors(name)")
-        .in("user_id", studentIds)
-        .neq("zoom_status", "cancelled")
-        .order("session_date", { ascending: false });
-      items = (sessions ?? []).map((session) => {
-        const tutor = Array.isArray(session.tutors) ? session.tutors[0] : session.tutors;
-        return {
-          id: session.id,
-          date: session.session_date,
-          title: session.title,
-          subject: session.subject,
-          studentName: studentNames.get(session.user_id) || "학생",
-          tutorName: tutor?.name || "담당 튜터",
-          minutes: session.actual_minutes ?? session.duration_minutes,
-          amountKrw: lessonAmountFromRateKrw(
-            session.billing_rate_krw ?? hourlyRateFor(session.subject),
-            session.actual_minutes ?? session.duration_minutes,
-          ),
-          status: session.zoom_status === "ended" ? "confirmed" : "scheduled",
-        };
-      });
-    }
+    items = await loadBillingItems(user.id);
+    paidMonths = await loadPaidMonths(user.id);
   }
+
+  const { payment } = await searchParams;
+  const paymentResult: PaymentResult | null =
+    payment === "paid" || payment === "failed" || payment === "closed" ? payment : null;
 
   return (
     <main className={styles.page}>
@@ -83,7 +60,29 @@ export default async function BillingPage() {
         // Phone OTP is off until SMS delivery is provisioned.
         methods={{ email: Boolean(profile.email || user.email), phone: false }}
         items={items}
+        paymentEnabled={Boolean(inipayConfig())}
+        paidMonths={paidMonths}
+        paymentResult={paymentResult}
       />
     </main>
   );
+}
+
+// Payments are service-role only. A missing key or table must not take the
+// statement down with it, so a failure reads as "nothing paid yet".
+async function loadPaidMonths(parentId: string): Promise<PaidMonth[]> {
+  try {
+    const { data: payments } = await createAdminClient()
+      .from("billing_payments")
+      .select("billing_month,amount_krw,approved_at")
+      .eq("parent_id", parentId)
+      .eq("status", "paid");
+    return (payments ?? []).map((payment) => ({
+      month: payment.billing_month,
+      amountKrw: payment.amount_krw,
+      approvedAt: payment.approved_at,
+    }));
+  } catch {
+    return [];
+  }
 }
